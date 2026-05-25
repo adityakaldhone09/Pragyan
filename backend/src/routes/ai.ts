@@ -12,4 +12,9 @@ router.post('/personalized-roadmap', authenticate, aiController.getPersonalizedR
 router.get('/status', aiController.getStatus);
 router.get('/telemetry', aiController.getTelemetry);
 
+router.post(
+  '/recommend-career',
+  aiController.getPythonCareerRecommendation
+);
+
 export default router;

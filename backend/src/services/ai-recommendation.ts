@@ -1,3 +1,5 @@
+import axios from 'axios';
+
 import { prisma } from '@/lib/prisma';
 import { NotFoundError } from '@/utils/errors';
 import { recommendationEngineService } from '@/services/recommendation-engine';
@@ -102,6 +104,24 @@ export class AIRecommendationService {
     const alreadyStarted = user.progress.map((entry) => entry.roadmapId);
     return filteredRoadmaps.filter((roadmap) => !alreadyStarted.includes(roadmap.id));
   }
+  async getPythonCareerRecommendation(skills: string[]) {
+  try {
+    const response = await axios.post(
+      'http://127.0.0.1:5001/recommend',
+      {
+        skills,
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error('Python AI Engine Error:', error);
+
+    throw new Error(
+      'Failed to get career recommendation'
+    );
+  }
+}
 }
 
 export const aiRecommendationService = new AIRecommendationService();

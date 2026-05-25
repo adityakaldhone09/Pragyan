@@ -67,3 +67,39 @@ export const getTelemetry = asyncHandler(async (_req: Request, res: Response) =>
   const data = aiTelemetry.getTelemetry();
   return sendSuccess(res, data, 200, 'AI telemetry');
 });
+
+export const getPythonCareerRecommendation =
+asyncHandler(
+  async (
+    req: Request,
+    res: Response
+  ) => {
+
+    const { skills } =
+      req.body;
+
+    if (
+      !skills ||
+      !Array.isArray(skills)
+    ) {
+      return sendError(
+        res,
+        400,
+        'Skills array required'
+      );
+    }
+
+    const recommendations =
+      await aiRecommendationService
+      .getPythonCareerRecommendation(
+        skills
+      );
+
+    return sendSuccess(
+      res,
+      recommendations,
+      200,
+      'Career recommendation fetched'
+    );
+  }
+);
