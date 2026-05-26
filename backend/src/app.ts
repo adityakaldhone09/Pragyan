@@ -5,8 +5,11 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import morgan from 'morgan';
+import session from 'express-session';
+import passport from 'passport';
 import { config } from '@/config/env';
 import { errorHandler } from '@/middleware/errorHandler';
+import { configurePassport } from '@/config/passport';
 
 // Routes
 import authRoutes from '@/routes/auth';
@@ -25,14 +28,54 @@ import { redisRateLimiter } from '@/middleware/redisRateLimiter';
 
 const app: Application = express();
 
+configurePassport();
+
 // ============ SECURITY MIDDLEWARE ============
 
 app.use(helmet());
 
-// Rate limiting
+app.set('trust proxy', 1);
+
+app.use(
+  session({
+    secret: config.oauth.sessionSecret,
+    name: 'pragyan.sid',
+    resave: false,
+    saveUninitialized: false,
+    rolling: true,
+    cookie: {
+      httpOnly: true,
+      secure: config.nodeEnv === 'production',
+      sameSite: 'lax',
+      maxAge: 1000 * 60 * 60,
+    },
+  })
+);
+
+// Temporary debug: print session / cookie config
+console.log('[Session Config] SESSION_SECRET set?:', !!config.oauth.sessionSecret);
+console.log('[Session Config] nodeEnv:', config.nodeEnv);
+console.log('[Session Config] cookie.secure:', config.nodeEnv === 'production');
+console.log('[Session Config] cookie.sameSite:', 'lax');
+console.log('[Session Config] cookie.httpOnly:', true);
+console.log('[Session Config] saveUninitialized:', false);
+console.log('[Session Config] resave:', false);
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+const isDevelopment = config.nodeEnv !== 'production';
+const rateLimitMessage = { success: false, message: 'Too many requests' };
+
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: isDevelopment ? 1000 : 100, // allow higher burst in development
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: rateLimitMessage,
+  handler: (_req, res) => {
+    res.status(429).json(rateLimitMessage);
+  },
 });
 
 app.use('/api/', limiter);

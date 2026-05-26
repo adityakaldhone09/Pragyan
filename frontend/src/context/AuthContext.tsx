@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useCallback, useState } from "react";
 import { authService } from "@/services/authService";
 import { clearStoredAuthSession, AUTH_SESSION_KEY } from "@/services/apiClient";
 import type { AuthSession, AuthUser } from "@/types/api";
@@ -16,6 +16,7 @@ interface AuthContextValue {
   updateProfile: typeof authService.updateProfile;
   logout: () => Promise<void>;
   reloadUser: () => Promise<void>;
+  setSession: (session: AuthSession | null) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -32,6 +33,15 @@ function readStoredSession() {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<AuthSession | null>(() => readStoredSession());
   const [status, setStatus] = useState<AuthStatus>("initializing");
+
+  const persistSession = useCallback((nextSession: AuthSession | null) => {
+    setSession(nextSession);
+    if (nextSession) {
+      localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(nextSession));
+    } else {
+      clearStoredAuthSession();
+    }
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -50,8 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const user = await authService.me();
         if (active) {
           const nextSession = { ...stored, user };
-          setSession(nextSession);
-          localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(nextSession));
+          persistSession(nextSession);
           setStatus("authenticated");
         }
       } catch {
@@ -77,19 +86,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isAuthenticated: Boolean(session?.accessToken),
     login: async (input) => {
       const next = await authService.login(input);
-      setSession(next);
+      persistSession(next);
       setStatus("authenticated");
       return next;
     },
     register: async (input) => {
       const next = await authService.register(input);
-      setSession(next);
+      persistSession(next);
       setStatus("authenticated");
       return next;
     },
     refreshToken: async (input) => {
       const next = await authService.refreshToken(input);
-      setSession(next);
+      persistSession(next);
       setStatus("authenticated");
       return next;
     },
@@ -101,19 +110,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         clearStoredAuthSession();
       }
-      setSession(null);
+      persistSession(null);
       setStatus("anonymous");
     },
     reloadUser: async () => {
       const user = await authService.me();
       if (session?.accessToken && session?.refreshToken) {
         const nextSession = { ...session, user };
-        setSession(nextSession);
-        localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(nextSession));
+        persistSession(nextSession);
       } else {
         setSession((current) => (current ? { ...current, user } : current));
       }
     },
+    setSession: persistSession,
   }), [session, status]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

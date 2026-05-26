@@ -19,8 +19,9 @@ export function Navigation() {
   const { user, isAuthenticated, logout } = useAuth();
   const isLandingPage = location.pathname === "/";
   const isAuthPage = location.pathname === "/auth";
+  const isAuthSuccessPage = location.pathname === "/auth/success";
 
-  if (isLandingPage || isAuthPage) {
+  if (isLandingPage || isAuthPage || isAuthSuccessPage) {
     return null;
   }
 
@@ -77,7 +78,7 @@ export function Navigation() {
             {isAuthenticated ? (
               <>
                 <Link
-                  to="/dashboard"
+                  to="/profile"
                   className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-muted/50 transition-all"
                 >
                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center">

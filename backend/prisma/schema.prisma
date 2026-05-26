@@ -10,60 +10,81 @@ datasource db {
 // ============ USER MODELS ============
 
 model User {
-  id                  String              @id @default(auto()) @map("_id") @db.ObjectId
-  email               String              @unique
-  fullName            String
-  password            String
-  role                String              @default("USER")
-  age                 Int?
-  location            String?
-  phone               String?
-  linkedin            String?
-  skills              String[]
-  interests           String[]
-  preferences         String[]
-  experience          String?
-  experienceType      String?             @default("fresher")
-  education          String?
-  educationEntries    Json?
-  skillLevel          String?
-  xp                  Float               @default(0)
-  streak              Int                 @default(0)
-  
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  email            String   @unique
+  fullName         String
+  password         String
+  provider         String   @default("local")
+  providerId       String?
+  avatar           String?
+  emailVerified    Boolean  @default(false)
+  role             String   @default("USER")
+  age              Int?
+  location         String?
+  phone            String?
+  linkedin         String?
+  skills           String[]
+  interests        String[]
+  preferences      String[]
+  experience       String?
+  experienceType   String?  @default("fresher")
+  education        String?
+  educationEntries Json?
+  skillLevel       String?
+  xp               Float    @default(0)
+  streak           Int      @default(0)
+
   // Relations
-  refreshTokens       RefreshToken[]
-  assessmentAnswers   AssessmentAnswer[]
-  assessmentResults   AssessmentResult[]
-  assessmentSessions  AssessmentSession[]
-  progress            UserProgress[]
-  completedRoadmaps   CompletedRoadmap[]
-  completedTaskHistory CompletedTaskHistory[]
-  achievements        UserAchievement[]
-  dailyLearning       UserDailyLearning[]
-  userRoadmaps        UserRoadmap[]
-  taskProgress        TaskProgress[]
-  careerMatches       CareerMatch[]
-  jobApplications     JobApplication[]
+  refreshTokens           RefreshToken[]
+  socialAccounts          SocialAccount[]
+  assessmentAnswers       AssessmentAnswer[]
+  assessmentResults       AssessmentResult[]
+  assessmentSessions      AssessmentSession[]
+  progress                UserProgress[]
+  completedRoadmaps       CompletedRoadmap[]
+  completedTaskHistory    CompletedTaskHistory[]
+  achievements            UserAchievement[]
+  dailyLearning           UserDailyLearning[]
+  userRoadmaps            UserRoadmap[]
+  taskProgress            TaskProgress[]
+  careerMatches           CareerMatch[]
+  jobApplications         JobApplication[]
   // AI Memory & Personalization relations
-  aiMemoryProfiles    AIMemoryProfile[]
+  aiMemoryProfiles        AIMemoryProfile[]
   recommendationHistories RecommendationHistory[]
-  roadmapMutations    RoadmapMutation[]
-  personalityProfiles PersonalityProfile[]
-  learningVelocities  LearningVelocity[]
-  decisionSnapshots    DecisionSnapshot[]
-  
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
+  roadmapMutations        RoadmapMutation[]
+  personalityProfiles     PersonalityProfile[]
+  learningVelocities      LearningVelocity[]
+  decisionSnapshots       DecisionSnapshot[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([provider, providerId])
+}
+
+model SocialAccount {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String   @db.ObjectId
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider      String
+  providerId    String
+  avatar        String?
+  emailVerified Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  @@unique([provider, providerId])
+  @@index([userId])
 }
 
 model RefreshToken {
-  id                  String              @id @default(auto()) @map("_id") @db.ObjectId
-  token               String              @unique
-  userId              String              @db.ObjectId
-  user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expiresAt           DateTime
-  
-  createdAt           DateTime            @default(now())
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  token     String   @unique
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+
+  createdAt DateTime @default(now())
 
   @@index([userId])
 }
@@ -71,89 +92,89 @@ model RefreshToken {
 // ============ SKILL & ROADMAP MODELS ============
 
 model Skill {
-  id                String            @id @default(auto()) @map("_id") @db.ObjectId
-  skillName         String            @unique
-  skillCategory     String
-  difficulty        String
-  description       String
-  totalDuration     String
-  estimatedHours    Int
-  icon              String
-  color             String
-  prerequisites     String[]
-  relatedSkills     String[]
-  totalDays         Int
-  
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  skillName      String   @unique
+  skillCategory  String
+  difficulty     String
+  description    String
+  totalDuration  String
+  estimatedHours Int
+  icon           String
+  color          String
+  prerequisites  String[]
+  relatedSkills  String[]
+  totalDays      Int
+
   // Relations
-  weeklyModules     WeeklyModule[]
-  dailyTasks        DailyTask[]
-  
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  weeklyModules WeeklyModule[]
+  dailyTasks    DailyTask[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model DailyTask {
-  id                String            @id @default(auto()) @map("_id") @db.ObjectId
-  skillId           String            @db.ObjectId
-  skill             Skill             @relation(fields: [skillId], references: [id], onDelete: Cascade)
-  taskNumber        Int
-  title             String
-  description       String
-  estimatedTime     String
-  subtasks          String[]
-  xp                Int               @default(0)
-  
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  skillId       String   @db.ObjectId
+  skill         Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  taskNumber    Int
+  title         String
+  description   String
+  estimatedTime String
+  subtasks      String[]
+  xp            Int      @default(0)
+
   // Relations
-  resources         Resource[]
-  taskProgress      TaskProgress[]
-  
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  resources    Resource[]
+  taskProgress TaskProgress[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([skillId])
 }
 
 model WeeklyModule {
-  id                String            @id @default(auto()) @map("_id") @db.ObjectId
-  skillId           String            @db.ObjectId
-  skill             Skill             @relation(fields: [skillId], references: [id], onDelete: Cascade)
-  title             String
-  description       String?
-  moduleNumber      Int
+  id           String  @id @default(auto()) @map("_id") @db.ObjectId
+  skillId      String  @db.ObjectId
+  skill        Skill   @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  title        String
+  description  String?
+  moduleNumber Int
 
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([skillId])
 }
 
 model Resource {
-  id                String            @id @default(auto()) @map("_id") @db.ObjectId
-  taskId            String            @db.ObjectId
-  task              DailyTask         @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  title             String
-  url               String
-  description       String?
-  platform          String
-  type              String
-  
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  taskId      String    @db.ObjectId
+  task        DailyTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  title       String
+  url         String
+  description String?
+  platform    String
+  type        String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([taskId])
 }
 
 model TaskProgress {
-  id                String            @id @default(auto()) @map("_id") @db.ObjectId
-  userId            String            @db.ObjectId
-  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  taskId            String            @db.ObjectId
-  task              DailyTask         @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  completed         Boolean           @default(false)
-  completedAt       DateTime?
-  
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String    @db.ObjectId
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  taskId      String    @db.ObjectId
+  task        DailyTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([userId, taskId])
   @@index([userId])
@@ -163,87 +184,87 @@ model TaskProgress {
 // ============ LEGACY ROADMAP MODELS ============
 
 model Roadmap {
-  id                String            @id @default(auto()) @map("_id") @db.ObjectId
-  title             String
-  category          String
-  description       String
-  level             String
-  duration          String
-  icon              String
-  estimatedHours    Int
-  tags              String[]
-  
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  title          String
+  category       String
+  description    String
+  level          String
+  duration       String
+  icon           String
+  estimatedHours Int
+  tags           String[]
+
   // Relations
   weeks             Week[]
   userRoadmaps      UserRoadmap[]
   progress          UserProgress[]
   completedRoadmaps CompletedRoadmap[]
-  
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Week {
-  id                String            @id @default(auto()) @map("_id") @db.ObjectId
-  roadmapId         String            @db.ObjectId
-  roadmap           Roadmap           @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
-  title             String
-  weekNumber        Int
-  
+  id         String  @id @default(auto()) @map("_id") @db.ObjectId
+  roadmapId  String  @db.ObjectId
+  roadmap    Roadmap @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  title      String
+  weekNumber Int
+
   // Relations
-  days              Day[]
-  
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  days Day[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([roadmapId])
 }
 
 model Day {
-  id                String            @id @default(auto()) @map("_id") @db.ObjectId
-  weekId            String            @db.ObjectId
-  week              Week              @relation(fields: [weekId], references: [id], onDelete: Cascade)
-  title             String
-  dayNumber         Int
-  description       String?
-  
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  weekId      String  @db.ObjectId
+  week        Week    @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  title       String
+  dayNumber   Int
+  description String?
+
   // Relations
-  tasks             Task[]
-  
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  tasks Task[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([weekId])
 }
 
 model Task {
-  id                String            @id @default(auto()) @map("_id") @db.ObjectId
-  dayId             String            @db.ObjectId
-  day               Day               @relation(fields: [dayId], references: [id], onDelete: Cascade)
-  title             String
-  description       String
-  duration          String
-  completed         Boolean           @default(false)
-  xp                Int               @default(10)
-  
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  dayId       String  @db.ObjectId
+  day         Day     @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  title       String
+  description String
+  duration    String
+  completed   Boolean @default(false)
+  xp          Int     @default(10)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([dayId])
 }
 
 model UserRoadmap {
-  id                String            @id @default(auto()) @map("_id") @db.ObjectId
-  userId            String            @db.ObjectId
-  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  roadmapId         String            @db.ObjectId
-  roadmap           Roadmap           @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
-  progress          Float             @default(0)
-  started           Boolean           @default(false)
-  completed         Boolean           @default(false)
-  
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String  @db.ObjectId
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roadmapId String  @db.ObjectId
+  roadmap   Roadmap @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  progress  Float   @default(0)
+  started   Boolean @default(false)
+  completed Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([userId, roadmapId])
   @@index([userId])
@@ -253,92 +274,92 @@ model UserRoadmap {
 // ============ ASSESSMENT MODELS ============
 
 model Assessment {
-  id                String            @id @default(auto()) @map("_id") @db.ObjectId
-  title             String
-  description       String?
-  
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  description String?
+
   // Relations
-  questions         AssessmentQuestion[]
-  
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  questions AssessmentQuestion[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model AssessmentQuestion {
-  id                String            @id @default(auto()) @map("_id") @db.ObjectId
-  assessmentId      String            @db.ObjectId
-  assessment        Assessment        @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
-  questionText      String
-  options           String[]
-  category          String
-  
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  id           String     @id @default(auto()) @map("_id") @db.ObjectId
+  assessmentId String     @db.ObjectId
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  questionText String
+  options      String[]
+  category     String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([assessmentId])
 }
 
 model AssessmentAnswer {
-  id                String            @id @default(auto()) @map("_id") @db.ObjectId
-  userId            String            @db.ObjectId
-  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  question          String
-  answer            String
-  category          String
-  
-  createdAt         DateTime          @default(now())
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  userId   String @db.ObjectId
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question String
+  answer   String
+  category String
+
+  createdAt DateTime @default(now())
 
   @@index([userId])
 }
 
 model AssessmentResult {
-  id                String            @id @default(auto()) @map("_id") @db.ObjectId
-  userId            String            @db.ObjectId
-  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  answers           String
-  suggestedCareers  String[]
-  scores            String
-  strengths         String[]
-  weaknesses        String[]
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId           String   @db.ObjectId
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers          String
+  suggestedCareers String[]
+  scores           String
+  strengths        String[]
+  weaknesses       String[]
 
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
 }
 
 model AssessmentSession {
-  id                 String            @id @default(auto()) @map("_id") @db.ObjectId
-  userId             String            @db.ObjectId
-  user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  answers            String
-  selectedOptions    String[]
-  analysis           String
-  completedAt        DateTime          @default(now())
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String   @db.ObjectId
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers         String
+  selectedOptions String[]
+  analysis        String
+  completedAt     DateTime @default(now())
 
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([completedAt])
 }
 
 model UserProgress {
-  id                String            @id @default(auto()) @map("_id") @db.ObjectId
-  userId            String            @db.ObjectId
-  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  roadmapId         String            @db.ObjectId
-  roadmap           Roadmap           @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
-  completedTasks    String[]          @default([])
-  completedDays     String[]          @default([])
-  progressPercentage Float             @default(0)
-  currentDay        Int               @default(1)
-  xp                Int               @default(0)
-  streak            Int               @default(0)
-  lastActiveDate    DateTime?
+  id                 String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId             String    @db.ObjectId
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roadmapId          String    @db.ObjectId
+  roadmap            Roadmap   @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  completedTasks     String[]  @default([])
+  completedDays      String[]  @default([])
+  progressPercentage Float     @default(0)
+  currentDay         Int       @default(1)
+  xp                 Int       @default(0)
+  streak             Int       @default(0)
+  lastActiveDate     DateTime?
 
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([userId, roadmapId])
   @@index([userId])
@@ -346,30 +367,30 @@ model UserProgress {
 }
 
 model CompletedRoadmap {
-  id                String            @id @default(auto()) @map("_id") @db.ObjectId
-  userId            String            @db.ObjectId
-  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  roadmapId         String            @db.ObjectId
-  roadmap           Roadmap           @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
-  completedAt       DateTime          @default(now())
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roadmapId   String   @db.ObjectId
+  roadmap     Roadmap  @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  completedAt DateTime @default(now())
 
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([roadmapId])
 }
 
 model CompletedTaskHistory {
-  id                String            @id @default(auto()) @map("_id") @db.ObjectId
-  userId            String            @db.ObjectId
-  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  taskId            String
-  roadmapId         String?
-  xpAwarded         Int               @default(0)
-  completedAt       DateTime          @default(now())
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  taskId      String
+  roadmapId   String?
+  xpAwarded   Int      @default(0)
+  completedAt DateTime @default(now())
 
-  createdAt         DateTime          @default(now())
+  createdAt DateTime @default(now())
 
   @@unique([userId, taskId])
   @@index([userId])
@@ -377,30 +398,30 @@ model CompletedTaskHistory {
 }
 
 model UserAchievement {
-  id                String            @id @default(auto()) @map("_id") @db.ObjectId
-  userId            String            @db.ObjectId
-  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  code              String
-  title             String
-  description       String
-  unlockedAt        DateTime          @default(now())
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code        String
+  title       String
+  description String
+  unlockedAt  DateTime @default(now())
 
-  createdAt         DateTime          @default(now())
+  createdAt DateTime @default(now())
 
   @@unique([userId, code])
   @@index([userId])
 }
 
 model UserDailyLearning {
-  id                String            @id @default(auto()) @map("_id") @db.ObjectId
-  userId            String            @db.ObjectId
-  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  date              String
-  tasksCompleted    Int               @default(0)
-  xpEarned          Int               @default(0)
+  id             String @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String @db.ObjectId
+  user           User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date           String
+  tasksCompleted Int    @default(0)
+  xpEarned       Int    @default(0)
 
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([userId, date])
   @@index([userId])
@@ -409,66 +430,66 @@ model UserDailyLearning {
 // ============ CAREER MODELS ============
 
 model Career {
-  id                String            @id @default(auto()) @map("_id") @db.ObjectId
-  title             String            @unique
+  id                String  @id @default(auto()) @map("_id") @db.ObjectId
+  title             String  @unique
   description       String?
   category          String?
   averageSalary     String?
-  jobMarketDemand   Int?              @default(0)
+  jobMarketDemand   Int?    @default(0)
   requiredEducation String?
   yearsExperience   Int?
-  
+
   // Relations
-  skillMappings     CareerSkillMapping[]
-  interestMappings  CareerInterestMapping[]
-  matches           CareerMatch[]
-  
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  skillMappings    CareerSkillMapping[]
+  interestMappings CareerInterestMapping[]
+  matches          CareerMatch[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model CareerSkillMapping {
-  id                String            @id @default(auto()) @map("_id") @db.ObjectId
-  careerId          String            @db.ObjectId
-  career            Career            @relation(fields: [careerId], references: [id], onDelete: Cascade)
-  skill             String
-  importance        Float             @default(1.0)
-  
-  createdAt         DateTime          @default(now())
-  
+  id         String @id @default(auto()) @map("_id") @db.ObjectId
+  careerId   String @db.ObjectId
+  career     Career @relation(fields: [careerId], references: [id], onDelete: Cascade)
+  skill      String
+  importance Float  @default(1.0)
+
+  createdAt DateTime @default(now())
+
   @@unique([careerId, skill])
   @@index([careerId])
 }
 
 model CareerInterestMapping {
-  id                String            @id @default(auto()) @map("_id") @db.ObjectId
-  careerId          String            @db.ObjectId
-  career            Career            @relation(fields: [careerId], references: [id], onDelete: Cascade)
-  interest          String
-  importance        Float             @default(1.0)
-  
-  createdAt         DateTime          @default(now())
-  
+  id         String @id @default(auto()) @map("_id") @db.ObjectId
+  careerId   String @db.ObjectId
+  career     Career @relation(fields: [careerId], references: [id], onDelete: Cascade)
+  interest   String
+  importance Float  @default(1.0)
+
+  createdAt DateTime @default(now())
+
   @@unique([careerId, interest])
   @@index([careerId])
 }
 
 model CareerMatch {
-  id                String            @id @default(auto()) @map("_id") @db.ObjectId
-  userId            String            @db.ObjectId
-  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  careerId          String            @db.ObjectId
-  career            Career            @relation(fields: [careerId], references: [id], onDelete: Cascade)
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String   @db.ObjectId
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  careerId          String   @db.ObjectId
+  career            Career   @relation(fields: [careerId], references: [id], onDelete: Cascade)
   matchScore        Float
-  confidenceLevel   String            @default("medium")
+  confidenceLevel   String   @default("medium")
   requiredSkills    String[]
   recommendedSkills String[]
   skillGaps         String[]
-  educationMatch    Float             @default(0)
-  experienceMatch   Float             @default(0)
-  
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  educationMatch    Float    @default(0)
+  experienceMatch   Float    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([userId, careerId])
   @@index([userId])
@@ -478,29 +499,29 @@ model CareerMatch {
 // ============ JOB MODELS ============
 
 model Job {
-  id              String            @id @default(auto()) @map("_id") @db.ObjectId
-  title           String
-  company         String
-  location        String
-  description     String
-  salary          Json?
-  skills          String[]
-  applyLink       String
-  source          String
-  createdAt       DateTime          @default(now())
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  company     String
+  location    String
+  description String
+  salary      Json?
+  skills      String[]
+  applyLink   String
+  source      String
+  createdAt   DateTime @default(now())
 
-  applications    JobApplication[]
+  applications JobApplication[]
 }
 
 model JobApplication {
-  id              String            @id @default(auto()) @map("_id") @db.ObjectId
-  userId          String            @db.ObjectId
-  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  jobId           String            @db.ObjectId
-  job             Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  status          String            @default("APPLIED")
-  appliedAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobId     String   @db.ObjectId
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  status    String   @default("APPLIED")
+  appliedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([userId, jobId])
   @@index([userId])
@@ -510,88 +531,88 @@ model JobApplication {
 // ============ AI MEMORY & PERSONALIZATION MODELS ============
 
 model AIMemoryProfile {
-  id                String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId            String   @db.ObjectId
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String   @db.ObjectId
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   // Free-form profile JSON storing aggregated signals, e.g. strengths, weaknesses, preferences
-  profileData       Json
+  profileData    Json
   // Compact metrics for quick queries
-  compositeScore    Float?   
-  xp                Float    @default(0)
-  lastUpdated       DateTime @default(now())
+  compositeScore Float?
+  xp             Float    @default(0)
+  lastUpdated    DateTime @default(now())
 
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
 }
 
 model RecommendationHistory {
-  id                String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId            String   @db.ObjectId
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String  @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String  @db.ObjectId
+  user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   // Stores the recommended item and metadata
-  recommendation    Json
-  reason            String?
-  score             Float?
-  source            String?  // e.g., 'assessment', 'ai-engine', 'manual'
+  recommendation Json
+  reason         String?
+  score          Float?
+  source         String? // e.g., 'assessment', 'ai-engine', 'manual'
 
-  createdAt         DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([userId])
 }
 
 model RoadmapMutation {
-  id                String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId            String   @db.ObjectId
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   // Mutation record describing the change: branching, milestone added, pacing adjusted
-  mutation          Json
-  reason            String?
-  appliedAt         DateTime @default(now())
+  mutation  Json
+  reason    String?
+  appliedAt DateTime @default(now())
 
-  createdAt         DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([userId])
 }
 
 model PersonalityProfile {
-  id                String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId            String   @db.ObjectId
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  profile           Json     // e.g., mentorType, tone, affinity
-  confidence        Float?   
-  lastEvaluatedAt   DateTime @default(now())
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String   @db.ObjectId
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profile         Json // e.g., mentorType, tone, affinity
+  confidence      Float?
+  lastEvaluatedAt DateTime @default(now())
 
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
 }
 
 model LearningVelocity {
-  id                String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId            String   @db.ObjectId
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  windowStart       DateTime
-  windowEnd         DateTime
-  metrics           Json     // e.g., tasksCompleted, xpEarned, avgTimePerTask
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  windowStart DateTime
+  windowEnd   DateTime
+  metrics     Json // e.g., tasksCompleted, xpEarned, avgTimePerTask
 
-  createdAt         DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([userId])
 }
 
 // Persisted snapshots of adaptive decision evaluations for longitudinal analysis
 model DecisionSnapshot {
-  id                String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId            String   @db.ObjectId
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  snapshot          Json     // full engine output (evaluated list, meta)
-  topItems          String[] // cached top career titles
-  meta              Json?    // lightweight meta like avgVelocity, xp, traitCount
+  id       String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId   String   @db.ObjectId
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  snapshot Json // full engine output (evaluated list, meta)
+  topItems String[] // cached top career titles
+  meta     Json? // lightweight meta like avgVelocity, xp, traitCount
 
-  createdAt         DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([userId])
 }

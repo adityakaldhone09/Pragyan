@@ -14,5 +14,12 @@ frontend/dist/
 # Large datasets
 datasets/*.csv
 
+# Backend env (local only)
+backend/.env
+
+# Ignore downloaded OAuth credential files
+client_secret_*.json
+**/client_secret_*.json
+
 # Editor
 .vscode/

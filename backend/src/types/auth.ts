@@ -15,6 +15,15 @@ export interface RegisterRequest extends AuthRequest {
   fullName: string;
 }
 
+export interface OAuthUserProfile {
+  provider: 'google' | 'github';
+  providerId: string;
+  email: string;
+  fullName: string;
+  avatar?: string | null;
+  emailVerified?: boolean;
+}
+
 export interface AuthResponse {
   success: boolean;
   message: string;
@@ -23,6 +32,9 @@ export interface AuthResponse {
     email: string;
     fullName: string;
     role: string;
+    avatar?: string | null;
+    provider?: string;
+    emailVerified?: boolean;
   };
   accessToken?: string;
   refreshToken?: string;

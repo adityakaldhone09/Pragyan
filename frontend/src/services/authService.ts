@@ -45,7 +45,7 @@ export const authService = {
   },
 
   async me() {
-    return apiClient.get<AuthUser>("/auth/me");
+    return apiClient.get<AuthUser>("/auth/me", { retryCount: 0 });
   },
 
   async updateProfile(input: UpdateProfileInput) {

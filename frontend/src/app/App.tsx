@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router";
 import { Suspense, lazy } from "react";
 import { LandingPage } from "./pages/LandingPage";
 import { Auth } from "./pages/Auth";
+import { AuthSuccess } from "./pages/AuthSuccess";
 import { Navigation } from "./components/Navigation";
 import { AuthProvider } from "@/context/AuthContext";
 import { RequireAuth } from "./components/RequireAuth";
@@ -13,6 +14,7 @@ const Roadmap = lazy(() => import("./pages/Roadmap").then((module) => ({ default
 const DetailedAnalysis = lazy(() => import("./pages/DetailedAnalysis").then((module) => ({ default: module.DetailedAnalysis })));
 const Jobs = lazy(() => import("./pages/Jobs").then((module) => ({ default: module.Jobs })));
 const Assistant = lazy(() => import("./pages/Assistant").then((module) => ({ default: module.Assistant })));
+const Profile = lazy(() => import("./pages/Profile").then((module) => ({ default: module.Profile })));
 
 export default function App() {
   return (
@@ -30,6 +32,7 @@ export default function App() {
             <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/auth/success" element={<AuthSuccess />} />
               <Route
                 path="/dashboard"
                 element={
@@ -85,6 +88,10 @@ export default function App() {
                     <Assistant />
                   </RequireAuth>
                 }
+              />
+              <Route
+                path="/profile"
+                element={<Profile />}
               />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

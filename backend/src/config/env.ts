@@ -22,8 +22,17 @@ export const config = {
   port: parseInt(process.env.PORT || '5000', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
   apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:5000',
+  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
   ai: {
     provider: (process.env.AI_PROVIDER || 'gemini').toLowerCase(),
+  },
+
+  oauth: {
+    googleClientId: process.env.GOOGLE_CLIENT_ID || null,
+    googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || null,
+    githubClientId: process.env.GITHUB_CLIENT_ID || null,
+    githubClientSecret: process.env.GITHUB_CLIENT_SECRET || null,
+    sessionSecret: process.env.SESSION_SECRET || process.env.JWT_SECRET || 'change_me_in_production_use_a_unique_session_secret',
   },
 
   gemini: {

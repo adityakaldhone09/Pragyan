@@ -22,6 +22,8 @@ export interface AuthUser {
   fullName: string;
   role?: string;
   avatar?: string | null;
+  provider?: string;
+  emailVerified?: boolean;
   bio?: string | null;
   skills?: string[];
   interests?: string[];
