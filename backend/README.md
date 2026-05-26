@@ -132,7 +132,7 @@ Example values in `.env`:
 
 ```bash
 AI_PROVIDER=gemini
-GEMINI_API_KEY=AIzaSyDNOZao7XxY53ATGARvKAZKmciuzrGQrvw
+GEMINI_API_KEY=your_gemini_api_key_here
 GEMINI_MODEL=gemini-1.5-flash
 REDIS_URL=redis://127.0.0.1:6379
 ```

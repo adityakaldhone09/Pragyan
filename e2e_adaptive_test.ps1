@@ -2,7 +2,8 @@ $ErrorActionPreference='Stop'
 $base='http://localhost:5000/api'
 $stamp=[DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
 $email="e2e.$stamp@pragyan.test"
-$password='Pass1234!'
+$password = $env:E2E_PASSWORD
+if (-not $password) { Write-Host "E2E_PASSWORD environment variable is not set. Aborting."; exit 1 }
 $fullName='E2E Test User'
 $report=@()
 function Add-Check($step,$status,$detail){ $global:report += [pscustomobject]@{Step=$step;Status=$status;Detail=$detail} }
