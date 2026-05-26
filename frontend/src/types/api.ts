@@ -29,6 +29,12 @@ export interface AuthUser {
   interests?: string[];
   education?: string | null;
   experience?: string | null;
+  linkedAccounts?: Array<{
+    provider: string;
+    providerId: string;
+    avatar?: string | null;
+    emailVerified?: boolean;
+  }>;
 }
 
 export interface AuthSession {
@@ -39,6 +45,19 @@ export interface AuthSession {
 
 export interface StoredAuthSession extends AuthSession {
   expiresAt?: number;
+}
+
+export interface ProviderConnectionStatus {
+  linked: boolean;
+  email?: string;
+  username?: string;
+  verified?: boolean;
+  avatar?: string | null;
+}
+
+export interface ConnectedProvidersResponse {
+  google: ProviderConnectionStatus;
+  github: ProviderConnectionStatus;
 }
 
 export interface AssessmentQuestion {
@@ -178,6 +197,16 @@ export interface RoadmapSummary {
   tags?: string[];
   progress?: number;
   milestones?: RoadmapMilestone[];
+}
+
+export interface RoadmapDomainSection {
+  id: string;
+  title: string;
+  summary: string;
+  priority: number;
+  focusPoints: string[];
+  category?: string;
+  roadmaps: RoadmapSummary[];
 }
 
 export interface JobFeedItem {

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { motion } from "motion/react";
 import { Loader2, ShieldCheck, Sparkles } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { authService } from "@/services/authService";
 import { clearStoredAuthSession, setStoredAuthSession } from "@/services/apiClient";
@@ -18,6 +19,7 @@ function readOAuthTokens() {
 
 export function AuthSuccess() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { setSession } = useAuth();
   const [status, setStatus] = useState("Completing secure sign-in...");
   const [error, setError] = useState<string | null>(null);
@@ -28,6 +30,9 @@ export function AuthSuccess() {
     async function completeOAuthLogin() {
       try {
         const { accessToken, refreshToken } = readOAuthTokens();
+        const search = new URLSearchParams(location.search);
+        const mode = search.get("mode");
+        const provider = search.get("provider");
 
         if (!accessToken || !refreshToken) {
           throw new Error("OAuth tokens were not returned by the server. Please try signing in again.");
@@ -44,11 +49,18 @@ export function AuthSuccess() {
         }
 
         setSession({ accessToken, refreshToken, user });
-        setStatus("Redirecting to your dashboard...");
+        const isLinkFlow = mode === "link";
+        if (isLinkFlow) {
+          toast.success(`${provider === "github" ? "GitHub" : "Google"} account linked successfully`);
+        } else {
+          toast.success("Signed in successfully");
+        }
+
+        setStatus(isLinkFlow ? "Redirecting to your profile..." : "Redirecting to your dashboard...");
 
         window.setTimeout(() => {
           if (active) {
-            navigate("/dashboard", { replace: true });
+            navigate(isLinkFlow ? "/profile" : "/dashboard", { replace: true });
           }
         }, 650);
       } catch (loginError) {
@@ -68,7 +80,7 @@ export function AuthSuccess() {
     return () => {
       active = false;
     };
-  }, [navigate, setSession]);
+  }, [location.search, navigate, setSession]);
 
   return (
     <div className="min-h-screen relative flex items-center justify-center px-6 py-12 overflow-hidden bg-background">

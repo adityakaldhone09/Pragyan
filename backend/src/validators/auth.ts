@@ -25,6 +25,7 @@ export const educationEntrySchema = z.object({
 
 export const profileUpdateSchema = z.object({
   fullName: z.string().trim().min(2, 'Full name must be at least 2 characters').max(100).optional(),
+  avatar: z.string().trim().max(200000).optional().nullable(),
   age: z.coerce.number().int().positive().optional(),
   location: z.string().trim().max(100).optional(),
   phone: z.string().trim().max(30).optional(),

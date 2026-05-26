@@ -37,6 +37,7 @@ model User {
   // Relations
   refreshTokens           RefreshToken[]
   socialAccounts          SocialAccount[]
+  githubRepositories      GithubRepository[]
   assessmentAnswers       AssessmentAnswer[]
   assessmentResults       AssessmentResult[]
   assessmentSessions      AssessmentSession[]
@@ -69,11 +70,38 @@ model SocialAccount {
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   provider      String
   providerId    String
+  email         String?
+  username      String?
   avatar        String?
+  accessToken   String?
+  refreshToken  String?
   emailVerified Boolean  @default(false)
   createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@unique([provider, providerId])
+  @@index([userId])
+}
+
+model GithubRepository {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String   @db.ObjectId
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repoId        String
+  name          String
+  fullName      String
+  htmlUrl       String
+  description   String?
+  language      String?
+  stars         Int      @default(0)
+  forks         Int      @default(0)
+  isPrivate     Boolean  @default(false)
+  defaultBranch String?
+  pushedAt      DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, repoId])
   @@index([userId])
 }
 

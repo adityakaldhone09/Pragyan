@@ -37,6 +37,15 @@ export const getRoadmapRecommendations = asyncHandler(async (req: Request, res: 
   return sendSuccess(res, data, 200, 'Roadmap recommendations fetched successfully');
 });
 
+export const getRoadmapSections = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    return sendError(res, 401, 'Unauthorized');
+  }
+
+  const data = await recommendationEngineService.getRoadmapDomainSections(req.user.id);
+  return sendSuccess(res, data, 200, 'Roadmap sections fetched successfully');
+});
+
 export const getCareerRecommendations = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     return sendError(res, 401, 'Unauthorized');

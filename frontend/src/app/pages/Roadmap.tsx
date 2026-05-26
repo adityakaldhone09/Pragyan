@@ -9,7 +9,7 @@ import { GradientIconWrapper } from "../components/GradientIconWrapper";
 import { AnimatedProgress } from "../components/AnimatedProgress";
 import { roadmapService } from "../../services/roadmapService";
 import { recommendationService } from "../../services/recommendationService";
-import type { RoadmapSummary } from "../../types/api";
+import type { RoadmapDomainSection, RoadmapSummary } from "../../types/api";
 
 export function Roadmap() {
   const [selectedMilestone, setSelectedMilestone] = useState<number | null>(0);
@@ -17,6 +17,7 @@ export function Roadmap() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [roadmapList, setRoadmapList] = useState<RoadmapSummary[]>([]);
   const [selectedRoadmap, setSelectedRoadmap] = useState<RoadmapSummary | null>(null);
+  const [roadmapSections, setRoadmapSections] = useState<RoadmapDomainSection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [aiSuggestion, setAiSuggestion] = useState<string>("Based on your progress, we recommend focusing on the next milestone.");
@@ -29,10 +30,11 @@ export function Roadmap() {
         setLoading(true);
         setError(null);
 
-        const [categoryResponse, roadmapResponse, recommendedResponse] = await Promise.allSettled([
+        const [categoryResponse, roadmapResponse, recommendedResponse, sectionResponse] = await Promise.allSettled([
           roadmapService.getCategories(),
           roadmapService.getAllRoadmaps({ limit: 8 }),
           recommendationService.getRoadmapRecommendations(),
+          recommendationService.getRoadmapSections(),
         ]);
 
         if (!mounted) return;
@@ -49,6 +51,10 @@ export function Roadmap() {
 
         if (recommendedResponse.status === "fulfilled" && recommendedResponse.value?.[0]?.reason) {
           setAiSuggestion(recommendedResponse.value[0].reason);
+        }
+
+        if (sectionResponse?.status === "fulfilled") {
+          setRoadmapSections(sectionResponse.value || []);
         }
       } catch (loadError) {
         if (mounted) {
@@ -118,6 +124,12 @@ export function Roadmap() {
       active = false;
     };
   }, [selectedRoadmap?.id]);
+
+  const handleSectionSelect = (section: RoadmapDomainSection) => {
+    if (section.roadmaps.length) {
+      setSelectedRoadmap(section.roadmaps[0]);
+    }
+  };
 
   const roadmapData = useMemo(() => {
     const roadmap = selectedRoadmap;
@@ -211,6 +223,61 @@ export function Roadmap() {
             </div>
           </GlassCard>
         </motion.div>
+
+        {roadmapSections.length ? (
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.03 }}>
+            <GlassCard glow glowColor="secondary" className="relative overflow-hidden">
+              <div className="relative z-10 space-y-6">
+                <SectionHeader title="AI Career Domains" subtitle="Sections built from the roadmap database and organized by the AI layer." />
+
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {roadmapSections.map((section) => (
+                    <button
+                      key={section.id}
+                      type="button"
+                      onClick={() => handleSectionSelect(section)}
+                      className="group text-left rounded-2xl border border-white/10 bg-background/30 p-5 transition-all hover:-translate-y-1 hover:border-primary/30 hover:bg-primary/10"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">{section.category || "Domain"}</p>
+                          <h3 className="mt-1 text-xl font-semibold text-foreground">{section.title}</h3>
+                        </div>
+                        <div className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                          Priority {section.priority}
+                        </div>
+                      </div>
+
+                      <p className="mt-3 text-sm text-muted-foreground">{section.summary}</p>
+
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {section.focusPoints.slice(0, 3).map((focus) => (
+                          <span key={focus} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-muted-foreground">
+                            {focus}
+                          </span>
+                        ))}
+                      </div>
+
+                      <div className="mt-4 space-y-2">
+                        {section.roadmaps.slice(0, 2).map((roadmap) => (
+                          <div key={roadmap.id} className="rounded-xl border border-white/10 bg-black/10 px-3 py-2">
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="font-medium text-foreground">{roadmap.title}</span>
+                              <span className="text-xs text-primary">{roadmap.level || "All levels"}</span>
+                            </div>
+                          </div>
+                        ))}
+                        {section.roadmaps.length > 2 ? (
+                          <p className="text-xs text-muted-foreground">+{section.roadmaps.length - 2} more roadmaps in this domain</p>
+                        ) : null}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </GlassCard>
+          </motion.div>
+        ) : null}
 
         <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
           <div>

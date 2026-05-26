@@ -19,6 +19,7 @@ import assessmentRoutes from '@/routes/assessment';
 import aiRoutes from '@/routes/ai';
 import recommendationsRoutes from '@/routes/recommendations';
 import adminRoutes from '@/routes/admin';
+import profileRoutes from '@/routes/profile';
 import skillRoutes from '@/routes/skill';
 import taskRoutes from '@/routes/task';
 import careerMatchingRoutes from '@/routes/career-matching';
@@ -125,6 +126,7 @@ app.post('/api/top-career', (_req: Request, res: Response) => {
 
 // API routes
 app.use('/api/auth', authRoutes);
+app.use('/api/profile', profileRoutes);
 app.use('/api/skills', skillRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/roadmaps', roadmapRoutes);

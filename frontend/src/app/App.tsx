@@ -6,6 +6,7 @@ import { AuthSuccess } from "./pages/AuthSuccess";
 import { Navigation } from "./components/Navigation";
 import { AuthProvider } from "@/context/AuthContext";
 import { RequireAuth } from "./components/RequireAuth";
+import { Toaster } from "./components/ui/sonner";
 
 const Dashboard = lazy(() => import("./pages/Dashboard").then((module) => ({ default: module.Dashboard })));
 const Assessment = lazy(() => import("./pages/Assessment").then((module) => ({ default: module.Assessment })));
@@ -20,6 +21,7 @@ export default function App() {
   return (
     <div className="size-full dark">
       <AuthProvider>
+        <Toaster richColors closeButton />
         <BrowserRouter>
           <Navigation />
           <Suspense

@@ -1,8 +1,9 @@
 import { prisma } from '@/lib/prisma';
 import { careerMatchingEngine, type AssessmentAnswers } from '@/services/career-matching';
 import safeParseAIResponse from '@/ai/safeParser';
-import { ExplainSchema } from '@/ai/schemas';
+import { ExplainSchema, RoadmapSectionResponseSchema } from '@/ai/schemas';
 import { generateContent } from '../ai/GeminiProvider';
+import { aiProvider } from '@/services/aiProvider';
 
 export interface RecommendationRequestProfile {
   skills?: string[];
@@ -40,6 +41,16 @@ export interface RecommendedRoadmap {
   matchScore: number;
   reason: string;
   tags: string[];
+}
+
+export interface RoadmapDomainSection {
+  id: string;
+  title: string;
+  summary: string;
+  priority: number;
+  focusPoints: string[];
+  category?: string;
+  roadmaps: RecommendedRoadmap[];
 }
 
 export interface RecommendationResponse {
@@ -95,6 +106,58 @@ export class RecommendationEngineService {
   async getRecommendedRoadmaps(userId: string): Promise<RecommendedRoadmap[]> {
     const recommendation = await this.generateRecommendations(userId);
     return recommendation.roadmapRecommendations;
+  }
+
+  async getRoadmapDomainSections(userId: string): Promise<RoadmapDomainSection[]> {
+    const profile = await this.loadProfileFromLatestAssessment(userId);
+    const roadmapCatalog = await prisma.roadmap.findMany({
+      take: 60,
+      orderBy: { updatedAt: 'desc' },
+      select: {
+        id: true,
+        title: true,
+        category: true,
+        description: true,
+        level: true,
+        tags: true,
+        estimatedHours: true,
+      },
+    });
+
+    if (!roadmapCatalog.length) {
+      return [];
+    }
+
+    const serializedRoadmaps = roadmapCatalog.map((roadmap) => ({
+      id: roadmap.id,
+      title: roadmap.title,
+      category: roadmap.category,
+      description: roadmap.description,
+      level: roadmap.level,
+      estimatedHours: roadmap.estimatedHours,
+      tags: roadmap.tags || [],
+    }));
+
+    const prompt = [
+      'You are Pragyan AI roadmap organizer.',
+      'Group the stored roadmaps into 4 to 6 domain sections for a career-learning dashboard.',
+      'Use only the roadmap IDs from the catalog.',
+      'Return JSON with the structure: { sections: [{ id, title, summary, priority, focusPoints, roadmapIds }] }',
+      `User skills: ${(profile.skills || []).join(', ') || 'None'}`,
+      `User interests: ${(profile.interests || []).join(', ') || 'None'}`,
+      `User personality: ${(profile.personality || []).join(', ') || 'None'}`,
+      `Roadmap catalog: ${JSON.stringify(serializedRoadmaps)}`,
+    ].join('\n\n');
+
+    try {
+      const raw = await aiProvider.generateJsonRaw(prompt, { timeoutMs: 15000 });
+      const parsed = safeParseAIResponse(JSON.parse(raw), RoadmapSectionResponseSchema);
+
+      return this.mapRoadmapSections(parsed.sections, roadmapCatalog);
+    } catch (error) {
+      console.warn('AI roadmap section generation failed; using deterministic fallback:', error);
+      return this.buildRoadmapSectionFallback(roadmapCatalog);
+    }
   }
 
   async getLegacyCareerList(userId: string): Promise<Array<{ career: string; score: number; reason: string }>> {
@@ -450,6 +513,106 @@ export class RecommendationEngineService {
       }));
 
     return scored;
+  }
+
+  private mapRoadmapSections(
+    sections: Array<{
+      id: string;
+      title: string;
+      summary: string;
+      priority: number;
+      focusPoints: string[];
+      roadmapIds: string[];
+    }>,
+    roadmapCatalog: Array<{
+      id: string;
+      title: string;
+      category: string;
+      description: string;
+      level: string;
+      tags: string[];
+      estimatedHours?: number;
+    }>
+  ): RoadmapDomainSection[] {
+    const catalogMap = new Map(roadmapCatalog.map((roadmap) => [roadmap.id, roadmap] as const));
+
+    return sections
+      .map((section) => {
+        const roadmaps = section.roadmapIds
+          .map((roadmapId) => catalogMap.get(roadmapId))
+          .filter(Boolean)
+          .map((roadmap) => ({
+            id: roadmap!.id,
+            title: roadmap!.title,
+            category: roadmap!.category,
+            level: roadmap!.level,
+            matchScore: Math.max(50, Math.min(98, 100 - section.priority * 4)),
+            reason: section.summary,
+            tags: roadmap!.tags || [],
+            description: roadmap!.description,
+            estimatedHours: roadmap!.estimatedHours,
+          }));
+
+        if (!roadmaps.length) {
+          return null;
+        }
+
+        return {
+          id: section.id,
+          title: section.title,
+          summary: section.summary,
+          priority: section.priority,
+          focusPoints: section.focusPoints,
+          category: roadmaps[0]?.category,
+          roadmaps,
+        };
+      })
+      .filter((section): section is RoadmapDomainSection => Boolean(section))
+      .sort((a, b) => a.priority - b.priority);
+  }
+
+  private buildRoadmapSectionFallback(
+    roadmapCatalog: Array<{
+      id: string;
+      title: string;
+      category: string;
+      description: string;
+      level: string;
+      tags: string[];
+      estimatedHours?: number;
+    }>
+  ): RoadmapDomainSection[] {
+    const grouped = new Map<string, typeof roadmapCatalog>();
+
+    roadmapCatalog.forEach((roadmap) => {
+      const key = roadmap.category || 'General';
+      const existing = grouped.get(key) || [];
+      existing.push(roadmap);
+      grouped.set(key, existing);
+    });
+
+    return Array.from(grouped.entries())
+      .slice(0, 6)
+      .map(([category, roadmaps], index) => ({
+        id: `${category.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'general'}-${index}`,
+        title: category,
+        summary: `Practical roadmap picks for the ${category} domain, organized from the current database catalog.`,
+        priority: index + 1,
+        focusPoints: ['Core fundamentals', 'Hands-on projects', 'Interview readiness'],
+        category,
+        roadmaps: roadmaps.slice(0, 4).map((roadmap) => ({
+          id: roadmap.id,
+          title: roadmap.title,
+          category: roadmap.category,
+          level: roadmap.level,
+          matchScore: 75,
+          reason: `Grouped under the ${category} domain based on stored roadmap data.`,
+          tags: roadmap.tags || [],
+          description: roadmap.description,
+          estimatedHours: roadmap.estimatedHours,
+        })),
+      }))
+      .filter((section) => section.roadmaps.length > 0);
   }
 
   private safeJsonParse<T>(value: string, fallback: T): T {

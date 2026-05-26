@@ -5,6 +5,8 @@ import { authService } from '@/services/auth';
 import { sendSuccess, sendError } from '@/utils/response';
 import { RegisterInput, LoginInput, ProfileUpdateInput } from '@/validators/auth';
 import { asyncHandler } from '@/middleware/errorHandler';
+import { isGoogleOAuthConfigured, isGitHubOAuthConfigured } from '@/config/passport';
+import { config } from '@/config/env';
 
 export const register = asyncHandler(async (req: Request, res: Response) => {
   const input: RegisterInput = req.body;
@@ -60,4 +62,18 @@ export const refreshToken = asyncHandler(async (req: Request, res: Response) => 
 
   const result = await authService.refreshAccessToken(token);
   return sendSuccess(res, result, 200, 'Access token refreshed');
+});
+
+export const getAuthConfig = asyncHandler(async (_req: Request, res: Response) => {
+  return sendSuccess(
+    res,
+    {
+      googleEnabled: isGoogleOAuthConfigured(),
+      githubEnabled: isGitHubOAuthConfigured(),
+      googleLoginUrl: `${config.apiBaseUrl}/api/auth/google`,
+      githubLoginUrl: `${config.apiBaseUrl}/api/auth/github`,
+    },
+    200,
+    'Auth config fetched successfully'
+  );
 });

@@ -26,6 +26,7 @@ function getGoogleProfile(profile: GoogleProfile): OAuthUserProfile {
     providerId: profile.id,
     email,
     fullName: resolveFullName(profile.name?.givenName, profile.name?.familyName, profile.displayName, email.split('@')[0]),
+    username: email.split('@')[0] || null,
     avatar: profile.photos?.[0]?.value ?? null,
     emailVerified: true,
   };
@@ -65,6 +66,7 @@ async function getGitHubProfile(accessToken: string, profile: GitHubProfile): Pr
     providerId: profile.id,
     email,
     fullName,
+    username: profile.username || email.split('@')[0] || null,
     avatar,
     emailVerified: true,
   };
@@ -106,7 +108,7 @@ export function configurePassport() {
               profileId: profile.id,
               email: profile.emails?.[0]?.value || null,
             });
-            done(null, getGoogleProfile(profile) as any);
+            done(null, { ...getGoogleProfile(profile), accessToken, refreshToken: _refreshToken || null } as any);
           } catch (err) {
             console.error('[OAUTH VERIFY ERROR]');
             console.error(err);
@@ -128,7 +130,7 @@ export function configurePassport() {
         } as any,
         async (accessToken: string, _refreshToken: string, profile: GitHubProfile, done: (error: Error | null, user?: OAuthUserProfile | false) => void) => {
           try {
-            done(null, await getGitHubProfile(accessToken, profile));
+            done(null, { ...(await getGitHubProfile(accessToken, profile)), accessToken, refreshToken: _refreshToken || null } as any);
           } catch (error) {
             done(error as Error);
           }
