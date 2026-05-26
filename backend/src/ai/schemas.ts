@@ -33,6 +33,19 @@ export const ExplainSchema = z.object({
   targetLevel: z.enum(['junior', 'mid', 'senior']).optional(),
 });
 
+export const RoadmapSectionSchema = z.object({
+  id: z.string().min(1).max(80),
+  title: z.string().min(1).max(120),
+  summary: z.string().min(10).max(500),
+  priority: z.number().int().min(1).max(10),
+  focusPoints: z.array(z.string().min(1)).max(5),
+  roadmapIds: z.array(z.string().min(1)).max(8),
+});
+
+export const RoadmapSectionResponseSchema = z.object({
+  sections: z.array(RoadmapSectionSchema).min(1).max(8),
+});
+
 export const RecommendationCareerSchema = z.object({
   career: z.string().min(1),
   match: z.number().min(0).max(100),
@@ -64,5 +77,7 @@ export default {
   CareerAdjustmentSchema,
   CareerAdjustmentArraySchema,
   ExplainSchema,
+  RoadmapSectionSchema,
+  RoadmapSectionResponseSchema,
   RecommendationSchema,
 };

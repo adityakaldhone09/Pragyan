@@ -74,8 +74,18 @@ function redirectOAuthError(res: Response, message: string, provider?: string) {
   return res.redirect(buildFrontendUrl('/auth', { error: message, provider: provider || '' }));
 }
 
-function redirectOAuthSuccess(res: Response, session: { accessToken: string; refreshToken: string }) {
+function redirectOAuthSuccess(
+  res: Response,
+  session: { accessToken: string; refreshToken: string },
+  options: { mode?: 'login' | 'link'; provider?: 'google' | 'github' } = {}
+) {
   const url = new URL('/auth/success', config.frontendUrl);
+  if (options.mode) {
+    url.searchParams.set('mode', options.mode);
+  }
+  if (options.provider) {
+    url.searchParams.set('provider', options.provider);
+  }
   url.hash = new URLSearchParams({
     accessToken: session.accessToken,
     refreshToken: session.refreshToken,
@@ -147,7 +157,7 @@ function executePassportCallback(strategy: 'google' | 'github') {
             void saveSession(req).catch(() => undefined);
 
             const result = { user: linkedUser, accessToken, refreshToken };
-            return redirectOAuthSuccess(res, result as any);
+            return redirectOAuthSuccess(res, result as any, { mode: 'link', provider: strategy });
           } catch (linkErr: any) {
             console.error('[OAuth:linking:error]', linkErr);
             const message = linkErr instanceof Error ? linkErr.message : 'Unable to link social account';
@@ -163,7 +173,7 @@ function executePassportCallback(strategy: 'google' | 'github') {
           email: profile.email,
           sessionId: req.sessionID,
         });
-        return redirectOAuthSuccess(res, session);
+        return redirectOAuthSuccess(res, session, { mode: 'login', provider: strategy });
       } catch (oauthError) {
         const message = oauthError instanceof Error ? oauthError.message : 'Unable to complete OAuth login';
         return redirectOAuthError(res, message, strategy);

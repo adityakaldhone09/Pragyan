@@ -20,8 +20,11 @@ export interface OAuthUserProfile {
   providerId: string;
   email: string;
   fullName: string;
+  username?: string | null;
   avatar?: string | null;
   emailVerified?: boolean;
+  accessToken?: string | null;
+  refreshToken?: string | null;
 }
 
 export interface AuthResponse {

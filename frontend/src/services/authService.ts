@@ -1,5 +1,5 @@
 import { apiClient, clearStoredAuthSession, setStoredAuthSession } from "./apiClient";
-import type { AuthSession, AuthUser } from "@/types/api";
+import type { AuthSession, AuthUser, ConnectedProvidersResponse } from "@/types/api";
 
 export interface LoginInput {
   email: string;
@@ -16,11 +16,16 @@ export interface RefreshTokenInput {
 
 export interface UpdateProfileInput {
   fullName?: string;
+  avatar?: string | null;
   bio?: string;
   skills?: string[];
   interests?: string[];
   education?: string;
   experience?: string;
+}
+
+export interface LinkProviderResponse {
+  redirectUrl: string;
 }
 
 function normalizeSession(data: AuthSession | { user: AuthUser; accessToken?: string; refreshToken?: string }) {
@@ -65,5 +70,17 @@ export const authService = {
     } finally {
       clearStoredAuthSession();
     }
+  },
+
+  async getLinkedProviders() {
+    return apiClient.get<ConnectedProvidersResponse>("/profile/providers");
+  },
+
+  async startLink(provider: "google" | "github") {
+    return apiClient.post<LinkProviderResponse>(`/profile/link/${provider}`);
+  },
+
+  async unlinkProvider(provider: "google" | "github") {
+    return apiClient.delete<ConnectedProvidersResponse>(`/profile/unlink/${provider}`);
   },
 };

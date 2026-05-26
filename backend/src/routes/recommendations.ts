@@ -10,6 +10,7 @@ const router = Router();
 router.post('/', authenticate, validate(recommendationProfileSchema), recommendationsController.generateRecommendations);
 router.get('/top-career', authenticate, recommendationsController.getTopCareer);
 router.get('/roadmaps', authenticate, recommendationsController.getRoadmapRecommendations);
+router.get('/roadmap-sections', authenticate, recommendationsController.getRoadmapSections);
 router.get('/skills', authenticate, recommendationsController.getSkillRecommendations);
 router.get('/explain/:careerId', authenticate, recommendationsController.explainCareer);
 
