@@ -56,6 +56,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      if (stored.user) {
+        if (active) {
+          persistSession(stored);
+          setStatus("authenticated");
+        }
+
+        void authService.me()
+          .then((user) => {
+            if (!active) {
+              return;
+            }
+
+            persistSession({ ...stored, user });
+          })
+          .catch(() => {
+            if (!active) {
+              return;
+            }
+
+            clearStoredAuthSession();
+            setSession(null);
+            setStatus("anonymous");
+          });
+
+        return;
+      }
+
       try {
         const user = await authService.me();
         if (active) {
