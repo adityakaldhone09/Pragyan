@@ -10,7 +10,7 @@ import { GradientIconWrapper } from "../components/GradientIconWrapper";
 import { AnimatedProgress } from "../components/AnimatedProgress";
 import { roadmapService } from "../../services/roadmapService";
 import { recommendationService } from "../../services/recommendationService";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "@/context/useAuth";
 import { aiService } from "../../services/aiService";
 import type { RoadmapDomainSection, RoadmapLearningDay, RoadmapLearningResource, RoadmapProject, RoadmapSummary, SmartDailyPlanTask } from "../../types/api";
 

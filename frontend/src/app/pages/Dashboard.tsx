@@ -8,7 +8,7 @@ import { GlowButton } from "../components/GlowButton";
 import { SectionHeader } from "../components/SectionHeader";
 import { GradientIconWrapper } from "../components/GradientIconWrapper";
 import { AnimatedProgress } from "../components/AnimatedProgress";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "@/context/useAuth";
 import { recommendationService } from "../../services/recommendationService";
 import { jobsService } from "../../services/jobsService";
 

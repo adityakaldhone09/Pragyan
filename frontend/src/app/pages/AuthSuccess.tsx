@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router";
 import { motion } from "motion/react";
 import { Loader2, ShieldCheck, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context/useAuth";
 import { authService } from "@/services/authService";
 import { clearStoredAuthSession, setStoredAuthSession } from "@/services/apiClient";
 

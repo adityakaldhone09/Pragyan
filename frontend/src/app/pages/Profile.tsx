@@ -24,7 +24,7 @@ import { GlassCard } from "../components/GlassCard";
 import { SectionHeader } from "../components/SectionHeader";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { Badge } from "../components/ui/badge";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "@/context/useAuth";
 import { authService } from "@/services/authService";
 import type { ConnectedProvidersResponse, ProviderConnectionStatus } from "@/types/api";
 

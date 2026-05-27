@@ -5,7 +5,7 @@ import { GlassCard } from '../components/GlassCard';
 import { GlowButton } from '../components/GlowButton';
 import { SectionHeader } from '../components/SectionHeader';
 import { NeuralBackground } from '../components/NeuralBackground';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '@/context/useAuth';
 import { roadmapService } from '../../services/roadmapService';
 import { learningResourceService } from '../../services/learningResourceService';
 import type { LearningResourceDayGroup, LearningResourceHistoryItem, LearningResourceItem, LearningResourceRecommendation, RoadmapSummary } from '../../types/api';

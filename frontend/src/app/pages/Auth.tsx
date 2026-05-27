@@ -5,7 +5,7 @@ import { Mail, Lock, User, ArrowRight, Sparkles } from "lucide-react";
 import { NeuralBackground } from "../components/NeuralBackground";
 import { GlassCard } from "../components/GlassCard";
 import { GlowButton } from "../components/GlowButton";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context/useAuth";
 
 type AuthMode = "login" | "signup" | "forgot";
 
