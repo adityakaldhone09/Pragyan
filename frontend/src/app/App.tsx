@@ -1,12 +1,13 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router";
 import { Suspense, lazy } from "react";
-import { LandingPage } from "./pages/LandingPage";
-import { Auth } from "./pages/Auth";
-import { AuthSuccess } from "./pages/AuthSuccess";
-import { Navigation } from "./components/Navigation";
 import { AuthProvider } from "@/context/AuthContext";
 import { RequireAuth } from "./components/RequireAuth";
 import { Toaster } from "./components/ui/sonner";
+
+const LandingPage = lazy(() => import("./pages/LandingPage").then((module) => ({ default: module.LandingPage })));
+const Auth = lazy(() => import("./pages/Auth").then((module) => ({ default: module.Auth })));
+const AuthSuccess = lazy(() => import("./pages/AuthSuccess").then((module) => ({ default: module.AuthSuccess })));
+const Navigation = lazy(() => import("./components/Navigation").then((module) => ({ default: module.Navigation })));
 
 const Dashboard = lazy(() => import("./pages/Dashboard").then((module) => ({ default: module.Dashboard })));
 const Assessment = lazy(() => import("./pages/Assessment").then((module) => ({ default: module.Assessment })));
@@ -25,10 +26,14 @@ export default function App() {
       <AuthProvider>
         <Toaster richColors closeButton />
         <BrowserRouter>
-          <Navigation />
+          <Suspense
+            fallback={null}
+          >
+            <Navigation />
+          </Suspense>
           <Suspense
             fallback={
-              <div className="min-h-screen flex items-center justify-center px-6 text-center text-muted-foreground">
+              <div className="min-h-screen flex items-center justify-center px-6 text-center text-muted-foreground bg-background">
                 Loading Pragyan experience...
               </div>
             }

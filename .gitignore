@@ -17,6 +17,9 @@ datasets/*.csv
 # Backend env (local only)
 backend/.env
 
+# Coverage artifacts
+backend/coverage/
+
 # Ignore downloaded OAuth credential files
 client_secret_*.json
 **/client_secret_*.json
