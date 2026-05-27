@@ -463,56 +463,47 @@ export class AuthService {
       const emailVerified = profile.emailVerified ?? true;
       const fullName = profile.fullName || profile.email.split('@')[0] || 'Pragyan User';
       const now = new Date();
+      const normalizedEmail = profile.email.trim();
 
-      // First, check for an existing SocialAccount linking this provider id
+      // Resolve the login target by email first so we do not create duplicate users.
       let user = null as any;
-      console.log(Object.keys(prisma));
-      console.log('user:', prisma.user);
-      console.log('socialAccount:', (prisma as any).socialAccount);
-      console.log('Prisma object:', prisma);
-      console.log('prisma.user exists:', !!prisma.user);
-      console.log('prisma.socialAccount exists:', !!(prisma as any).socialAccount);
-      // @ts-ignore
-      console.log('Prisma client version:', (prisma as any)._clientVersion ?? 'unknown');
-      const existingSocial = await (prisma as any).socialAccount.findFirst({
-        where: { provider: profile.provider, providerId: profile.providerId },
+      console.log('[OAuth:loginWithOAuth:lookup]', {
+        provider: profile.provider,
+        providerId: profile.providerId,
+        email: normalizedEmail,
+        sessionId: (globalThis as any)?.sessionID || undefined,
+      });
+      const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+      console.log('[OAuth:loginWithOAuth:existingUser]', {
+        found: Boolean(existingUser),
+        userId: existingUser?.id || null,
+        provider: existingUser?.provider || null,
+        providerId: existingUser?.providerId || null,
       });
 
-      if (existingSocial) {
-        console.log('Prisma object:', prisma);
-        console.log('prisma.user exists:', !!prisma.user);
-        console.log('prisma.socialAccount exists:', !!(prisma as any).socialAccount);
-        // @ts-ignore
-        console.log('Prisma client version:', (prisma as any)._clientVersion ?? 'unknown');
-        user = await prisma.user.findUnique({ where: { id: existingSocial.userId } });
-      }
-
-      if (!user) {
-        console.log('Prisma object:', prisma);
-        console.log('prisma.user exists:', !!prisma.user);
-        console.log('prisma.socialAccount exists:', !!(prisma as any).socialAccount);
-        // @ts-ignore
-        console.log('Prisma client version:', (prisma as any)._clientVersion ?? 'unknown');
-        user = await prisma.user.findUnique({ where: { email: profile.email } });
-      }
-
-      if (user) {
-        user = await this.linkProviderToUser(user.id, {
+      if (existingUser) {
+        console.log('[OAuth:loginWithOAuth:attachExistingUser]', {
+          userId: existingUser.id,
+          email: existingUser.email,
+          hasProviderId: Boolean(existingUser.providerId),
+        });
+        user = await this.attachOAuthAccountToUser(existingUser.id, {
           ...profile,
+          email: normalizedEmail,
           avatar,
           emailVerified,
-          fullName: user.fullName || fullName,
+          fullName: existingUser.fullName || fullName,
         });
       } else {
         const hashedPassword = await hashPassword(randomBytes(32).toString('hex'));
-        console.log('Prisma object:', prisma);
-        console.log('prisma.user exists:', !!prisma.user);
-        console.log('prisma.socialAccount exists:', !!(prisma as any).socialAccount);
-        // @ts-ignore
-        console.log('Prisma client version:', (prisma as any)._clientVersion ?? 'unknown');
+        console.log('[OAuth:loginWithOAuth:createUser]', {
+          email: normalizedEmail,
+          provider: profile.provider,
+          providerId: profile.providerId,
+        });
         const created = await prisma.user.create({
           data: {
-            email: profile.email,
+            email: normalizedEmail,
             fullName,
             password: hashedPassword,
             provider: profile.provider,
@@ -537,8 +528,9 @@ export class AuthService {
           },
         });
 
-        user = await this.linkProviderToUser(created.id, {
+        user = await this.attachOAuthAccountToUser(created.id, {
           ...profile,
+          email: normalizedEmail,
           avatar,
           emailVerified,
           fullName,
@@ -548,18 +540,18 @@ export class AuthService {
       console.log('[OAuth:loginWithOAuth]', {
         provider: profile.provider,
         providerId: profile.providerId,
-        email: profile.email,
-        action: user ? 'updated' : 'created',
+        email: normalizedEmail,
+        action: existingUser ? 'login-existing-user' : 'created-new-user',
         userId: user.id,
       });
 
       let refreshToken = generateRefreshToken(user.id);
       try {
-        console.log('Prisma object:', prisma);
-        console.log('prisma.user exists:', !!prisma.user);
-        console.log('prisma.socialAccount exists:', !!(prisma as any).socialAccount);
-        // @ts-ignore
-        console.log('Prisma client version:', (prisma as any)._clientVersion ?? 'unknown');
+        console.log('[OAuth:loginWithOAuth:refreshTokenCreate]', {
+          userId: user.id,
+          provider: profile.provider,
+          providerId: profile.providerId,
+        });
         await prisma.refreshToken.create({
           data: {
             token: refreshToken,
@@ -632,6 +624,87 @@ export class AuthService {
     }
   }
 
+  private async attachOAuthAccountToUser(userId: string, profile: OAuthUserProfile) {
+    const now = new Date();
+    const existingAccount = await prisma.socialAccount.findUnique({
+      where: {
+        provider_providerId: {
+          provider: profile.provider,
+          providerId: profile.providerId,
+        },
+      },
+    });
+
+    console.log('[OAuth:attachOAuthAccountToUser]', {
+      userId,
+      provider: profile.provider,
+      providerId: profile.providerId,
+      email: profile.email,
+      existingAccountUserId: existingAccount?.userId || null,
+      willReassign: Boolean(existingAccount && existingAccount.userId !== userId),
+    });
+
+    await prisma.socialAccount.upsert({
+      where: {
+        provider_providerId: {
+          provider: profile.provider,
+          providerId: profile.providerId,
+        },
+      },
+      create: {
+        userId,
+        provider: profile.provider,
+        providerId: profile.providerId,
+        email: profile.email,
+        username: profile.username ?? null,
+        avatar: profile.avatar ?? null,
+        accessToken: profile.accessToken ?? null,
+        refreshToken: profile.refreshToken ?? null,
+        emailVerified: profile.emailVerified ?? true,
+      },
+      update: {
+        userId,
+        email: profile.email,
+        username: profile.username ?? null,
+        avatar: profile.avatar ?? null,
+        accessToken: profile.accessToken ?? null,
+        refreshToken: profile.refreshToken ?? null,
+        emailVerified: profile.emailVerified ?? true,
+      },
+    });
+
+    if (profile.provider === 'github') {
+      try {
+        await this.syncGitHubRepositories(userId, profile.accessToken);
+      } catch (syncErr) {
+        console.warn('GitHub repository sync failed during OAuth login:', (syncErr as any)?.message || String(syncErr));
+      }
+    }
+
+    await prisma.user.updateMany({
+      where: { id: userId },
+      data: {
+        provider: profile.provider,
+        providerId: profile.providerId,
+        fullName: profile.fullName || undefined,
+        avatar: profile.avatar ?? undefined,
+        emailVerified: profile.emailVerified ?? undefined,
+        updatedAt: now,
+      } as any,
+    });
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: userProfileSelect,
+    });
+
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+
+    return user;
+  }
+
   async linkProviderToUser(userId: string, profile: OAuthUserProfile) {
     if (!profile.providerId) {
       throw new BadRequestError('OAuth provider did not return a provider identifier');
@@ -648,6 +721,13 @@ export class AuthService {
     });
 
     if (existing && existing.userId !== userId) {
+      console.log('[OAuth:linkProviderToUser:conflict]', {
+        userId,
+        existingUserId: existing.userId,
+        provider: profile.provider,
+        providerId: profile.providerId,
+        email: profile.email,
+      });
       throw new ConflictError('Account already linked with different user');
     }
 

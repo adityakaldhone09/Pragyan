@@ -27,6 +27,7 @@ export const getAllRoadmaps = asyncHandler(async (req: Request, res: Response) =
   const input: SearchRoadmapInput = {
     query: req.query.query as string | undefined,
     category: req.query.category as string | undefined,
+    careerPath: req.query.careerPath as string | undefined,
     level: req.query.level as any | undefined,
     page: parseInt(req.query.page as string) || 1,
     limit: parseInt(req.query.limit as string) || 10,

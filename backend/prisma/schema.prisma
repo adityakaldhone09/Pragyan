@@ -48,6 +48,7 @@ model User {
   dailyLearning           UserDailyLearning[]
   userRoadmaps            UserRoadmap[]
   taskProgress            TaskProgress[]
+  resourceLearningHistory  ResourceLearningHistory[]
   careerMatches           CareerMatch[]
   jobApplications         JobApplication[]
   // AI Memory & Personalization relations
@@ -192,6 +193,66 @@ model Resource {
   @@index([taskId])
 }
 
+model LearningResource {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  resourceKey      String   @unique
+  roadmapId        String?  @db.ObjectId
+  roadmap          Roadmap? @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  roadmapCategory  String
+  roadmapTitle     String?
+  skill            String
+  topic            String
+  topicSlug        String
+  dayNumber        Int?
+  resourceType     String
+  difficulty       String
+  source           String   @default("curated")
+  title            String
+  url              String
+  description      String
+  provider         String
+  estimatedMinutes Int?
+  isOfficial       Boolean  @default(false)
+  aiScore          Float    @default(0)
+  tags             String[]
+  metadata         Json?
+
+  history ResourceLearningHistory[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([roadmapId])
+  @@index([roadmapCategory])
+  @@index([skill])
+  @@index([topic])
+  @@index([resourceType])
+  @@index([difficulty])
+}
+
+model ResourceLearningHistory {
+  id              String           @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String           @db.ObjectId
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resourceId      String           @db.ObjectId
+  resource        LearningResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  roadmapId       String?          @db.ObjectId
+  roadmap         Roadmap?         @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  completed       Boolean          @default(false)
+  progressPercent Int              @default(0)
+  quizScore       Float?
+  notes           String?
+  source          String           @default("manual")
+  completedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, resourceId])
+  @@index([userId])
+  @@index([roadmapId])
+}
+
 model TaskProgress {
   id          String    @id @default(auto()) @map("_id") @db.ObjectId
   userId      String    @db.ObjectId
@@ -215,15 +276,23 @@ model Roadmap {
   id             String   @id @default(auto()) @map("_id") @db.ObjectId
   title          String
   category       String
+  careerPath     String?
+  difficulty     String?
   description    String
   level          String
   duration       String
   icon           String
   estimatedHours Int
+  requiredSkills String[] @default([])
+  learningStructure Json?
+  milestones     Json?
+  progression    Json?
   tags           String[]
 
   // Relations
   weeks             Week[]
+  learningResources LearningResource[]
+  resourceLearningHistory ResourceLearningHistory[]
   userRoadmaps      UserRoadmap[]
   progress          UserProgress[]
   completedRoadmaps CompletedRoadmap[]

@@ -14,6 +14,7 @@ router.post('/personalized-roadmap', authenticate, aiController.getPersonalizedR
 router.get('/status', aiController.getStatus);
 router.get('/telemetry', aiController.getTelemetry);
 router.post('/chat', authenticate, aiController.chatAssistant);
+router.post('/daily-plan', authenticate, aiController.generateDailyPlan);
 router.post('/report', authenticate, aiController.generateAssessmentReport);
 router.post('/roadmap', authenticate, aiController.generateLearningRoadmap);
 

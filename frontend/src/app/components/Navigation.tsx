@@ -1,6 +1,6 @@
 import { motion } from "motion/react";
 import { Link, useLocation } from "react-router";
-import { Home, LayoutDashboard, Brain, Target, TrendingUp, User, Sparkles, LogOut, MessageSquare, Briefcase } from "lucide-react";
+import { Home, LayoutDashboard, Brain, Target, TrendingUp, User, Sparkles, LogOut, MessageSquare, Briefcase, Grid2X2, BookOpen } from "lucide-react";
 import { cn } from "../utils/cn";
 import { useAuth } from "@/context/AuthContext";
 
@@ -10,6 +10,8 @@ const navItems = [
   { path: "/assessment", label: "Assessment", icon: Brain },
   { path: "/results", label: "Results", icon: Target },
   { path: "/roadmap", label: "Roadmap", icon: TrendingUp },
+  { path: "/roadmap-catalog", label: "Catalog", icon: Grid2X2 },
+  { path: "/learning-resources", label: "Resources", icon: BookOpen },
   { path: "/jobs", label: "Jobs", icon: Briefcase },
   { path: "/assistant", label: "Assistant", icon: MessageSquare },
 ];

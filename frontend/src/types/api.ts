@@ -29,6 +29,8 @@ export interface AuthUser {
   interests?: string[];
   education?: string | null;
   experience?: string | null;
+  xp?: number;
+  streak?: number;
   linkedAccounts?: Array<{
     provider: string;
     providerId: string;
@@ -185,18 +187,169 @@ export interface RoadmapMilestone {
   tags?: string[];
 }
 
+export interface RoadmapLearningResource {
+  title: string;
+  provider: string;
+  type: string;
+  url: string;
+  estimatedMinutes?: number;
+}
+
+export interface RoadmapLearningDay {
+  day: number;
+  focus: string;
+  dailyTopics?: string[];
+  tasks: string[];
+  resources?: RoadmapLearningResource[];
+  deliverable: string;
+  xp: number;
+}
+
+export interface RoadmapProjectResource {
+  title: string;
+  url: string;
+  provider: string;
+}
+
+export interface RoadmapProject {
+  id: string;
+  title: string;
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  unlockAfterTopics: string[];
+  estimatedMinutes: number;
+  xpReward: number;
+  skillsUsed: string[];
+  githubIdeas?: string[];
+  resources?: RoadmapProjectResource[];
+}
+
 export interface RoadmapSummary {
   id?: string;
   title: string;
   description?: string;
   category?: string;
+  careerPath?: string;
   level?: string;
+  difficulty?: string;
   duration?: string;
   estimatedHours?: number;
   icon?: string;
   tags?: string[];
   progress?: number;
   milestones?: RoadmapMilestone[];
+  requiredSkills?: string[];
+  learningStructure?: RoadmapLearningDay[];
+  projects?: RoadmapProject[];
+  progression?: Array<{
+    stage: string;
+    title: string;
+    description: string;
+  }>;
+}
+
+export type LearningResourceType = 'youtube' | 'documentation' | 'practice' | 'article' | 'mini-project' | 'certification';
+
+export interface LearningResourceItem {
+  id: string;
+  resourceKey?: string;
+  roadmapId?: string | null;
+  roadmapCategory: string;
+  roadmapTitle?: string | null;
+  skill: string;
+  topic: string;
+  topicSlug?: string;
+  dayNumber?: number | null;
+  resourceType: LearningResourceType | string;
+  difficulty: string;
+  title: string;
+  url: string;
+  description: string;
+  provider: string;
+  estimatedMinutes?: number | null;
+  isOfficial?: boolean;
+  aiScore?: number;
+  aiReason?: string;
+  tags?: string[];
+  metadata?: Record<string, unknown> | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface LearningResourceHistoryItem {
+  id: string;
+  userId: string;
+  resourceId: string;
+  roadmapId?: string | null;
+  completed: boolean;
+  progressPercent: number;
+  quizScore?: number | null;
+  notes?: string | null;
+  source?: string | null;
+  completedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  resource?: LearningResourceItem;
+}
+
+export interface LearningResourceDayGroup {
+  dayNumber: number;
+  focus: string;
+  resources: LearningResourceItem[];
+  completedCount: number;
+  totalCount: number;
+  progress: number;
+}
+
+export interface LearningResourceRecommendation {
+  roadmap: RoadmapSummary;
+  resources: LearningResourceItem[];
+  days: LearningResourceDayGroup[];
+  history: LearningResourceHistoryItem[];
+  profile?: {
+    careerGoal: string;
+    completedTopics: string[];
+    weakSkills: string[];
+    assessmentWeaknesses: string[];
+    assessmentStrengths: string[];
+    skillSignal: string[];
+  };
+  ai: {
+    enabled: boolean;
+    provider: string;
+    used: boolean;
+    summary?: string;
+    adaptiveMode?: 'recovery' | 'growth' | 'stretch';
+    adaptiveReason?: string;
+    difficultyMultiplier?: number;
+    recommendedTaskMix?: {
+      learn: number;
+      practice: number;
+      quiz: number;
+      revision: number;
+      project: number;
+    };
+  };
+  totalTopics: number;
+  topics: string[];
+}
+
+export interface SmartDailyPlanTask {
+  type: 'learn' | 'practice' | 'quiz' | 'revision' | 'project' | string;
+  title: string;
+  minutes: number;
+  details?: string;
+}
+
+export interface SmartDailyPlanResponse {
+  todayGoal: string;
+  estimatedMinutes: number;
+  tasks: SmartDailyPlanTask[];
+  xpReward: number;
+  level: string;
+  rationale?: string;
+  adaptiveMode?: 'recovery' | 'growth' | 'stretch';
+  adaptiveReason?: string;
+  difficultyMultiplier?: number;
 }
 
 export interface RoadmapDomainSection {

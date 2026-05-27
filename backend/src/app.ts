@@ -25,7 +25,12 @@ import taskRoutes from '@/routes/task';
 import careerMatchingRoutes from '@/routes/career-matching';
 import careersRoutes from '@/routes/careers';
 import jobsRoutes from '@/routes/jobs';
+import learningResourcesRoutes from '@/routes/learningResources';
 import { redisRateLimiter } from '@/middleware/redisRateLimiter';
+import debugRoutes from '@/routes/debug';
+import adminDevRoutes from '@/routes/adminDev';
+import path from 'path';
+import fs from 'fs';
 
 const app: Application = express();
 
@@ -138,7 +143,51 @@ app.use('/api/recommendations', recommendationsRoutes);
 app.use('/api/career-matching', careerMatchingRoutes);
 app.use('/api/careers', careersRoutes);
 app.use('/api/jobs', jobsRoutes);
+app.use('/api/learning-resources', learningResourcesRoutes);
 app.use('/api/admin', adminRoutes);
+
+// Development-only debug routes (do not expose in production)
+if (isDevelopment) {
+  app.use('/api/debug', debugRoutes);
+  // Dev-only admin summary (no auth) for quick checks
+  // Mounted under /api/dev/admin to avoid colliding with authenticated /api/admin
+  app.use('/api/dev/admin', adminDevRoutes);
+}
+
+// Serve frontend production build if present (useful for local demos)
+try {
+  const frontendDist = path.resolve(__dirname, '../../frontend/dist');
+  if (fs.existsSync(frontendDist)) {
+    app.use(express.static(frontendDist));
+
+    // Serve index.html for non-API routes (SPA fallback)
+    app.get('*', (req, res, next) => {
+      if (req.path.startsWith('/api/')) return next();
+      res.sendFile(path.join(frontendDist, 'index.html'));
+    });
+    console.log('[Static] Serving frontend from', frontendDist);
+  }
+} catch (err) {
+  // ignore static serving errors
+}
+
+// Explicit assets handler to avoid other middleware returning JSON for static files
+try {
+  const frontendDist = path.resolve(__dirname, '../../frontend/dist');
+  const assetsRoot = path.join(frontendDist, 'assets');
+  if (fs.existsSync(assetsRoot)) {
+    app.get('/assets/*', (req, res) => {
+      const rel = req.path.replace(/^[\/]+/, '');
+      const file = path.join(frontendDist, rel);
+      if (fs.existsSync(file)) {
+        return res.sendFile(file);
+      }
+      return res.status(404).end();
+    });
+  }
+} catch (_) {
+  // noop
+}
 
 // ============ 404 HANDLING ============
 

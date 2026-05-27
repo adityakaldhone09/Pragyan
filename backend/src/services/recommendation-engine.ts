@@ -536,39 +536,40 @@ export class RecommendationEngineService {
   ): RoadmapDomainSection[] {
     const catalogMap = new Map(roadmapCatalog.map((roadmap) => [roadmap.id, roadmap] as const));
 
-    return sections
-      .map((section) => {
-        const roadmaps = section.roadmapIds
-          .map((roadmapId) => catalogMap.get(roadmapId))
-          .filter(Boolean)
-          .map((roadmap) => ({
-            id: roadmap!.id,
-            title: roadmap!.title,
-            category: roadmap!.category,
-            level: roadmap!.level,
-            matchScore: Math.max(50, Math.min(98, 100 - section.priority * 4)),
-            reason: section.summary,
-            tags: roadmap!.tags || [],
-            description: roadmap!.description,
-            estimatedHours: roadmap!.estimatedHours,
-          }));
+    const mappedSections = sections.reduce<RoadmapDomainSection[]>((accumulator, section) => {
+      const roadmaps = section.roadmapIds
+        .map((roadmapId) => catalogMap.get(roadmapId))
+        .filter((roadmap): roadmap is (typeof roadmapCatalog)[number] => Boolean(roadmap))
+        .map((roadmap) => ({
+          id: roadmap.id,
+          title: roadmap.title,
+          category: roadmap.category,
+          level: roadmap.level,
+          matchScore: Math.max(50, Math.min(98, 100 - section.priority * 4)),
+          reason: section.summary,
+          tags: roadmap.tags || [],
+          description: roadmap.description,
+          estimatedHours: roadmap.estimatedHours,
+        }));
 
-        if (!roadmaps.length) {
-          return null;
-        }
+      if (!roadmaps.length) {
+        return accumulator;
+      }
 
-        return {
-          id: section.id,
-          title: section.title,
-          summary: section.summary,
-          priority: section.priority,
-          focusPoints: section.focusPoints,
-          category: roadmaps[0]?.category,
-          roadmaps,
-        };
-      })
-      .filter((section): section is RoadmapDomainSection => Boolean(section))
-      .sort((a, b) => a.priority - b.priority);
+      accumulator.push({
+        id: section.id,
+        title: section.title,
+        summary: section.summary,
+        priority: section.priority,
+        focusPoints: section.focusPoints,
+        category: roadmaps[0].category,
+        roadmaps,
+      });
+
+      return accumulator;
+    }, []);
+
+    return mappedSections.sort((a, b) => a.priority - b.priority);
   }
 
   private buildRoadmapSectionFallback(

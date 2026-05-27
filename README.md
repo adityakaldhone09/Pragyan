@@ -46,6 +46,28 @@
 
 ---
 
+## 🔎 Current Status
+
+- **What Pragyan does now:** Adaptive assessment engine, intelligent career matching, structured learning roadmaps, job listings, progress tracking, and an AI chat assistant (Gemini) for personalized guidance.
+- **Implemented:** JWT auth, Prisma + MongoDB schema, seeding scripts in `backend/scripts`, core API endpoints, frontend React app with responsive UI.
+- **In development / TODO:** polish production deployment (CI/CD, Docker compose for full stack), refine AI prompts and rate-limits, add more job integrations and mobile support.
+- **Active branch:** `refined-frontend-bacckend` (local development ongoing).
+- **Run locally (quick):**
+
+```bash
+cd backend
+npm install
+npx prisma generate
+npm run dev
+
+# In a second terminal
+cd frontend
+pnpm install
+npm run dev
+```
+
+---
+
 ## ✨ Key Features
 
 ### Core Capabilities
@@ -520,5 +542,5 @@ MIT License - see LICENSE file for details.
 
 **Made with ❤️ for Career Guidance**
 
-Latest Update: May 2026
+Latest Update: May 26, 2026
   

@@ -12,6 +12,8 @@ const Dashboard = lazy(() => import("./pages/Dashboard").then((module) => ({ def
 const Assessment = lazy(() => import("./pages/Assessment").then((module) => ({ default: module.Assessment })));
 const Results = lazy(() => import("./pages/Results").then((module) => ({ default: module.Results })));
 const Roadmap = lazy(() => import("./pages/Roadmap").then((module) => ({ default: module.Roadmap })));
+const RoadmapCatalog = lazy(() => import("./pages/RoadmapCatalog").then((module) => ({ default: module.RoadmapCatalog })));
+const LearningResources = lazy(() => import("./pages/LearningResources").then((module) => ({ default: module.LearningResources })));
 const DetailedAnalysis = lazy(() => import("./pages/DetailedAnalysis").then((module) => ({ default: module.DetailedAnalysis })));
 const Jobs = lazy(() => import("./pages/Jobs").then((module) => ({ default: module.Jobs })));
 const Assistant = lazy(() => import("./pages/Assistant").then((module) => ({ default: module.Assistant })));
@@ -72,6 +74,20 @@ export default function App() {
                 element={
                   <RequireAuth>
                     <Roadmap />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/roadmap-catalog"
+                element={
+                  <RoadmapCatalog />
+                }
+              />
+              <Route
+                path="/learning-resources"
+                element={
+                  <RequireAuth>
+                    <LearningResources />
                   </RequireAuth>
                 }
               />

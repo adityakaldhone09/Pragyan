@@ -176,6 +176,12 @@ export function Dashboard() {
                   <ArrowRight className="w-4 h-4 ml-2 inline" />
                 </GlowButton>
               </Link>
+              <Link to="/roadmap-catalog" className="block">
+                <GlowButton variant="primary" className="w-full mt-3">
+                  Browse Catalog
+                  <ArrowRight className="w-4 h-4 ml-2 inline" />
+                </GlowButton>
+              </Link>
             </GlassCard>
           </motion.div>
 
