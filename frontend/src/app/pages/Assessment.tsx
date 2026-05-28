@@ -88,10 +88,28 @@ export function Assessment() {
       if (response.shouldSubmit || !response.nextQuestion) {
         const submitted = await assessmentService.submitAdaptiveAssessment(sessionId);
         setResultId(submitted.resultId);
-        navigate('/results', { state: { adaptiveResult: submitted } });
+
+        const summary = submitted.summary;
+        const topMatch = summary?.topMatch || submitted.topMatches?.[0] || null;
+
+        const llmRecommendation = await assessmentService.getLLMCareerRecommendation({
+          interests: summary?.suggestedCareers || submitted.topMatches?.map((match) => match.career) || [],
+          strengths: summary?.strengths || [],
+          weaknesses: summary?.weaknesses || [],
+          skills: topMatch?.skillGaps || [],
+          quizScore: submitted.confidence || summary?.confidence || confidence || 70,
+          learningHours: 2,
+        });
+
+        navigate('/results', {
+          state: {
+            adaptiveResult: submitted,
+            llmRecommendation,
+          },
+        });
+
         return;
       }
-
       setCurrentQuestion(response.nextQuestion);
       setQuestionHistory((history) => [...history, response.nextQuestion as AssessmentQuestion]);
       setSelectedAnswer(null);

@@ -42,5 +42,9 @@ router.post(
   '/recommend-career',
   aiController.getPythonCareerRecommendation
 );
+router.post(
+  '/llm-career-recommendation',
+  aiController.getLLMCareerRecommendation
+);
 
 export default router;

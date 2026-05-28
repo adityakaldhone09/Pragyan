@@ -9,11 +9,12 @@ import { GlassCard } from "../components/GlassCard";
 import { GlowButton } from "../components/GlowButton";
 import { SectionHeader } from "../components/SectionHeader";
 import { assessmentService } from "../../services/assessmentService";
-import type { AdaptiveCareerMatch, AdaptiveSubmitResponse } from "../../types/api";
+import type { AdaptiveCareerMatch, AdaptiveSubmitResponse, LLMCareerRecommendation } from "../../types/api";
 import { toCareerSlug } from "../utils/careerSlug";
 
 type LocationState = {
   adaptiveResult?: AdaptiveSubmitResponse;
+  llmRecommendation?: LLMCareerRecommendation | { data?: LLMCareerRecommendation };
 };
 
 const TRAIT_LABELS = [
@@ -40,7 +41,7 @@ function deriveRadarData(summary: AdaptiveSubmitResponse["summary"]) {
 
 export function Results() {
   const location = useLocation();
-  const { adaptiveResult } = (location.state || {}) as LocationState;
+  const { adaptiveResult, llmRecommendation } = (location.state || {}) as LocationState;
   const [result, setResult] = useState<AdaptiveSubmitResponse | null>(adaptiveResult || null);
 
   useEffect(() => {
@@ -82,6 +83,10 @@ export function Results() {
   const secondary = result?.summary?.secondaryMatches || result?.topMatches?.slice(1) || [];
   const radarData = useMemo(() => deriveRadarData(result?.summary as AdaptiveSubmitResponse["summary"]), [result?.summary]);
   const confidence = Math.max(0, Math.min(100, Number(result?.confidence || result?.summary?.confidence || 0)));
+  const normalizedLLMRecommendation = llmRecommendation && "data" in llmRecommendation
+    ? llmRecommendation.data
+    : llmRecommendation;
+  const aiCareer = normalizedLLMRecommendation?.topCareers?.[0];
 
   const skillHeatmap = useMemo(() => {
     const source = (topMatch?.skillGaps || []).slice(0, 6);
@@ -230,6 +235,56 @@ export function Results() {
             </div>
           </div>
         </GlassCard>
+
+        {aiCareer && (
+          <GlassCard glow glowColor="primary">
+            <div className="flex items-center gap-3 mb-6">
+              <Brain className="w-6 h-6 text-cyan-400" />
+              <div>
+                <h2 className="text-2xl font-bold">LLM Career Intelligence</h2>
+                <p className="text-sm text-muted-foreground">AI-powered explainable recommendation</p>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <p className="text-sm text-muted-foreground">Recommended Career</p>
+                <h3 className="text-3xl font-bold text-cyan-400 mt-1">{aiCareer.career}</h3>
+
+                <div className="mt-3 inline-flex items-center rounded-full bg-cyan-500/10 px-4 py-2 border border-cyan-500/20">
+                  <TrendingUp className="w-4 h-4 mr-2 text-cyan-400" />
+                  <span className="font-semibold">{aiCareer.confidence}% confidence</span>
+                </div>
+
+                <p className="mt-5 text-sm text-muted-foreground leading-relaxed">{aiCareer.reason}</p>
+              </div>
+
+              <div className="space-y-5">
+                <div>
+                  <h4 className="font-semibold text-red-400 mb-2">Missing Skills</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {aiCareer.missingSkills?.map((skill) => (
+                      <span key={skill} className="rounded-full border border-red-500/20 bg-red-500/10 px-3 py-1 text-sm">
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold text-green-400 mb-2">Suggested Roadmap</h4>
+                  <ol className="space-y-2">
+                    {aiCareer.roadmap?.map((step, index) => (
+                      <li key={step} className="rounded-xl bg-white/5 p-3 border border-white/10">
+                        {index + 1}. {step}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              </div>
+            </div>
+          </GlassCard>
+        )}
 
         <div className="grid lg:grid-cols-2 gap-6">
           <GlassCard glow glowColor="secondary">

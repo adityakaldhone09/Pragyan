@@ -7,6 +7,7 @@ import type {
   AdaptiveAnswerResponse,
   AdaptiveStartResponse,
   AdaptiveSubmitResponse,
+  LLMCareerRecommendation,
 } from "@/types/api";
 
 export interface SaveAssessmentInput {
@@ -54,6 +55,21 @@ export const assessmentService = {
 
   submitAdaptiveAssessment(sessionId: string) {
     return apiClient.post<AdaptiveSubmitResponse>("/assessment/submit", { sessionId });
+  },
+
+  getLLMCareerRecommendation(payload: {
+    interests: string[];
+    strengths: string[];
+    weaknesses: string[];
+    skills: string[];
+    quizScore: number;
+    learningHours: number;
+  }) {
+    return apiClient.post<LLMCareerRecommendation>(
+      "/ai/llm-career-recommendation",
+      payload,
+      { timeoutMs: 30_000 }
+    );
   },
 
   getAdaptiveResult(resultId: string) {

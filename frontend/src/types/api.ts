@@ -579,3 +579,17 @@ export interface TelemetrySnapshot {
   providerFailures: Record<string, number>;
   providerServiceUnavailable: Record<string, number>;
 }
+
+export interface LLMCareerRecommendation {
+  topCareers: Array<{
+    career: string;
+    confidence: number;
+    reason: string;
+    requiredSkills: string[];
+    missingSkills: string[];
+    roadmap: string[];
+  }>;
+  summary: string;
+  provider?: string;
+  fallbackUsed?: boolean;
+}
