@@ -247,6 +247,181 @@ export interface RoadmapSummary {
   }>;
 }
 
+export type JourneyAdaptiveMode = 'recovery' | 'growth' | 'stretch';
+
+export interface JourneyTask {
+  id: string;
+  title: string;
+  type: 'learn' | 'practice' | 'quiz' | 'project' | 'revision' | string;
+  estimatedMinutes: number;
+  xp: number;
+  completed: boolean;
+  details?: string;
+}
+
+export interface JourneyDay {
+  dayNumber: number;
+  title: string;
+  focus: string;
+  topics: string[];
+  tasks: JourneyTask[];
+  resources: Array<{
+    title: string;
+    provider?: string;
+    type?: string;
+    url?: string;
+    estimatedMinutes?: number;
+  }>;
+  estimatedMinutes: number;
+  xpReward: number;
+  completed: boolean;
+}
+
+export interface JourneySkillProgress {
+  skill: string;
+  mastery: number;
+  completed: boolean;
+  weak: boolean;
+}
+
+export interface JourneyJobEligibility {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  salary: string | null;
+  jobType: string;
+  role: string;
+  requiredSkills: string[];
+  missingSkills: string[];
+  matchPercentage: number;
+  eligible: boolean;
+  source: string;
+  applyLink: string;
+}
+
+export interface PlacementReadiness {
+  score: number;
+  label: string;
+  completedSkills: string[];
+  missingSkills: string[];
+  eligibleJobs: number;
+  strengths?: string[];
+  weakAreas?: string[];
+  recommendedNextStep?: string;
+  factors?: Array<{
+    label: string;
+    score: number;
+    weight: number;
+    note: string;
+  }>;
+}
+
+export interface DailyAnalyticsTrendPoint {
+  date: string;
+  readinessScore: number;
+  xp: number;
+  studyHours: number;
+  completedTasks: number;
+  streak: number;
+  eligibleJobs: number;
+  weakSkillCount: number;
+}
+
+export interface JourneyPayload {
+  careerSlug: string;
+  resolvedCareerSlug: string;
+  careerTitle: string;
+  roadmapId: string | null;
+  roadmapTitle: string;
+  duration: string;
+  industryDemand: string;
+  salaryRange: string;
+  completionPercentage: number;
+  xp: number;
+  streak: number;
+  currentDay: number;
+  adaptiveMode: JourneyAdaptiveMode;
+  adaptiveReason: string;
+  weakSkills: string[];
+  completedSkills: string[];
+  nextAction: string;
+  mentorContext: {
+    career: string;
+    roadmapTitle: string;
+    currentDay: string;
+    completedSkills: string[];
+    weakSkills: string[];
+    mentorLevel: string;
+    learningLevel: string;
+  };
+  roadmapDays: JourneyDay[];
+  skillProgress: JourneySkillProgress[];
+  aiInsights: string[];
+  eligibleJobs: JourneyJobEligibility[];
+  placementReadiness: PlacementReadiness;
+  topCareerMatch: number;
+  currentPlan: {
+    todayGoal: string;
+    estimatedMinutes: number;
+    tasks: Array<{ type: string; title: string; minutes: number; details?: string }>;
+    xpReward: number;
+    level: string;
+    adaptiveMode: JourneyAdaptiveMode;
+    adaptiveReason: string;
+    difficultyMultiplier: number;
+  };
+}
+
+export interface JourneyDashboardSnapshot {
+  currentJourney: JourneyPayload | null;
+  currentDay: number;
+  xp: number;
+  streak: number;
+  aiInsights: string[];
+  weakSkills: string[];
+  nextAction: string;
+  eligibleJobs: JourneyJobEligibility[];
+  placementReadiness: PlacementReadiness | null;
+  trend?: DailyAnalyticsTrendPoint[];
+}
+
+export interface MentorContextSnapshot {
+  career?: string;
+  roadmap?: string;
+  currentDay?: string;
+  weakSkills?: string[];
+  completedSkills?: string[];
+  adaptiveMode?: string;
+  currentGoal?: string;
+  placementReadiness?: number;
+  learningStyle?: string;
+}
+
+export interface MentorMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt: string;
+  contextSnapshot?: MentorContextSnapshot | null;
+}
+
+export interface MentorConversation {
+  conversationId: string;
+  title: string;
+  journeyId?: string | null;
+  messages: MentorMessage[];
+}
+
+export interface MentorChatResponse {
+  conversationId: string;
+  title: string;
+  reply: string;
+  provider?: string;
+  fallbackUsed?: boolean;
+  userMessageId?: string;
+}
+
 export type LearningResourceType = 'youtube' | 'documentation' | 'practice' | 'article' | 'mini-project' | 'certification';
 
 export interface LearningResourceItem {

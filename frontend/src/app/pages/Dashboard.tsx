@@ -7,10 +7,14 @@ import { GlassCard } from "../components/GlassCard";
 import { GlowButton } from "../components/GlowButton";
 import { SectionHeader } from "../components/SectionHeader";
 import { GradientIconWrapper } from "../components/GradientIconWrapper";
-import { AnimatedProgress } from "../components/AnimatedProgress";
+import { SkillHeatmap } from "../components/SkillHeatmap";
+import { AIForecastWidget, PlacementReadinessRing, ReadinessBreakdownCard, SkillRadarPanel, WeeklyMomentumChart } from "../components/dashboard/PlacementIntelligence";
 import { useAuth } from "@/context/useAuth";
 import { recommendationService } from "../../services/recommendationService";
 import { jobsService } from "../../services/jobsService";
+import { journeyService } from "../../services/journeyService";
+import type { JourneyDashboardSnapshot } from "@/types/api";
+import { Skeleton } from "../components/ui/skeleton";
 
 export function Dashboard() {
   const { user } = useAuth();
@@ -18,17 +22,21 @@ export function Dashboard() {
   const [skillRecommendations, setSkillRecommendations] = useState<Array<{ skill: string; confidence: number; reason: string }>>([]);
   const [roadmaps, setRoadmaps] = useState<Array<{ id: string; title: string; category: string; level: string; matchScore: number; reason: string; tags: string[] }>>([]);
   const [jobPreview, setJobPreview] = useState<Array<{ id: string; title: string; company: string; location: string; matchScore: number }>>([]);
+  const [journeySnapshot, setJourneySnapshot] = useState<JourneyDashboardSnapshot | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
 
     async function loadDashboard() {
+      setIsLoading(true);
       try {
-        const [careerResponse, skillResponse, roadmapResponse, jobsResponse] = await Promise.allSettled([
+        const [careerResponse, skillResponse, roadmapResponse, jobsResponse, journeyResponse] = await Promise.allSettled([
           recommendationService.getTopCareer(),
           recommendationService.getSkillRecommendations(),
           recommendationService.getRoadmapRecommendations(),
           jobsService.getJobs(),
+          journeyService.getDashboardJourney(),
         ]);
 
         if (!mounted) return;
@@ -48,8 +56,16 @@ export function Dashboard() {
         if (jobsResponse.status === "fulfilled") {
           setJobPreview(jobsResponse.value.recommendedJobs?.slice(0, 3) || []);
         }
+
+        if (journeyResponse.status === "fulfilled") {
+          setJourneySnapshot(journeyResponse.value);
+        }
       } catch {
         // dashboard gracefully falls back to local identity data
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
     }
 
@@ -65,6 +81,27 @@ export function Dashboard() {
   const greeting = currentTime < 12 ? "Good morning" : currentTime < 18 ? "Good afternoon" : "Good evening";
 
   const roadmapPreview = useMemo(() => roadmaps.slice(0, 3), [roadmaps]);
+  const readinessScore = journeySnapshot?.placementReadiness?.score || journeySnapshot?.currentJourney?.placementReadiness?.score || 0;
+  const unlockedOpportunities = (journeySnapshot?.eligibleJobs?.filter((job) => job.eligible).length || 0) + jobPreview.length;
+  const momentumLabel = useMemo(() => {
+    const points = journeySnapshot?.trend || [];
+    if (points.length < 2) return "Stable";
+    const recent = points.slice(-4).map((p) => p.readinessScore);
+    const deltas = recent.slice(1).map((value, i) => value - recent[i]);
+    const avg = deltas.length ? deltas.reduce((sum, v) => sum + v, 0) / deltas.length : 0;
+    if (avg >= 2) return "Accelerating";
+    if (avg >= 0.5) return "Growing";
+    if (avg <= -1) return "Cooling";
+    return "Stable";
+  }, [journeySnapshot]);
+  const weakSkillCells = useMemo(
+    () =>
+      (journeySnapshot?.weakSkills || []).slice(0, 6).map((skill, index) => ({
+        label: skill,
+        value: Math.max(30, 96 - index * 12),
+      })),
+    [journeySnapshot]
+  );
 
   return (
     <div className="min-h-screen relative pb-20 pt-20">
@@ -83,7 +120,11 @@ export function Dashboard() {
                 <h1 className="text-3xl md:text-4xl font-bold">
                   {greeting}, {userName}!
                 </h1>
-                <p className="text-lg text-muted-foreground">Your AI-powered career journey continues</p>
+                {isLoading ? (
+                  <Skeleton className="h-5 w-72" />
+                ) : (
+                  <p className="text-lg text-muted-foreground">Placement Readiness: {readinessScore}% • {unlockedOpportunities} opportunities unlocked • Momentum {momentumLabel}</p>
+                )}
               </div>
               <GradientIconWrapper size="lg" gradient="purple" glow>
                 <Brain className="w-12 h-12 text-white" />
@@ -121,7 +162,7 @@ export function Dashboard() {
 
         <div className="grid md:grid-cols-4 gap-6">
           {[
-            { icon: Flame, label: "Learning Streak", value: "12 Days", color: "pink" as const, subtext: "+2 from last week" },
+            { icon: Flame, label: "Learning Streak", value: `${journeySnapshot?.streak || 0} Days`, color: "pink" as const, subtext: "Daily consistency tracker" },
             { icon: Trophy, label: "Top Career Match", value: `${topCareer?.match || 0}%`, color: "purple" as const, subtext: topCareer?.career || "Awaiting assessment" },
             { icon: Target, label: "Active Roadmaps", value: String(roadmaps.length || 0), color: "cyan" as const, subtext: roadmaps[0]?.title || "Dynamic roadmap feed" },
             { icon: Award, label: "Skill Recommendations", value: String(skillRecommendations.length || 0), color: "blue" as const, subtext: skillRecommendations[0]?.skill || "AI-assisted insight" },
@@ -131,8 +172,17 @@ export function Dashboard() {
                 <div className="flex items-start justify-between">
                   <div className="space-y-2">
                     <p className="text-sm text-muted-foreground">{stat.label}</p>
-                    <p className="text-2xl font-bold">{stat.value}</p>
-                    <p className="text-xs text-muted-foreground">{stat.subtext}</p>
+                    {isLoading ? (
+                      <>
+                        <Skeleton className="h-8 w-24" />
+                        <Skeleton className="h-3 w-32" />
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-2xl font-bold">{stat.value}</p>
+                        <p className="text-xs text-muted-foreground">{stat.subtext}</p>
+                      </>
+                    )}
                   </div>
                   <GradientIconWrapper size="sm" gradient={stat.color}>
                     <stat.icon className="w-5 h-5 text-white" />
@@ -142,6 +192,111 @@ export function Dashboard() {
             </motion.div>
           ))}
         </div>
+
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.2 }}>
+          <GlassCard glow glowColor="secondary" className="relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-secondary/10 via-primary/5 to-accent/10" />
+            <div className="relative z-10 grid gap-6 lg:grid-cols-[1.1fr_0.9fr] items-center">
+              <div className="space-y-4">
+                <div className="inline-flex items-center gap-2 rounded-full border border-secondary/30 bg-secondary/10 px-4 py-2 text-sm text-secondary">
+                  <Target className="w-4 h-4" />
+                  Career Operating System
+                </div>
+                <div>
+                  <h3 className="text-2xl font-semibold">Current Journey</h3>
+                  <p className="mt-2 text-muted-foreground">
+                    {journeySnapshot?.currentJourney?.careerTitle || topCareer?.career || "Your AI journey is ready"}
+                  </p>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {journeySnapshot?.nextAction || "Start an assessment to unlock a dynamic journey, daily roadmap, mentor guidance, and job eligibility."}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-muted-foreground">
+                    Day {journeySnapshot?.currentDay || 1}
+                  </span>
+                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-muted-foreground">
+                    XP {journeySnapshot?.xp || 0}
+                  </span>
+                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-muted-foreground">
+                    Streak {journeySnapshot?.streak || 0} days
+                  </span>
+                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-muted-foreground">
+                    Readiness {journeySnapshot?.placementReadiness?.score || 0}%
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-white/10 bg-background/35 p-4">
+                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Weak skills</p>
+                  <p className="mt-2 font-medium text-sm">
+                    {journeySnapshot?.weakSkills?.slice(0, 3).join(", ") || "Assessment will populate this"}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-background/35 p-4">
+                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Eligible jobs</p>
+                  <p className="mt-2 font-medium text-sm">
+                    {journeySnapshot?.eligibleJobs?.[0]?.title || "Eligibility appears after the journey begins"}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-background/35 p-4 sm:col-span-2">
+                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">AI insight</p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {journeySnapshot?.aiInsights?.[0] || "Your dashboard will learn from progress, streaks, and weak skills."}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-3 lg:col-span-2">
+                <Link to={`/journey/${journeySnapshot?.currentJourney?.resolvedCareerSlug || "career-journey"}`}>
+                  <GlowButton variant="primary">Open Journey</GlowButton>
+                </Link>
+                <Link to="/opportunities">
+                  <GlowButton variant="secondary">View Opportunities</GlowButton>
+                </Link>
+              </div>
+            </div>
+          </GlassCard>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.5 }}>
+          <div className="grid gap-6 xl:grid-cols-[0.98fr_1.02fr]">
+            <PlacementReadinessRing
+              readiness={journeySnapshot?.placementReadiness || journeySnapshot?.currentJourney?.placementReadiness || null}
+              nextAction={journeySnapshot?.nextAction || journeySnapshot?.currentJourney?.nextAction}
+            />
+            <WeeklyMomentumChart snapshot={journeySnapshot} />
+          </div>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.54 }}>
+          <AIForecastWidget snapshot={journeySnapshot} />
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.58 }}>
+          <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+            <ReadinessBreakdownCard
+              readiness={journeySnapshot?.placementReadiness || journeySnapshot?.currentJourney?.placementReadiness || null}
+              nextAction={journeySnapshot?.nextAction || journeySnapshot?.currentJourney?.nextAction}
+            />
+            <SkillRadarPanel snapshot={journeySnapshot} />
+          </div>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.64 }}>
+          <GlassCard glow glowColor="pink" className="relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-pink/10 via-transparent to-secondary/10" />
+            <div className="relative z-10 space-y-4">
+              <SectionHeader title="Weak Skill Heatmap" subtitle="Priority gaps ranked by estimated placement impact" />
+              <SkillHeatmap data={weakSkillCells.length ? weakSkillCells : [{ label: "Assessment pending", value: 40 }]} columns={2} />
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-muted-foreground">
+                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Why it matters</p>
+                <p className="mt-2">This turns your weakest skills into a visual priority map instead of a text-only list.</p>
+              </div>
+            </div>
+          </GlassCard>
+        </motion.div>
 
         <div className="grid md:grid-cols-2 gap-6">
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6, delay: 0.3 }}>
@@ -261,58 +416,6 @@ export function Dashboard() {
           </div>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.5 }}>
-          <GlassCard glow glowColor="accent">
-            <div className="flex items-center gap-3 mb-6">
-              <GradientIconWrapper size="md" gradient="blue" glow>
-                <TrendingUp className="w-6 h-6 text-white" />
-              </GradientIconWrapper>
-              <h3 className="text-xl font-semibold">This Week's Progress</h3>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-6">
-              <div className="space-y-4">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-muted-foreground">Skill Recommendations</span>
-                    <span className="text-sm font-medium">{skillRecommendations.length}/6</span>
-                  </div>
-                  <AnimatedProgress value={skillRecommendations.length} max={6} showLabel={false} />
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-muted-foreground">Roadmap Suggestions</span>
-                    <span className="text-sm font-medium">{roadmaps.length}/5</span>
-                  </div>
-                  <AnimatedProgress value={Math.min(roadmaps.length, 5)} max={5} showLabel={false} />
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-muted-foreground">Job Matches</span>
-                    <span className="text-sm font-medium">{jobPreview.length}/3</span>
-                  </div>
-                  <AnimatedProgress value={jobPreview.length} max={3} showLabel={false} />
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-muted-foreground">Career Match</span>
-                    <span className="text-sm font-medium">{topCareer?.match || 0}%</span>
-                  </div>
-                  <AnimatedProgress value={topCareer?.match || 0} max={100} showLabel={false} />
-                </div>
-              </div>
-
-              <div className="flex flex-col justify-center items-center text-center p-4 rounded-lg bg-gradient-to-br from-accent/10 to-transparent border border-accent/20">
-                <div className="text-4xl font-bold text-accent mb-1">{topCareer?.match || 0}%</div>
-                <p className="text-sm text-muted-foreground">Weekly Goal Achievement</p>
-                <p className="text-xs text-accent mt-2">{topCareer?.confidenceLevel ? "AI-assisted insight ready" : "Complete your assessment"}</p>
-              </div>
-            </div>
-          </GlassCard>
-        </motion.div>
       </div>
     </div>
   );

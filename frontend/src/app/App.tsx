@@ -12,6 +12,7 @@ const Navigation = lazy(() => import("./components/Navigation").then((module) =>
 const Dashboard = lazy(() => import("./pages/Dashboard").then((module) => ({ default: module.Dashboard })));
 const Assessment = lazy(() => import("./pages/Assessment").then((module) => ({ default: module.Assessment })));
 const Results = lazy(() => import("./pages/Results").then((module) => ({ default: module.Results })));
+const Journey = lazy(() => import("./pages/Journey").then((module) => ({ default: module.Journey })));
 const Roadmap = lazy(() => import("./pages/Roadmap").then((module) => ({ default: module.Roadmap })));
 const RoadmapCatalog = lazy(() => import("./pages/RoadmapCatalog").then((module) => ({ default: module.RoadmapCatalog })));
 const LearningResources = lazy(() => import("./pages/LearningResources").then((module) => ({ default: module.LearningResources })));
@@ -19,6 +20,8 @@ const DetailedAnalysis = lazy(() => import("./pages/DetailedAnalysis").then((mod
 const Jobs = lazy(() => import("./pages/Jobs").then((module) => ({ default: module.Jobs })));
 const Assistant = lazy(() => import("./pages/Assistant").then((module) => ({ default: module.Assistant })));
 const Profile = lazy(() => import("./pages/Profile").then((module) => ({ default: module.Profile })));
+const AdminIntelligence = lazy(() => import("./pages/AdminIntelligence").then((module) => ({ default: module.default })));
+const AdminIntelligenceAudits = lazy(() => import("./pages/AdminIntelligenceAudits").then((module) => ({ default: module.default })));
 
 export default function App() {
   return (
@@ -67,10 +70,34 @@ export default function App() {
                 }
               />
               <Route
+                path="/journey"
+                element={
+                  <RequireAuth>
+                    <Journey />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/journey/:careerSlug"
+                element={
+                  <RequireAuth>
+                    <Journey />
+                  </RequireAuth>
+                }
+              />
+              <Route
                 path="/analysis"
                 element={
                   <RequireAuth>
                     <DetailedAnalysis />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/opportunities"
+                element={
+                  <RequireAuth>
+                    <Jobs />
                   </RequireAuth>
                 }
               />
@@ -115,6 +142,22 @@ export default function App() {
               <Route
                 path="/profile"
                 element={<Profile />}
+              />
+              <Route
+                path="/admin/intelligence"
+                element={
+                  <RequireAuth>
+                    <AdminIntelligence />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/admin/intelligence/audits"
+                element={
+                  <RequireAuth>
+                    <AdminIntelligenceAudits />
+                  </RequireAuth>
+                }
               />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

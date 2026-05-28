@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">80% </span>
+                <span class="strong">62.5% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>16/20</span>
-            </div>
-        
-            
-            <div class='fl pad1y space-right2'>
-                <span class="strong">50% </span>
-                <span class="quiet">Branches</span>
-                <span class='fraction'>2/4</span>
+                <span class='fraction'>5/8</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
-                <span class="quiet">Functions</span>
-                <span class='fraction'>2/2</span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/0</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">80% </span>
+                <span class="strong">50% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>1/2</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">62.5% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>16/20</span>
+                <span class='fraction'>5/8</span>
             </div>
         
             
@@ -86,92 +86,50 @@
 <a name='L21'></a><a href='#L21'>21</a>
 <a name='L22'></a><a href='#L22'>22</a>
 <a name='L23'></a><a href='#L23'>23</a>
-<a name='L24'></a><a href='#L24'>24</a>
-<a name='L25'></a><a href='#L25'>25</a>
-<a name='L26'></a><a href='#L26'>26</a>
-<a name='L27'></a><a href='#L27'>27</a>
-<a name='L28'></a><a href='#L28'>28</a>
-<a name='L29'></a><a href='#L29'>29</a>
-<a name='L30'></a><a href='#L30'>30</a>
-<a name='L31'></a><a href='#L31'>31</a>
-<a name='L32'></a><a href='#L32'>32</a>
-<a name='L33'></a><a href='#L33'>33</a>
-<a name='L34'></a><a href='#L34'>34</a>
-<a name='L35'></a><a href='#L35'>35</a>
-<a name='L36'></a><a href='#L36'>36</a>
-<a name='L37'></a><a href='#L37'>37</a>
-<a name='L38'></a><a href='#L38'>38</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<a name='L24'></a><a href='#L24'>24</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">11x</span>
 <span class="cline-any cline-yes">11x</span>
 <span class="cline-any cline-yes">11x</span>
 <span class="cline-any cline-yes">11x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">11x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { GoogleGenerativeAI } from '@google/generative-ai';
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { aiProvider } from '@/services/aiProvider';
 &nbsp;
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = 'gemini-2.5-flash';
-&nbsp;
-<span class="missing-if-branch" title="if path not taken" >I</span>if (!GEMINI_API_KEY) {
-<span class="cstat-no" title="statement not covered" >  throw new Error('GEMINI_API_KEY is not set');</span>
+function <span class="fstat-no" title="function not covered" >deterministicTestResponse(</span>) {
+<span class="cstat-no" title="statement not covered" >  return JSON.stringify([</span>
+    {
+      id: 'stub-q1',
+      question: 'Which of the following best describes your strongest technical skill?',
+      type: 'multiple_choice',
+      options: ['Programming', 'Data Analysis', 'Design', 'DevOps'],
+      category: 'skills',
+    },
+  ]);
 }
-&nbsp;
-const generativeAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-const model = generativeAI.getGenerativeModel({ model: GEMINI_MODEL });
-&nbsp;
-async function initializeGeminiProvider() {
-  try {
-    console.log(`Gemini Provider initialized with model: ${GEMINI_MODEL}`);
-  } catch (error) {
-<span class="cstat-no" title="statement not covered" >    console.error('Failed to initialize Gemini Provider:', error);</span>
-<span class="cstat-no" title="statement not covered" >    console.log('Switching to deterministic local AI mode');</span>
-    // Activate fallback logic here
-  }
-}
-&nbsp;
-initializeGeminiProvider();
 &nbsp;
 export async function generateContent(prompt: string): Promise&lt;string&gt; {
   try {
-    const response = await model.generateContent([prompt]);
-    if (!response || <span class="branch-1 cbranch-no" title="branch not covered" >!response.response)</span> {
-      throw new Error('Invalid response from Gemini API');
-    }
-<span class="cstat-no" title="statement not covered" >    return response.response.text();</span>
+    const response = await aiProvider.generateJsonRaw(prompt, { timeoutMs: 20000 });
+    return response;
   } catch (error) {
-    console.error('Gemini generation failed:', error);
-    // Fallback logic here - return empty array to trigger original fallback
-    return JSON.stringify([]);
+<span class="cstat-no" title="statement not covered" >    console.warn('AI generation failed; using deterministic fallback:', error);</span>
+<span class="cstat-no" title="statement not covered" >    return deterministicTestResponse();</span>
   }
 }
 &nbsp;</pre></td></tr></table></pre>
@@ -181,7 +139,7 @@ export async function generateContent(prompt: string): Promise&lt;string&gt; {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-05-18T14:20:19.211Z
+                at 2026-05-28T08:12:08.918Z
             </div>
         <script src="../prettify.js"></script>
         <script>

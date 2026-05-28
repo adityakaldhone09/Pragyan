@@ -29,6 +29,10 @@ import learningResourcesRoutes from '@/routes/learningResources';
 import { redisRateLimiter } from '@/middleware/redisRateLimiter';
 import debugRoutes from '@/routes/debug';
 import adminDevRoutes from '@/routes/adminDev';
+import journeyRoutes from '@/modules/journey/journey.routes';
+import mentorRoutes from '@/modules/mentor/mentor.routes';
+import intelligenceRoutes from '@/modules/intelligence/intelligence.routes';
+import { ensureIntelligenceIndexes } from '@/modules/intelligence/intelligence.indexes';
 import path from 'path';
 import fs from 'fs';
 
@@ -144,6 +148,9 @@ app.use('/api/career-matching', careerMatchingRoutes);
 app.use('/api/careers', careersRoutes);
 app.use('/api/jobs', jobsRoutes);
 app.use('/api/learning-resources', learningResourcesRoutes);
+app.use('/api/journey', journeyRoutes);
+app.use('/api/mentor', mentorRoutes);
+app.use('/api/intelligence', intelligenceRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Development-only debug routes (do not expose in production)
@@ -201,5 +208,8 @@ app.use((_req: Request, res: Response) => {
 // ============ ERROR HANDLING ============
 
 app.use(errorHandler);
+
+// Ensure intelligence audit indexes (non-blocking)
+void ensureIntelligenceIndexes();
 
 export default app;

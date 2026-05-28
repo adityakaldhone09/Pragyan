@@ -10,6 +10,7 @@ import { GlowButton } from "../components/GlowButton";
 import { SectionHeader } from "../components/SectionHeader";
 import { assessmentService } from "../../services/assessmentService";
 import type { AdaptiveCareerMatch, AdaptiveSubmitResponse } from "../../types/api";
+import { toCareerSlug } from "../utils/careerSlug";
 
 type LocationState = {
   adaptiveResult?: AdaptiveSubmitResponse;
@@ -214,15 +215,15 @@ export function Results() {
               </div>
 
               <div className="flex flex-col gap-3">
-                <Link to="/roadmap">
+                <Link to="/analysis">
                   <GlowButton variant="primary" className="w-full">
-                    Start AI Roadmap
+                    View Career Blueprint
                     <ArrowRight className="w-4 h-4 ml-2 inline" />
                   </GlowButton>
                 </Link>
-                <Link to="/roadmap-catalog">
+                <Link to={`/journey/${toCareerSlug(topMatch?.career || result?.summary?.suggestedCareers?.[0] || "career-journey")}`}>
                   <GlowButton variant="secondary" className="w-full">
-                    Browse all roadmaps
+                    Start Career Journey
                   </GlowButton>
                 </Link>
               </div>
@@ -314,14 +315,8 @@ export function Results() {
         <div className="flex flex-wrap items-center gap-3 justify-center">
           <Link to="/analysis">
             <GlowButton variant="secondary">
-              Detailed Analysis
+              View Career Blueprint
               <TrendingUp className="w-4 h-4 ml-2 inline" />
-            </GlowButton>
-          </Link>
-          <Link to="/roadmap">
-            <GlowButton variant="primary">
-              Start Learning Roadmap
-              <ArrowRight className="w-4 h-4 ml-2 inline" />
             </GlowButton>
           </Link>
         </div>
