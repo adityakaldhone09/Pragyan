@@ -4,7 +4,9 @@ import { motion } from "motion/react";
 import { NeuralBackground } from "../components/NeuralBackground";
 import { FloatingParticles } from "../components/FloatingParticles";
 import { GlassCard } from "../components/GlassCard";
-import { JourneyHeader, DayTimeline, SkillRadar, AIInsightsCard, EligibleJobsCard, PlacementReadinessWidget, JourneySectionSummary } from "../components/journey/JourneySections";
+import { AnimatedProgress } from "../components/AnimatedProgress";
+import { GlowButton } from "../components/GlowButton";
+import { JourneyHeader, DayTimeline, SkillRadar, AIInsightsCard, EligibleJobsCard, PlacementReadinessWidget } from "../components/journey/JourneySections";
 import { SectionHeader } from "../components/SectionHeader";
 import { journeyService } from "../../services/journeyService";
 import { mentorService } from "../../services/mentorService";
@@ -69,6 +71,21 @@ export function Journey() {
     () => journey?.roadmapDays.find((day) => day.dayNumber === selectedDay) || journey?.roadmapDays[0] || null,
     [journey, selectedDay]
   );
+
+  const missionResources = useMemo(() => {
+    const day = selectedLearningDay;
+    const slots = {
+      docs: day?.resources?.find((resource) => /w3schools|docs?|documentation|official/i.test(`${resource.title} ${resource.provider} ${resource.type}`)),
+      video: day?.resources?.find((resource) => /youtube|video|course|tutorial/i.test(`${resource.title} ${resource.provider} ${resource.type}`)),
+      practice: day?.resources?.find((resource) => /practice|project|build|lab|exercise/i.test(`${resource.title} ${resource.provider} ${resource.type}`)),
+    };
+
+    return {
+      docs: slots.docs,
+      video: slots.video,
+      practice: slots.practice,
+    };
+  }, [selectedLearningDay]);
 
   useEffect(() => {
     let mounted = true;
@@ -210,10 +227,71 @@ export function Journey() {
           <JourneyHeader journey={journey} />
         </motion.div>
 
-        <JourneySectionSummary journey={journey} />
+        <div className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr_0.9fr] items-start">
+          <GlassCard glow glowColor="primary" className="relative overflow-hidden">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.14),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(124,58,237,0.14),transparent_32%)]" />
+            <div className="relative z-10 space-y-4">
+              <SectionHeader title="Current Journey" subtitle={journey.careerTitle} />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Current role</p>
+                  <p className="mt-2 text-lg font-semibold">{journey.careerTitle}</p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Progress</p>
+                  <p className="mt-2 text-lg font-semibold">Day {journey.currentDay} / {journey.roadmapDays.length || 1}</p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:col-span-2">
+                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Completion</p>
+                  <p className="mt-2 text-3xl font-bold text-secondary">{journey.completionPercentage}%</p>
+                  <div className="mt-3">
+                    <AnimatedProgress value={journey.completionPercentage} showLabel={false} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </GlassCard>
+
+          <DayTimeline days={journey.roadmapDays} currentDay={journey.currentDay} selectedDay={selectedDay} onSelectDay={setSelectedDay} />
+
+          <GlassCard glow glowColor="secondary" className="relative overflow-hidden">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.16),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(124,58,237,0.14),transparent_32%)]" />
+            <div className="relative z-10 space-y-4">
+              <SectionHeader title="Today's Mission" subtitle="Focused work for the current day" />
+              <div className="rounded-2xl border border-white/10 bg-background/35 p-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Current topic</p>
+                <p className="mt-2 text-lg font-semibold">{selectedLearningDay?.focus || journey.currentPlan.todayGoal}</p>
+              </div>
+
+              <div className="grid gap-3">
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Theory</p>
+                  <p className="mt-2 text-sm text-foreground">{missionResources.docs?.title || `W3Schools ${selectedLearningDay?.focus || journey.careerTitle}`}</p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Video</p>
+                  <p className="mt-2 text-sm text-foreground">{missionResources.video?.title || "React Hooks Crash Course"}</p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Practice</p>
+                  <p className="mt-2 text-sm text-foreground">{missionResources.practice?.title || "Build a focused mini-project"}</p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Estimated time</p>
+                  <p className="mt-2 text-2xl font-semibold text-secondary">{journey.currentPlan.estimatedMinutes} min</p>
+                </div>
+              </div>
+
+              <Link to="/assistant">
+                <GlowButton variant="primary" className="w-full">
+                  Start Learning
+                </GlowButton>
+              </Link>
+            </div>
+          </GlassCard>
+        </div>
 
         <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr] items-start">
-          <DayTimeline days={journey.roadmapDays} currentDay={journey.currentDay} selectedDay={selectedDay} onSelectDay={setSelectedDay} />
           <div className="grid gap-6">
             <PlacementReadinessWidget readiness={journey.placementReadiness} nextAction={journey.nextAction} />
             <GlassCard glow glowColor="accent">

@@ -9,7 +9,7 @@ export interface AuthContextValue {
   status: AuthStatus;
   isAuthenticated: boolean;
   login: (input: { email: string; password: string }) => Promise<AuthSession>;
-  register: (input: { email: string; password: string; name?: string }) => Promise<AuthSession>;
+  register: (input: { email: string; password: string; fullName: string }) => Promise<AuthSession>;
   refreshToken: (input: { refreshToken: string }) => Promise<AuthSession>;
   updateProfile: typeof import('@/services/authService').authService.updateProfile;
   logout: () => Promise<void>;

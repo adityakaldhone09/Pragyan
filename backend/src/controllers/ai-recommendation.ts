@@ -42,13 +42,13 @@ export const getPersonalizedRoadmap = asyncHandler(async (req: Request, res: Res
     return sendError(res, 400, 'careerGoal and skillLevel are required');
   }
 
-  const roadmaps = await aiRecommendationService.generatePersonalizedRoadmap(
+  const roadmap = await aiRecommendationService.generatePersonalizedRoadmap(
     req.user.id,
     careerGoal,
     skillLevel
   );
 
-  return sendSuccess(res, roadmaps, 200, 'Personalized roadmaps generated');
+  return sendSuccess(res, roadmap, 200, 'Personalized roadmap generated');
 });
 
 export const getStatus = asyncHandler(async (_req: Request, res: Response) => {
@@ -111,11 +111,11 @@ export const chatAssistant = asyncHandler(async (req: Request, res: Response) =>
   ].filter(Boolean).join('\n\n');
 
   try {
-    const reply = await aiProvider.generateText(prompt);
+    const reply = await (await import('@/services/ai-layers')).aiLayers.generateCreative(prompt);
     return sendSuccess(res, { reply, provider: aiProvider.getRuntime().provider, fallbackUsed: false }, 200, 'AI assistant response');
   } catch (error) {
     const fallback = 'I can help with that. Based on your current Pragyan data, focus on the top recommended career, align your roadmap, and keep your resume targeted to the skills gap.';
-    return sendSuccess(res, { reply: fallback, provider: aiProvider.getRuntime().provider, fallbackUsed: true }, 200, 'AI assistant fallback response');
+    return sendSuccess(res, { reply: fallback, provider: 'local', fallbackUsed: true }, 200, 'AI assistant fallback response');
   }
 });
 
@@ -193,7 +193,7 @@ export const generateDailyPlan = asyncHandler(async (req: Request, res: Response
   });
 
   try {
-    const raw = await aiProvider.generateJsonRaw(prompt, { timeoutMs: 12_000 });
+    const raw = await (await import('@/services/ai-layers')).aiLayers.generateStructuredJson(prompt, { timeoutMs: 12_000 });
     const parsed = JSON.parse(raw) as Partial<typeof fallback>;
     const tasks = Array.isArray(parsed.tasks)
       ? parsed.tasks

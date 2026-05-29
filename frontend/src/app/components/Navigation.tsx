@@ -1,6 +1,6 @@
 import { motion } from "motion/react";
-import { Link, useLocation } from "react-router";
-import { Home, LayoutDashboard, Brain, User, Sparkles, LogOut, Briefcase, Compass } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router";
+import { Home, LayoutDashboard, Brain, User, LogOut, Briefcase, Compass } from "lucide-react";
 import { cn } from "../utils/cn";
 import { useAuth } from "@/context/useAuth";
 
@@ -15,11 +15,13 @@ const navItems = [
 export function Navigation() {
   const location = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
+  const navigate = useNavigate();
   const isLandingPage = location.pathname === "/";
   const isAuthPage = location.pathname === "/auth";
   const isAuthSuccessPage = location.pathname === "/auth/success";
+  const isDashboardPage = location.pathname === "/dashboard";
 
-  if (isLandingPage || isAuthPage || isAuthSuccessPage) {
+  if (isLandingPage || isAuthPage || isAuthSuccessPage || isDashboardPage) {
     return null;
   }
 
@@ -33,11 +35,9 @@ export function Navigation() {
       <div className="max-w-7xl mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <Link to="/dashboard" className="flex items-center gap-2">
-            <Sparkles className="w-6 h-6 text-primary" />
-            <span className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              Pragyan
-            </span>
+          <Link to="/dashboard" className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white font-bold">P</div>
+            <span className="text-xl font-bold text-foreground" style={{ fontFamily: "var(--brand-font)" }}>Pragyan</span>
           </Link>
 
           {/* Nav Items */}
@@ -88,7 +88,14 @@ export function Navigation() {
                 </Link>
                 <button
                   type="button"
-                  onClick={() => logout()}
+                  onClick={async () => {
+                    try {
+                      await logout();
+                    } finally {
+                      navigate("/auth");
+                      window.location.reload();
+                    }
+                  }}
                   className="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border text-sm text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all"
                 >
                   <LogOut className="w-4 h-4" />

@@ -33,7 +33,6 @@ export function AuthSuccess() {
         const search = new URLSearchParams(location.search);
         const mode = search.get("mode");
         const provider = search.get("provider");
-
         if (!accessToken || !refreshToken) {
           throw new Error("OAuth tokens were not returned by the server. Please try signing in again.");
         }
@@ -42,27 +41,31 @@ export function AuthSuccess() {
         setStoredAuthSession({ accessToken, refreshToken });
 
         setStatus("Loading your profile...");
-        const user = await authService.me();
+        try {
+          const user = await authService.me();
 
-        if (!active) {
-          return;
-        }
-
-        setSession({ accessToken, refreshToken, user });
-        const isLinkFlow = mode === "link";
-        if (isLinkFlow) {
-          toast.success(`${provider === "github" ? "GitHub" : "Google"} account linked successfully`);
-        } else {
-          toast.success("Signed in successfully");
-        }
-
-        setStatus(isLinkFlow ? "Redirecting to your profile..." : "Redirecting to your dashboard...");
-
-        window.setTimeout(() => {
-          if (active) {
-            navigate(isLinkFlow ? "/profile" : "/dashboard", { replace: true });
+          if (!active) {
+            return;
           }
-        }, 650);
+
+          setSession({ accessToken, refreshToken, user });
+          const isLinkFlow = mode === "link";
+          if (isLinkFlow) {
+            toast.success(`${provider === "github" ? "GitHub" : "Google"} account linked successfully`);
+          } else {
+            toast.success("Signed in successfully");
+          }
+
+          setStatus(isLinkFlow ? "Redirecting to your profile..." : "Redirecting to your dashboard...");
+
+          window.setTimeout(() => {
+            if (active) {
+              navigate(isLinkFlow ? "/profile" : "/dashboard", { replace: true });
+            }
+          }, 650);
+        } catch (meError) {
+          throw meError;
+        }
       } catch (loginError) {
         if (!active) {
           return;

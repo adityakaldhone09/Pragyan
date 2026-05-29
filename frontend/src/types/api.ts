@@ -31,6 +31,9 @@ export interface AuthUser {
   experience?: string | null;
   xp?: number;
   streak?: number;
+  level?: number;
+  currentTitle?: string | null;
+  careerTrack?: string | null;
   linkedAccounts?: Array<{
     provider: string;
     providerId: string;
@@ -371,6 +374,9 @@ export interface JourneyPayload {
     adaptiveReason: string;
     difficultyMultiplier: number;
   };
+  userLevel?: number;
+  userTitle?: string | null;
+  careerTrack?: string | null;
 }
 
 export interface JourneyDashboardSnapshot {

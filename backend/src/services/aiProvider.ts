@@ -4,6 +4,7 @@ import { AIProviderAdapter, AIProviderOptions } from './AIProviderBase';
 import { GeminiProvider } from './GeminiProvider';
 import { GroqProvider } from './GroqProvider';
 import { LocalAIProvider } from './LocalAIProvider';
+import aiTelemetry from '@/lib/aiTelemetry';
 
 type ProviderMode = 'local' | 'gemini' | 'groq';
 
@@ -60,18 +61,27 @@ class AIProviderFacade implements AIProviderAdapter {
   }
 
   async generateText(prompt: string, opts?: AIProviderOptions): Promise<string> {
+    const primary = this.provider.getProviderName();
+    const start = Date.now();
     try {
-      return await this.provider.generateText(prompt, opts);
-    } catch (error) {
+      const result = await this.provider.generateText(prompt, opts);
+      aiTelemetry.recordCall(primary, 0, Date.now() - start);
+      return result;
+    } catch (error: any) {
+      aiTelemetry.recordFailure(primary);
       for (const fallback of this.getFallbackProviders()) {
         if (fallback.getProviderName() === this.provider.getProviderName()) {
           continue;
         }
         try {
-          this.provider = fallback;
-          this.mode = fallback.getProviderName() as ProviderMode;
-          return await fallback.generateText(prompt, opts);
-        } catch (fallbackError) {
+          const fbName = fallback.getProviderName();
+          const fbStart = Date.now();
+          const result = await fallback.generateText(prompt, opts);
+          aiTelemetry.recordFallback(primary);
+          aiTelemetry.recordCall(fbName, 0, Date.now() - fbStart);
+          return result;
+        } catch (fallbackError: any) {
+          aiTelemetry.recordFailure(this.provider.getProviderName());
           continue;
         }
       }
@@ -81,18 +91,27 @@ class AIProviderFacade implements AIProviderAdapter {
   }
 
   async generateJsonRaw(prompt: string, opts?: AIProviderOptions): Promise<string> {
+    const primary = this.provider.getProviderName();
+    const start = Date.now();
     try {
-      return await this.provider.generateJsonRaw(prompt, opts);
-    } catch (error) {
+      const result = await this.provider.generateJsonRaw(prompt, opts);
+      aiTelemetry.recordCall(primary, 0, Date.now() - start);
+      return result;
+    } catch (error: any) {
+      aiTelemetry.recordFailure(primary);
       for (const fallback of this.getFallbackProviders()) {
         if (fallback.getProviderName() === this.provider.getProviderName()) {
           continue;
         }
         try {
-          this.provider = fallback;
-          this.mode = fallback.getProviderName() as ProviderMode;
-          return await fallback.generateJsonRaw(prompt, opts);
-        } catch (fallbackError) {
+          const fbName = fallback.getProviderName();
+          const fbStart = Date.now();
+          const result = await fallback.generateJsonRaw(prompt, opts);
+          aiTelemetry.recordFallback(primary);
+          aiTelemetry.recordCall(fbName, 0, Date.now() - fbStart);
+          return result;
+        } catch (fallbackError: any) {
+          aiTelemetry.recordFailure(this.provider.getProviderName());
           continue;
         }
       }

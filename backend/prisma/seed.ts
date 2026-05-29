@@ -60,10 +60,10 @@ const skillSeeds = [
         subtasks: ['How the web works', 'Client-server basics', 'HTML file structure'],
         resources: [
           {
-            title: 'MDN Web Docs - Getting started with the web',
-            url: 'https://developer.mozilla.org/en-US/docs/Learn/Getting_started_with_the_web',
+            title: 'W3Schools - Introduction to the Web',
+            url: 'https://www.w3schools.com/html/html_intro.asp',
             description: 'Learn how the web works.',
-            platform: 'MDN',
+            platform: 'W3Schools',
             type: 'documentation',
           },
           {
@@ -83,10 +83,10 @@ const skillSeeds = [
         subtasks: ['Semantic tags', 'Forms', 'Media elements'],
         resources: [
           {
-            title: 'MDN Semantic HTML',
-            url: 'https://developer.mozilla.org/en-US/docs/Glossary/Semantics',
+            title: 'W3Schools Semantic HTML',
+            url: 'https://www.w3schools.com/html/html5_semantic_elements.asp',
             description: 'Semantic markup reference.',
-            platform: 'MDN',
+            platform: 'W3Schools',
             type: 'documentation',
           },
         ],
@@ -99,10 +99,10 @@ const skillSeeds = [
         subtasks: ['Box model', 'Flexbox', 'Grid layouts'],
         resources: [
           {
-            title: 'MDN Flexbox Guide',
-            url: 'https://developer.mozilla.org/en-US/docs/Learn/CSS/CSS_layout/Flexbox',
+            title: 'W3Schools Flexbox',
+            url: 'https://www.w3schools.com/css/css3_flexbox.asp',
             description: 'Flexbox layout guide.',
-            platform: 'MDN',
+            platform: 'W3Schools',
             type: 'documentation',
           },
         ],
@@ -130,10 +130,10 @@ const skillSeeds = [
         subtasks: ['let, const', 'Strings, numbers, booleans', 'Undefined vs null'],
         resources: [
           {
-            title: 'MDN JavaScript Guide',
-            url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide',
+            title: 'W3Schools JavaScript Tutorial',
+            url: 'https://www.w3schools.com/js/default.asp',
             description: 'Official JavaScript guide.',
-            platform: 'MDN',
+            platform: 'W3Schools',
             type: 'documentation',
           },
         ],

@@ -49,7 +49,7 @@ export class MentorService {
     const userMessage = await mentorMemoryService.appendMessage(conversation.id, 'user', input.message, input.context || {});
 
     try {
-      const reply = await aiProvider.generateText(prompt);
+      const reply = await (await import('@/services/ai-layers')).aiLayers.generateCreative(prompt);
       await mentorMemoryService.appendMessage(conversation.id, 'assistant', reply, input.context || {});
 
       return {

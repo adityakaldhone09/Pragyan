@@ -26,13 +26,33 @@ function toDayKey(date = new Date()) {
 export class JourneyService {
   private async resolveRoadmap(careerSlug: string, userId: string) {
     const normalizedSlug = toCareerSlug(careerSlug);
-    const [topCareer, roadmapRecommendations, roadmapCatalog] = await Promise.all([
+    const [topCareer, roadmapRecommendations, roadmapCatalog, userRoadmaps] = await Promise.all([
       recommendationEngineService.getTopCareer(userId),
       recommendationEngineService.getRecommendedRoadmaps(userId).catch(() => []),
       roadmapService.getAllRoadmaps({ page: 1, limit: 50 }).then((result) => result.roadmaps).catch(() => []),
+      prisma.userRoadmap.findMany({
+        where: { userId },
+        include: { roadmap: true },
+        orderBy: { updatedAt: 'desc' },
+      }).catch(() => []),
     ]);
 
-    const candidates = [...roadmapRecommendations, ...roadmapCatalog].filter(Boolean) as Array<any>;
+    const personalizedRoadmap = userRoadmaps
+      .map((entry: any) => entry.roadmap)
+      .find((roadmap: any) => {
+        if (!roadmap) return false;
+        const haystack = [roadmap.title, roadmap.category, roadmap.careerPath, roadmap.description, ...(roadmap.tags || [])]
+          .filter(Boolean)
+          .map((value) => toCareerSlug(String(value)));
+
+        return haystack.includes(normalizedSlug);
+      }) || userRoadmaps[0]?.roadmap || null;
+
+    const personalizedRoadmapDetail = personalizedRoadmap?.id
+      ? await roadmapService.getRoadmapById(personalizedRoadmap.id).catch(() => personalizedRoadmap)
+      : null;
+
+    const candidates = [personalizedRoadmapDetail, ...roadmapRecommendations, ...roadmapCatalog].filter(Boolean) as Array<any>;
 
     const selected = candidates.find((roadmap: any) => {
       const haystack = [roadmap.title, roadmap.category, roadmap.careerPath, roadmap.description, ...(roadmap.tags || [])]
@@ -40,7 +60,7 @@ export class JourneyService {
         .map((value) => toCareerSlug(String(value)));
 
       return haystack.includes(normalizedSlug);
-    }) || candidates[0] || null;
+    }) || personalizedRoadmapDetail || candidates[0] || null;
 
     const selectedCareerPath = (selected as any)?.careerPath || (selected as any)?.category || (selected as any)?.title;
     const resolvedCareerTitle = topCareer?.career || selectedCareerPath || capitalizeWords(careerSlug);
@@ -52,7 +72,7 @@ export class JourneyService {
   async getJourney(userId: string, careerSlug: string): Promise<JourneyPayload> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, skills: true, xp: true, streak: true },
+      select: { id: true, skills: true, xp: true, streak: true, level: true, currentTitle: true, careerTrack: true },
     });
 
     const userSkills = uniqueValues(user?.skills || []);
@@ -160,6 +180,9 @@ export class JourneyService {
       completionPercentage: Math.round(progressPercentage),
       xp: Number(user?.xp || 0),
       streak: Number(user?.streak || 0),
+      userLevel: Number(user?.level || 1),
+      userTitle: user?.currentTitle || null,
+      careerTrack: user?.careerTrack || null,
       currentDay,
       adaptiveMode: adaptive.mode,
       adaptiveReason: adaptive.reason,

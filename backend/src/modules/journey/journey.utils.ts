@@ -82,6 +82,9 @@ export interface JourneyPayload {
   completionPercentage: number;
   xp: number;
   streak: number;
+  userLevel: number;
+  userTitle: string | null;
+  careerTrack: string | null;
   currentDay: number;
   adaptiveMode: AdaptiveMode;
   adaptiveReason: string;

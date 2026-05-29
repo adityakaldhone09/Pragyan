@@ -3,11 +3,11 @@ import { Suspense, lazy } from "react";
 import { AuthProvider } from "@/context/AuthContext";
 import { RequireAuth } from "./components/RequireAuth";
 import { Toaster } from "./components/ui/sonner";
+import { AppShell } from "./components/AppShell";
 
 const LandingPage = lazy(() => import("./pages/LandingPage").then((module) => ({ default: module.LandingPage })));
 const Auth = lazy(() => import("./pages/Auth").then((module) => ({ default: module.Auth })));
 const AuthSuccess = lazy(() => import("./pages/AuthSuccess").then((module) => ({ default: module.AuthSuccess })));
-const Navigation = lazy(() => import("./components/Navigation").then((module) => ({ default: module.Navigation })));
 
 const Dashboard = lazy(() => import("./pages/Dashboard").then((module) => ({ default: module.Dashboard })));
 const Assessment = lazy(() => import("./pages/Assessment").then((module) => ({ default: module.Assessment })));
@@ -30,11 +30,6 @@ export default function App() {
         <Toaster richColors closeButton />
         <BrowserRouter>
           <Suspense
-            fallback={null}
-          >
-            <Navigation />
-          </Suspense>
-          <Suspense
             fallback={
               <div className="min-h-screen flex items-center justify-center px-6 text-center text-muted-foreground bg-background">
                 Loading Pragyan experience...
@@ -46,119 +41,28 @@ export default function App() {
               <Route path="/auth" element={<Auth />} />
               <Route path="/auth/success" element={<AuthSuccess />} />
               <Route
-                path="/dashboard"
                 element={
                   <RequireAuth>
-                    <Dashboard />
+                    <AppShell />
                   </RequireAuth>
                 }
-              />
-              <Route
-                path="/assessment"
-                element={
-                  <RequireAuth>
-                    <Assessment />
-                  </RequireAuth>
-                }
-              />
-              <Route
-                path="/results"
-                element={
-                  <RequireAuth>
-                    <Results />
-                  </RequireAuth>
-                }
-              />
-              <Route
-                path="/journey"
-                element={
-                  <RequireAuth>
-                    <Journey />
-                  </RequireAuth>
-                }
-              />
-              <Route
-                path="/journey/:careerSlug"
-                element={
-                  <RequireAuth>
-                    <Journey />
-                  </RequireAuth>
-                }
-              />
-              <Route
-                path="/analysis"
-                element={
-                  <RequireAuth>
-                    <DetailedAnalysis />
-                  </RequireAuth>
-                }
-              />
-              <Route
-                path="/opportunities"
-                element={
-                  <RequireAuth>
-                    <Jobs />
-                  </RequireAuth>
-                }
-              />
-              <Route
-                path="/roadmap"
-                element={
-                  <RequireAuth>
-                    <Roadmap />
-                  </RequireAuth>
-                }
-              />
-              <Route
-                path="/roadmap-catalog"
-                element={
-                  <RoadmapCatalog />
-                }
-              />
-              <Route
-                path="/learning-resources"
-                element={
-                  <RequireAuth>
-                    <LearningResources />
-                  </RequireAuth>
-                }
-              />
-              <Route
-                path="/jobs"
-                element={
-                  <RequireAuth>
-                    <Jobs />
-                  </RequireAuth>
-                }
-              />
-              <Route
-                path="/assistant"
-                element={
-                  <RequireAuth>
-                    <Assistant />
-                  </RequireAuth>
-                }
-              />
-              <Route
-                path="/profile"
-                element={<Profile />}
-              />
-              <Route
-                path="/admin/intelligence"
-                element={
-                  <RequireAuth>
-                    <AdminIntelligence />
-                  </RequireAuth>
-                }
-              />
-              <Route
-                path="/admin/intelligence/audits"
-                element={
-                  <RequireAuth>
-                    <AdminIntelligenceAudits />
-                  </RequireAuth>
-                }
-              />
+              >
+                <Route path="dashboard" element={<Dashboard />} />
+                <Route path="assessment" element={<Assessment />} />
+                <Route path="results" element={<Results />} />
+                <Route path="journey" element={<Journey />} />
+                <Route path="journey/:careerSlug" element={<Journey />} />
+                <Route path="analysis" element={<DetailedAnalysis />} />
+                <Route path="opportunities" element={<Jobs />} />
+                <Route path="roadmap" element={<Roadmap />} />
+                <Route path="roadmap-catalog" element={<RoadmapCatalog />} />
+                <Route path="learning-resources" element={<LearningResources />} />
+                <Route path="jobs" element={<Jobs />} />
+                <Route path="assistant" element={<Assistant />} />
+                <Route path="profile" element={<Profile />} />
+                <Route path="admin/intelligence" element={<AdminIntelligence />} />
+                <Route path="admin/intelligence/audits" element={<AdminIntelligenceAudits />} />
+              </Route>
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>

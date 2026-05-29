@@ -1,11 +1,12 @@
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
-import { Mail, Lock, User, ArrowRight, Sparkles } from "lucide-react";
+import { Mail, Lock, User, ArrowRight, Eye, EyeOff } from "lucide-react";
 import { NeuralBackground } from "../components/NeuralBackground";
 import { GlassCard } from "../components/GlassCard";
 import { GlowButton } from "../components/GlowButton";
 import { useAuth } from "@/context/useAuth";
+ 
 
 type AuthMode = "login" | "signup" | "forgot";
 
@@ -16,6 +17,7 @@ export function Auth() {
   const [mode, setMode] = useState<AuthMode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -61,12 +63,27 @@ export function Auth() {
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = "http://localhost:5000/api/auth/google";
+    window.location.href = new URL("auth/google", getApiBaseUrl()).toString();
   };
 
   const handleGitHubLogin = () => {
-    window.location.href = "http://localhost:5000/api/auth/github";
+    window.location.href = new URL("auth/github", getApiBaseUrl()).toString();
   };
+
+  function getApiBaseUrl() {
+    const configured = import.meta.env.VITE_API_BASE_URL as string | undefined;
+
+    if (configured) {
+      if (/^https?:\/\//i.test(configured)) {
+        return configured.endsWith("/") ? configured : `${configured}/`;
+      }
+
+      const normalizedPath = configured.startsWith("/") ? configured : `/${configured}`;
+      return `${window.location.origin}${normalizedPath.endsWith("/") ? normalizedPath : `${normalizedPath}/`}`;
+    }
+
+    return `${window.location.origin}/api/`;
+  }
 
   return (
     <div className="min-h-screen relative flex items-center justify-center px-6 py-12">
@@ -85,10 +102,8 @@ export function Auth() {
               className="inline-flex items-center gap-2 mb-4"
               whileHover={{ scale: 1.05 }}
             >
-              <Sparkles className="w-8 h-8 text-primary" />
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                Pragyan
-              </h1>
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white font-bold">P</div>
+              <h1 className="text-3xl font-bold text-foreground" style={{ fontFamily: "var(--brand-font)" }}>Pragyan</h1>
             </motion.div>
             <p className="text-muted-foreground">
               {mode === "login" && "Welcome back to your career journey"}
@@ -140,13 +155,21 @@ export function Auth() {
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                    className="w-full pl-10 pr-12 py-3 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                     placeholder="••••••••"
                     required
                   />
+                  <button
+                    type="button"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    onClick={() => setShowPassword((s) => !s)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
                 </div>
               </div>
             )}

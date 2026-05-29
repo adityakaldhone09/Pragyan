@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Bot, Send, Sparkles, Brain, Rocket, FileText, MessageSquare, RefreshCw } from "lucide-react";
+import { useLocation } from "react-router";
 import { NeuralBackground } from "../components/NeuralBackground";
 import { GlassCard } from "../components/GlassCard";
 import { GlowButton } from "../components/GlowButton";
@@ -27,6 +28,8 @@ function renderSimpleMarkdown(text: string) {
 
 export function Assistant() {
   const { user } = useAuth();
+  const location = useLocation();
+  const autoPromptHandled = useRef(false);
   const firstName = user?.fullName?.split(" ")[0] || "there";
   const [messages, setMessages] = useState<AssistantChatMessage[]>([
     { role: "assistant", content: `Hi ${firstName}, I’m your Pragyan career assistant. Ask me about careers, roadmaps, resumes, or interviews.` },
@@ -73,6 +76,19 @@ export function Assistant() {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    const prompt = new URLSearchParams(location.search).get("prompt");
+
+    if (!prompt || autoPromptHandled.current) {
+      return;
+    }
+
+    autoPromptHandled.current = true;
+    setInput(prompt);
+    void sendMessage(prompt);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
 
   const contextSummary = useMemo(
     () => ({

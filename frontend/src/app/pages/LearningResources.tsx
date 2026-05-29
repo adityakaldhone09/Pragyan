@@ -258,7 +258,7 @@ export function LearningResources() {
                   >
                     <option value="all">All resource types</option>
                     <option value="youtube">YouTube</option>
-                    <option value="documentation">Official docs</option>
+                    <option value="documentation">W3Schools reading</option>
                     <option value="practice">Practice websites</option>
                     <option value="article">Articles</option>
                     <option value="mini-project">Mini projects</option>

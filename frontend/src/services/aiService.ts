@@ -65,6 +65,6 @@ export const aiService = {
   },
 
   generatePersonalizedRoadmap(careerGoal: string, skillLevel: string) {
-    return apiClient.post<RoadmapSummary[]>("/ai/personalized-roadmap", { careerGoal, skillLevel });
+    return apiClient.post<RoadmapSummary>("/ai/personalized-roadmap", { careerGoal, skillLevel });
   },
 };

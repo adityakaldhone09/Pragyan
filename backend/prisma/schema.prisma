@@ -33,6 +33,9 @@ model User {
   skillLevel       String?
   xp               Float    @default(0)
   streak           Int      @default(0)
+  level            Int      @default(1)
+  currentTitle     String?
+  careerTrack      String?
 
   // Relations
   refreshTokens           RefreshToken[]
@@ -45,6 +48,8 @@ model User {
   completedRoadmaps       CompletedRoadmap[]
   completedTaskHistory    CompletedTaskHistory[]
   achievements            UserAchievement[]
+  userXpLogs              UserXpLog[]
+  dailyQuizAttempts       DailyQuizAttempt[]
   dailyLearning           UserDailyLearning[]
   userRoadmaps            UserRoadmap[]
   taskProgress            TaskProgress[]
@@ -522,6 +527,43 @@ model UserAchievement {
 
   @@unique([userId, code])
   @@index([userId])
+}
+
+model UserXpLog {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount    Int
+  reason    String
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model DailyQuiz {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  roadmapId   String?  @db.ObjectId
+  title       String
+  description String?
+  questions   Json
+  attempts    DailyQuizAttempt[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model DailyQuizAttempt {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quizId    String   @db.ObjectId
+  quiz      DailyQuiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  score     Int
+  xpAwarded Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([quizId])
 }
 
 model UserDailyLearning {

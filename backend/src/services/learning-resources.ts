@@ -120,10 +120,10 @@ const CURATED_RESOURCE_LIBRARY: Record<string, Partial<Record<typeof RESOURCE_TY
       isOfficial: false,
     },
     documentation: {
-      title: 'MDN JavaScript Guide',
+      title: 'W3Schools JavaScript Tutorial',
       description: 'Official JavaScript reference and learning guide.',
-      url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide',
-      provider: 'MDN',
+      url: 'https://www.w3schools.com/js/default.asp',
+      provider: 'W3Schools',
       estimatedMinutes: 20,
       isOfficial: true,
     },
@@ -298,10 +298,10 @@ const CURATED_RESOURCE_LIBRARY: Record<string, Partial<Record<typeof RESOURCE_TY
   },
   accessibility: {
     documentation: {
-      title: 'MDN Accessibility Guide',
+      title: 'W3Schools Accessibility Guide',
       description: 'Official accessibility documentation and patterns.',
-      url: 'https://developer.mozilla.org/en-US/docs/Web/Accessibility',
-      provider: 'MDN',
+      url: 'https://www.w3schools.com/html/html_accessibility.asp',
+      provider: 'W3Schools',
       estimatedMinutes: 20,
       isOfficial: true,
     },
@@ -429,11 +429,11 @@ function buildUrl(type: typeof RESOURCE_TYPES[number], topic: string, roadmapTit
 function resolveDocumentationUrl(topic: string, skill: string, roadmapTitle: string) {
   const normalized = `${topic} ${skill} ${roadmapTitle}`.toLowerCase();
 
-  if (normalized.includes('react')) return 'https://react.dev/learn';
+  if (normalized.includes('react')) return 'https://www.w3schools.com/react/';
   if (normalized.includes('typescript')) return 'https://www.typescriptlang.org/docs/';
-  if (normalized.includes('javascript')) return 'https://developer.mozilla.org/en-US/docs/Web/JavaScript';
+  if (normalized.includes('javascript')) return 'https://www.w3schools.com/js/default.asp';
   if (normalized.includes('html') || normalized.includes('css') || normalized.includes('accessibility')) {
-    return 'https://developer.mozilla.org/en-US/';
+    return 'https://www.w3schools.com/';
   }
   if (normalized.includes('node') || normalized.includes('express')) return 'https://nodejs.org/en/docs';
   if (normalized.includes('mongodb')) return 'https://www.mongodb.com/docs/';
@@ -609,7 +609,7 @@ function buildResourceCandidates(roadmap: RoadmapLike) {
       const provider = resourceType === 'youtube'
         ? 'YouTube'
         : resourceType === 'documentation'
-          ? 'Official Docs'
+          ? 'W3Schools'
           : resourceType === 'practice'
             ? 'Practice Site'
             : resourceType === 'article'
@@ -845,7 +845,10 @@ async function rankResourcesWithAI(roadmap: RoadmapLike, userSkills: string[], r
   }
 
   try {
-    const raw = await aiProvider.generateJsonRaw(buildAIResourcePrompt({ roadmap, userSkills, resources }), { timeoutMs: 12_000 });
+      const raw = await (await import('@/services/ai-layers')).aiLayers.generateStructuredJson(
+        buildAIResourcePrompt({ roadmap, userSkills, resources }),
+        { timeoutMs: 12_000 }
+      );
     const parsed = JSON.parse(raw) as { summary?: string; ranked?: Array<{ id: string; score?: number; reason?: string }> };
 
     if (Array.isArray(parsed.ranked) && parsed.ranked.length) {
@@ -1087,13 +1090,10 @@ export class LearningResourceService {
         },
       });
 
-      await prisma.user.update({
-        where: { id: userId },
-        data: {
-          streak: nextStreak,
-          xp: { increment: Math.max(5, Math.round((input.progressPercent ?? 100) / 10)) },
-        },
-      });
+      const xpDelta = Math.max(5, Math.round((input.progressPercent ?? 100) / 10));
+      const { xpService } = await import('@/services/xp');
+      await xpService.awardXp(userId, xpDelta, 'resource-complete', { resourceId: input.resourceId });
+      await prisma.user.update({ where: { id: userId }, data: { streak: nextStreak } });
     }
 
     return result;

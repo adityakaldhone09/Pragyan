@@ -22,10 +22,10 @@ const resourceCatalog: Record<string, ResourceCatalogEntry> = {
   html: {
     docs: [
       {
-        title: "MDN HTML Guide",
-        url: "https://developer.mozilla.org/en-US/docs/Learn/HTML",
-        provider: "MDN",
-        description: "Official HTML reference and learning path.",
+        title: "W3Schools HTML Introduction",
+        url: "https://www.w3schools.com/html/html_intro.asp",
+        provider: "W3Schools",
+        description: "Official HTML introduction and learning path.",
         estimatedMinutes: 20,
       },
     ],
@@ -50,8 +50,8 @@ const resourceCatalog: Record<string, ResourceCatalogEntry> = {
     quiz: [
       {
         title: "HTML Quick Check",
-        url: "https://developer.mozilla.org/en-US/docs/Learn/HTML/Introduction_to_HTML/Getting_started",
-        provider: "MDN",
+        url: "https://www.w3schools.com/quiztest/quiztest.asp?qtest=HTML",
+        provider: "W3Schools",
         description: "Short self-check after the documentation pass.",
         estimatedMinutes: 10,
       },
@@ -60,10 +60,10 @@ const resourceCatalog: Record<string, ResourceCatalogEntry> = {
   react: {
     docs: [
       {
-        title: "React Official Docs",
-        url: "https://react.dev",
-        provider: "React Docs",
-        description: "The official React learning path.",
+        title: "W3Schools React Tutorial",
+        url: "https://www.w3schools.com/react/",
+        provider: "W3Schools",
+        description: "React learning path on W3Schools.",
         estimatedMinutes: 25,
       },
       {
@@ -102,8 +102,8 @@ const resourceCatalog: Record<string, ResourceCatalogEntry> = {
     quiz: [
       {
         title: "React Knowledge Check",
-        url: "https://react.dev/learn",
-        provider: "React Docs",
+        url: "https://www.w3schools.com/react/react_quiz.asp",
+        provider: "W3Schools",
         description: "Self-check after the React docs pass.",
         estimatedMinutes: 12,
       },

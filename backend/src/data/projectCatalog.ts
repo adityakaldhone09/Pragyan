@@ -36,7 +36,7 @@ const catalog: Record<string, ProjectCatalogEntry> = {
         xpReward: 120,
         skillsUsed: ['HTML', 'CSS', 'Layout'],
         githubIdeas: ['Product landing page', 'Marketing page clone'],
-        resources: [{ title: 'MDN CSS Layout', url: 'https://developer.mozilla.org/en-US/docs/Learn/CSS/CSS_layout', provider: 'MDN' }],
+        resources: [{ title: 'W3Schools CSS Layout', url: 'https://www.w3schools.com/css/css_layout.asp', provider: 'W3Schools' }],
       },
       {
         id: 'frontend-calculator',

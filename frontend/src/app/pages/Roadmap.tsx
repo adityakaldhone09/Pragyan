@@ -50,7 +50,7 @@ function normalizeText(value?: string | null) {
 function getResourceSlot(resource: RoadmapLearningResource): ResourceSlot {
   const haystack = normalizeText([resource.title, resource.provider, resource.type, resource.url].join(" "));
 
-  if (/(official|docs?|documentation|mdn|roadmap\.sh|owasp|portswigger|linux journey|ubuntu)/i.test(haystack)) {
+  if (/(official|docs?|documentation|w3schools|roadmap\.sh|owasp|portswigger|linux journey|ubuntu)/i.test(haystack)) {
     return "docs";
   }
 
@@ -72,7 +72,7 @@ function getResourceSlot(resource: RoadmapLearningResource): ResourceSlot {
 function getSlotMeta(slot: ResourceSlot) {
   switch (slot) {
     case "docs":
-      return { label: "Official Docs", icon: "📘", fallback: "MDN / official documentation", action: "Read docs" };
+      return { label: "W3Schools Reading", icon: "📘", fallback: "W3Schools reading guide", action: "Read now" };
     case "video":
       return { label: "Video", icon: "🎥", fallback: "freeCodeCamp or trusted YouTube video", action: "Watch video" };
     case "practice":

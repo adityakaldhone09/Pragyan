@@ -120,6 +120,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         clearStoredAuthSession();
       }
+
+      sessionStorage.clear();
       persistSession(null);
       setStatus("anonymous");
     },
