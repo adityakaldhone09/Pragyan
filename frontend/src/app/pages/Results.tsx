@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { Link, useLocation } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import { ArrowRight, Brain, Sparkles, Target, TrendingUp } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer } from "recharts";
@@ -9,7 +9,9 @@ import { GlassCard } from "../components/GlassCard";
 import { GlowButton } from "../components/GlowButton";
 import { SectionHeader } from "../components/SectionHeader";
 import { assessmentService } from "../../services/assessmentService";
+import { aiService } from "../../services/aiService";
 import type { AdaptiveCareerMatch, AdaptiveSubmitResponse } from "../../types/api";
+import { toCareerSlug } from "../utils/careerSlug";
 
 type LocationState = {
   adaptiveResult?: AdaptiveSubmitResponse;
@@ -39,8 +41,10 @@ function deriveRadarData(summary: AdaptiveSubmitResponse["summary"]) {
 
 export function Results() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { adaptiveResult } = (location.state || {}) as LocationState;
   const [result, setResult] = useState<AdaptiveSubmitResponse | null>(adaptiveResult || null);
+  const [generatingRoadmap, setGeneratingRoadmap] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -81,6 +85,19 @@ export function Results() {
   const secondary = result?.summary?.secondaryMatches || result?.topMatches?.slice(1) || [];
   const radarData = useMemo(() => deriveRadarData(result?.summary as AdaptiveSubmitResponse["summary"]), [result?.summary]);
   const confidence = Math.max(0, Math.min(100, Number(result?.confidence || result?.summary?.confidence || 0)));
+  const recommendedCareer = topMatch?.career || result?.summary?.suggestedCareers?.[0] || "career-journey";
+  const recommendedLevel = result?.ai?.targetLevel || (confidence >= 85 ? "advanced" : confidence >= 70 ? "intermediate" : "beginner");
+
+  async function handleStartJourney() {
+    setGeneratingRoadmap(true);
+    try {
+      await aiService.generatePersonalizedRoadmap(recommendedCareer, recommendedLevel);
+    } catch {
+      // Fall through and still open the journey page; the backend has a deterministic fallback.
+    } finally {
+      navigate(`/journey/${toCareerSlug(recommendedCareer)}`);
+    }
+  }
 
   const skillHeatmap = useMemo(() => {
     const source = (topMatch?.skillGaps || []).slice(0, 6);
@@ -171,6 +188,63 @@ export function Results() {
           </GlassCard>
         </div>
 
+        <GlassCard glow glowColor="secondary">
+          <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr] items-start">
+            <div className="space-y-4">
+              <div className="inline-flex items-center gap-2 rounded-full border border-secondary/30 bg-secondary/10 px-4 py-2">
+                <Sparkles className="w-4 h-4 text-secondary" />
+                <span className="text-sm font-medium text-secondary">Assessment → AI Match → Suggested Career → Roadmap</span>
+              </div>
+              <div>
+                <h3 className="text-2xl font-semibold">Your recommended learning path is ready</h3>
+                <p className="mt-2 text-sm text-muted-foreground max-w-2xl">
+                  The assessment locked your strongest career match, AI summarized the best-fit direction, and the roadmap page turns that into a daily execution plan.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-muted-foreground">1. Assessment complete</span>
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-muted-foreground">2. AI match generated</span>
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-muted-foreground">3. Suggested career: {topMatch?.career || result?.summary?.suggestedCareers?.[0] || "Next best path"}</span>
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-muted-foreground">4. Start the roadmap</span>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-background/40 p-5 space-y-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Recommended roadmap</p>
+                <p className="mt-2 text-xl font-semibold">{topMatch?.career || "Personalized career path"}</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {topMatch?.reasons?.[0] || "The roadmap adapts to your strengths, gaps, and preferred learning style."}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                  <p className="text-xs text-muted-foreground">Best match</p>
+                  <p className="mt-1 font-semibold text-secondary">{topMatch?.match || 0}%</p>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                  <p className="text-xs text-muted-foreground">Confidence</p>
+                  <p className="mt-1 font-semibold text-primary">{confidence}%</p>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <Link to="/analysis">
+                  <GlowButton variant="primary" className="w-full">
+                    View Career Blueprint
+                    <ArrowRight className="w-4 h-4 ml-2 inline" />
+                  </GlowButton>
+                </Link>
+                <GlowButton variant="secondary" className="w-full" onClick={() => void handleStartJourney()} disabled={generatingRoadmap}>
+                  {generatingRoadmap ? "Generating roadmap..." : "Start Career Journey"}
+                </GlowButton>
+              </div>
+            </div>
+          </div>
+        </GlassCard>
+
         <div className="grid lg:grid-cols-2 gap-6">
           <GlassCard glow glowColor="secondary">
             <SectionHeader title="Radar Profile" subtitle="Trait strengths synthesized from adaptive answers" className="mb-4" />
@@ -255,14 +329,8 @@ export function Results() {
         <div className="flex flex-wrap items-center gap-3 justify-center">
           <Link to="/analysis">
             <GlowButton variant="secondary">
-              Detailed Analysis
+              View Career Blueprint
               <TrendingUp className="w-4 h-4 ml-2 inline" />
-            </GlowButton>
-          </Link>
-          <Link to="/roadmap">
-            <GlowButton variant="primary">
-              Start Learning Roadmap
-              <ArrowRight className="w-4 h-4 ml-2 inline" />
             </GlowButton>
           </Link>
         </div>

@@ -164,3 +164,29 @@ export async function getStoredJobs() {
     orderBy: { createdAt: 'desc' },
   });
 }
+
+export async function ensureJobsSynced() {
+  const storedJobs = await getStoredJobs();
+
+  if (storedJobs.length > 0) {
+    return {
+      synced: false,
+      totalFetched: storedJobs.length,
+      totalStored: storedJobs.length,
+      jobs: storedJobs,
+    };
+  }
+
+  try {
+    return await storeJobs();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn('Lazy job sync failed:', message);
+    return {
+      synced: false,
+      totalFetched: 0,
+      totalStored: 0,
+      jobs: [],
+    };
+  }
+}

@@ -33,10 +33,14 @@ model User {
   skillLevel       String?
   xp               Float    @default(0)
   streak           Int      @default(0)
+  level            Int      @default(1)
+  currentTitle     String?
+  careerTrack      String?
 
   // Relations
   refreshTokens           RefreshToken[]
   socialAccounts          SocialAccount[]
+  githubRepositories      GithubRepository[]
   assessmentAnswers       AssessmentAnswer[]
   assessmentResults       AssessmentResult[]
   assessmentSessions      AssessmentSession[]
@@ -44,11 +48,15 @@ model User {
   completedRoadmaps       CompletedRoadmap[]
   completedTaskHistory    CompletedTaskHistory[]
   achievements            UserAchievement[]
+  userXpLogs              UserXpLog[]
+  dailyQuizAttempts       DailyQuizAttempt[]
   dailyLearning           UserDailyLearning[]
   userRoadmaps            UserRoadmap[]
   taskProgress            TaskProgress[]
+  resourceLearningHistory  ResourceLearningHistory[]
   careerMatches           CareerMatch[]
   jobApplications         JobApplication[]
+  dailyAnalyticsSnapshots  DailyAnalyticsSnapshot[]
   // AI Memory & Personalization relations
   aiMemoryProfiles        AIMemoryProfile[]
   recommendationHistories RecommendationHistory[]
@@ -63,17 +71,58 @@ model User {
   @@index([provider, providerId])
 }
 
+// Intelligence debug audit logs for admin access to sensitive intelligence payloads
+model IntelligenceDebugAudit {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  adminId    String   @db.ObjectId
+  targetUser String?  @db.ObjectId
+  endpoint   String
+  filters    Json?
+  env        String?
+  createdAt  DateTime @default(now())
+
+  @@index([adminId])
+  @@index([targetUser])
+}
+
 model SocialAccount {
   id            String   @id @default(auto()) @map("_id") @db.ObjectId
   userId        String   @db.ObjectId
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   provider      String
   providerId    String
+  email         String?
+  username      String?
   avatar        String?
+  accessToken   String?
+  refreshToken  String?
   emailVerified Boolean  @default(false)
   createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@unique([provider, providerId])
+  @@index([userId])
+}
+
+model GithubRepository {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String   @db.ObjectId
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repoId        String
+  name          String
+  fullName      String
+  htmlUrl       String
+  description   String?
+  language      String?
+  stars         Int      @default(0)
+  forks         Int      @default(0)
+  isPrivate     Boolean  @default(false)
+  defaultBranch String?
+  pushedAt      DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, repoId])
   @@index([userId])
 }
 
@@ -164,6 +213,66 @@ model Resource {
   @@index([taskId])
 }
 
+model LearningResource {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  resourceKey      String   @unique
+  roadmapId        String?  @db.ObjectId
+  roadmap          Roadmap? @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  roadmapCategory  String
+  roadmapTitle     String?
+  skill            String
+  topic            String
+  topicSlug        String
+  dayNumber        Int?
+  resourceType     String
+  difficulty       String
+  source           String   @default("curated")
+  title            String
+  url              String
+  description      String
+  provider         String
+  estimatedMinutes Int?
+  isOfficial       Boolean  @default(false)
+  aiScore          Float    @default(0)
+  tags             String[]
+  metadata         Json?
+
+  history ResourceLearningHistory[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([roadmapId])
+  @@index([roadmapCategory])
+  @@index([skill])
+  @@index([topic])
+  @@index([resourceType])
+  @@index([difficulty])
+}
+
+model ResourceLearningHistory {
+  id              String           @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String           @db.ObjectId
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resourceId      String           @db.ObjectId
+  resource        LearningResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  roadmapId       String?          @db.ObjectId
+  roadmap         Roadmap?         @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  completed       Boolean          @default(false)
+  progressPercent Int              @default(0)
+  quizScore       Float?
+  notes           String?
+  source          String           @default("manual")
+  completedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, resourceId])
+  @@index([userId])
+  @@index([roadmapId])
+}
+
 model TaskProgress {
   id          String    @id @default(auto()) @map("_id") @db.ObjectId
   userId      String    @db.ObjectId
@@ -187,15 +296,23 @@ model Roadmap {
   id             String   @id @default(auto()) @map("_id") @db.ObjectId
   title          String
   category       String
+  careerPath     String?
+  difficulty     String?
   description    String
   level          String
   duration       String
   icon           String
   estimatedHours Int
+  requiredSkills String[] @default([])
+  learningStructure Json?
+  milestones     Json?
+  progression    Json?
   tags           String[]
 
   // Relations
   weeks             Week[]
+  learningResources LearningResource[]
+  resourceLearningHistory ResourceLearningHistory[]
   userRoadmaps      UserRoadmap[]
   progress          UserProgress[]
   completedRoadmaps CompletedRoadmap[]
@@ -412,6 +529,43 @@ model UserAchievement {
   @@index([userId])
 }
 
+model UserXpLog {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount    Int
+  reason    String
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model DailyQuiz {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  roadmapId   String?  @db.ObjectId
+  title       String
+  description String?
+  questions   Json
+  attempts    DailyQuizAttempt[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model DailyQuizAttempt {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quizId    String   @db.ObjectId
+  quiz      DailyQuiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  score     Int
+  xpAwarded Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([quizId])
+}
+
 model UserDailyLearning {
   id             String @id @default(auto()) @map("_id") @db.ObjectId
   userId         String @db.ObjectId
@@ -425,6 +579,27 @@ model UserDailyLearning {
 
   @@unique([userId, date])
   @@index([userId])
+}
+
+model DailyAnalyticsSnapshot {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String   @db.ObjectId
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date            String
+  readinessScore  Float    @default(0)
+  xp              Int      @default(0)
+  streak          Int      @default(0)
+  completedTasks  Int      @default(0)
+  studyHours      Float    @default(0)
+  eligibleJobs    Int      @default(0)
+  weakSkillCount  Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
 }
 
 // ============ CAREER MODELS ============
@@ -615,4 +790,169 @@ model DecisionSnapshot {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+model MentorConversation {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  journeyId String?  @db.ObjectId
+  title     String
+  context   Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([journeyId])
+}
+
+model MentorMessage {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  conversationId String   @db.ObjectId
+  role           String
+  content        String
+  contextSnapshot Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([conversationId])
+}
+
+model CareerJourney {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  slug             String   @unique
+  title            String
+  roadmapId        String?  @db.ObjectId
+  duration         String
+  industryDemand   String
+  salaryRange      String
+  estimatedDays    Int
+  requiredSkills   String[]
+  learningStructure Json?
+  aiContext        Json?
+  active           Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([roadmapId])
+}
+
+model JourneyDay {
+  id               String        @id @default(auto()) @map("_id") @db.ObjectId
+  journeyId        String        @db.ObjectId
+  dayNumber        Int
+  title            String
+  focus            String
+  topics           String[]
+  tasks            Json?
+  resources        Json?
+  estimatedMinutes Int
+  xpReward         Int
+  isMilestone      Boolean       @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([journeyId])
+  @@index([journeyId, dayNumber])
+}
+
+model JourneyTask {
+  id               String      @id @default(auto()) @map("_id") @db.ObjectId
+  journeyDayId     String      @db.ObjectId
+  title            String
+  type             String
+  estimatedMinutes Int
+  xp               Int
+  completed        Boolean     @default(false)
+  metadata         Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([journeyDayId])
+}
+
+model UserJourneyProgress {
+  id                 String        @id @default(auto()) @map("_id") @db.ObjectId
+  userId             String        @db.ObjectId
+  journeyId          String?       @db.ObjectId
+  currentDay         Int           @default(1)
+  completionPercentage Float        @default(0)
+  streak             Int           @default(0)
+  xp                 Int           @default(0)
+  adaptiveMode       String        @default("growth")
+  weakSkills         String[]
+  completedSkills    String[]
+  nextAction         String?
+  lastActiveAt       DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([journeyId])
+}
+
+model SkillProgress {
+  id             String        @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String        @db.ObjectId
+  journeyId      String?       @db.ObjectId
+  skill          String
+  mastery        Float
+  completed      Boolean       @default(false)
+  weak           Boolean       @default(false)
+  progressHistory Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([journeyId])
+  @@index([skill])
+}
+
+model JobEligibility {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId           String   @db.ObjectId
+  journeySlug      String
+  jobId            String
+  title            String
+  company          String
+  role             String
+  location         String
+  salary           String?
+  requiredSkills   String[]
+  missingSkills    String[]
+  matchPercentage  Int
+  eligible         Boolean  @default(false)
+  source           String
+  applied          Boolean  @default(false)
+  appliedAt        DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([journeySlug])
+  @@index([jobId])
+}
+
+model PlacementReadiness {
+  id               String        @id @default(auto()) @map("_id") @db.ObjectId
+  userId           String        @db.ObjectId
+  journeyId        String?       @db.ObjectId
+  score            Int
+  label            String
+  completedSkills  String[]
+  missingSkills    String[]
+  eligibleJobs     Int
+  nextAction       String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([journeyId])
 }

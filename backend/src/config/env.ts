@@ -58,10 +58,33 @@ export const config = {
   
   cors: {
     origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-    allowedOrigins: (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || 'http://localhost:5173')
-      .split(',')
-      .map((origin) => origin.trim())
-      .filter(Boolean),
+    allowedOrigins: (() => {
+      const configuredOrigins = (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || 'http://localhost:5173,http://127.0.0.1:5173')
+        .split(',')
+        .map((origin) => origin.trim())
+        .filter(Boolean);
+
+      const expandedOrigins = configuredOrigins.flatMap((origin) => {
+        try {
+          const url = new URL(origin);
+          const port = url.port ? `:${url.port}` : '';
+
+          if (url.hostname === 'localhost') {
+            return [origin, `${url.protocol}//127.0.0.1${port}`];
+          }
+
+          if (url.hostname === '127.0.0.1') {
+            return [origin, `${url.protocol}//localhost${port}`];
+          }
+        } catch {
+          return [origin];
+        }
+
+        return [origin];
+      });
+
+      return Array.from(new Set(expandedOrigins));
+    })(),
   },
   
   bcrypt: {

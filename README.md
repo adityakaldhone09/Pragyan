@@ -1,242 +1,141 @@
 # Pragyan
 
-Pragyan is an AI-powered career guidance and learning platform. The repository is split into two runnable apps:
+Pragyan is an AI-powered career operating system that combines assessment, roadmap generation, curated learning resources, mentor memory, and explainable placement intelligence.
 
-- `frontend/` - the React + Vite website
-- `backend/` - the Express + TypeScript API, Prisma schema, and seed scripts
+This README highlights how to run the project and documents the recent intelligence and observability improvements (admin tools, audit logging, TTL/indexing, UX polish).
 
-Local development uses these default ports:
+## What’s new (high level)
 
-- Frontend: `http://localhost:5173`
-- Backend: `http://localhost:5000`
+- Centralized, explainable Intelligence module (`/api/intelligence`) that computes deterministic placement forecasts, opportunity signals, consistency risk, momentum, and readiness projections.
+- Admin observability panel and API:
+  - `GET /api/intelligence/debug` — admin-only debug payload (raw inputs, derived signals, explanations, config used).
+  - `GET /api/intelligence/audits` — paginated audit listing for admin governance.
+  - Frontend admin pages: `/admin/intelligence` and `/admin/intelligence/audits`.
+- Audit logging for debug access (fire-and-forget) persisted to `IntelligenceDebugAudit` collection with TTL and indexes to retain logs for a configurable window.
+- UX polish: assistant streaming replies, dashboard hero improvements, loading skeletons, and small micro-interaction upgrades.
 
-The frontend Vite server proxies `/api` requests to the backend during development, so the browser only needs to talk to the frontend origin.
+---
 
-## What Pragyan Does
+## Tech Stack
 
-Pragyan helps users:
+- Frontend: React 18, TypeScript, Vite, Tailwind
+- Backend: Node.js, Express, TypeScript
+- Database: MongoDB with Prisma
+- Auth: Passport + JWT + session
+- AI: pluggable provider (Gemini or local fallback)
 
-- discover careers that fit their interests and skills
-- complete adaptive assessments
-- view learning roadmaps and progress tracking
-- get AI-assisted recommendations and explanations
-- explore jobs, roadmaps, and personalized guidance
+## Repository Layout
 
-## Project Layout
-
-```text
+```
 Pragyan/
-├── frontend/        # Web app
-├── backend/         # API server, database schema, tests
-├── README.md        # This guide
-└── .gitignore       # Shared ignore rules
+├── frontend/    # React SPA
+├── backend/     # Express API + intelligence module
+├── README.md
+└── package.json
 ```
 
-Important frontend folders:
+## Quickstart (development)
 
-- `frontend/src/app/` - pages, route components, shared UI pieces
-- `frontend/src/context/` - React providers such as auth state
-- `frontend/src/services/` - API client and feature services
-- `frontend/src/styles/` - global CSS entry files and theme layers
+Prerequisites
+- Node.js 18+
+- npm or pnpm
+- MongoDB connection string (Atlas or local)
 
-Important backend folders:
+Environment
+- Copy `backend/.env.example` to `backend/.env` and set values.
+- Important env vars added recently:
+  - `AI_PROVIDER` (e.g. `gemini`)
+  - `GEMINI_API_KEY` (if using Gemini)
+  - `INTELLIGENCE_AUDIT_TTL_DAYS` — number of days to retain audit logs (default 30)
 
-- `backend/src/` - server bootstrap, routes, controllers, services, middleware
-- `backend/prisma/` - Prisma schema and seed file
-- `backend/scripts/` - seed/import/check scripts
-
-## Prerequisites
-
-Install these before starting the project:
-
-- Node.js 18 or newer
-- npm 9+ or pnpm 8+
-- MongoDB Atlas or another MongoDB replica-set compatible database
-- Optional AI provider keys if you want live AI responses
-
-## First-Time Setup
-
-### 1. Install dependencies
-
-Install packages inside both app folders:
+Install
 
 ```bash
-cd /workspaces/Pragyan/backend
+cd backend
 npm install
 
-cd /workspaces/Pragyan/frontend
+cd ../frontend
 npm install
 ```
 
-### 2. Configure the backend environment
-
-Create the backend environment file from the example:
+Database
 
 ```bash
-cd /workspaces/Pragyan/backend
-cp .env.example .env
-```
-
-Set at least these values in `backend/.env`:
-
-- `DATABASE_URL` - MongoDB connection string
-- `JWT_SECRET` - access-token secret
-- `JWT_REFRESH_SECRET` - refresh-token secret
-- `FRONTEND_URL` - usually `http://localhost:5173`
-- `CORS_ORIGINS` - allowed browser origins
-
-Optional values for AI and caching:
-
-- `AI_PROVIDER`
-- `GEMINI_API_KEY`
-- `GEMINI_MODEL`
-- `GROQ_API_KEY`
-- `REDIS_URL`
-
-Do not commit `.env` files.
-
-### 3. Prepare the database
-
-From the backend folder:
-
-```bash
-cd /workspaces/Pragyan/backend
-npm run prisma:generate
-npm run prisma:push
-```
-
-If you want demo data, run:
-
-```bash
+cd backend
+npx prisma generate
+npx prisma db push
 npm run seed
 ```
 
-The backend validates its environment before it starts listening, so a bad `DATABASE_URL` or missing secret will stop startup early.
+> Note: the audit model `IntelligenceDebugAudit` was added; we use raw Mongo commands for index/TTL creation at app startup so a regenerated client is not strictly required for runtime.
 
-## How To Start The Website
-
-Open two terminals and start both services.
-
-### Terminal 1 - Backend
+Run locally
 
 ```bash
-cd /workspaces/Pragyan/backend
+# backend
+cd backend
+npm run dev
+
+# frontend (in another terminal)
+cd frontend
 npm run dev
 ```
 
-This starts the API on `http://localhost:5000`.
+Frontend default: `http://127.0.0.1:5173` (proxies to backend)
 
-### Terminal 2 - Frontend
-
-```bash
-cd /workspaces/Pragyan/frontend
-npm run dev
-```
-
-This starts the website on `http://localhost:5173`.
-
-Open `http://localhost:5173` in your browser after both are running.
-
-## Recommended Startup Order
-
-1. Start the backend first so auth and data requests have a live API.
-2. Start the frontend second so Vite can serve the UI and proxy `/api` calls.
-3. Seed the database if you want sample roadmaps, jobs, and test accounts.
-4. Keep the backend terminal visible because it prints configuration and connection issues clearly.
-
-## Useful Commands
-
-### Frontend
+Build
 
 ```bash
-cd /workspaces/Pragyan/frontend
-npm run dev
+cd backend
+npm run build
+
+cd ../frontend
 npm run build
 ```
 
-### Backend
+---
+
+## Intelligence & Observability (details)
+
+- The intelligence engine lives under `backend/src/modules/intelligence` and exposes a typed payload shape used by the dashboard and forecast chips.
+- Admin debug endpoint returns an explainable payload suitable for QA and ML inspection. Access to the endpoint is protected by `authenticate + authorize('ADMIN')`.
+- Audit logging captures each admin access to the debug endpoint and stores a minimal governance record (adminId, targetUser, endpoint, filters, env, createdAt). Logs are written in non-blocking mode; failures do not affect the API response.
+- Indexes and TTL are created at startup by the app (see `ensureIntelligenceIndexes`) and are configurable via `INTELLIGENCE_AUDIT_TTL_DAYS`.
+
+Operational guidance
+- Default TTL: 30 days. Adjust with `INTELLIGENCE_AUDIT_TTL_DAYS` for staging/production.
+- Audit viewer is admin-only and intentionally shows only governance metadata (no raw payload content) to avoid exposing sensitive internals.
+
+---
+
+## UX polish highlights
+
+- Assistant: streaming reply effect (typewriter), personalized greeting, visual typing indicator.
+- Dashboard: hero shows live placement readiness, unlocked opportunities, and momentum summary; stat cards show skeletons while loading.
+- Admin pages: lightweight observability UI for intelligence and audit logs.
+
+These changes aim to improve perceived product quality and make the platform demo-ready.
+
+---
+
+## Deployment notes
+
+- Ensure `DATABASE_URL` is set and the MongoDB user has permissions to create indexes.
+- Ensure `INTELLIGENCE_AUDIT_TTL_DAYS` is set according to retention policy.
+
+## Contributing & Tests
+
+- Run unit tests from `backend`:
 
 ```bash
-cd /workspaces/Pragyan/backend
-npm run dev
-npm run build
-npm run start
-npm run seed
-npm test
+cd backend
+npm run test
 ```
 
-### Prisma
+- Open a PR with focused changes; intelligence changes should include unit tests that exercise `intelligence.service`.
 
-```bash
-cd /workspaces/Pragyan/backend
-npm run prisma:generate
-npm run prisma:push
-```
+---
 
-## What Lives Where
+If you want, I can add a short admin guide (README snippet) that documents how to use `/admin/intelligence` and `/admin/intelligence/audits` for product/QA teams.
 
-### Frontend
-
-The frontend is a React app with lazy-loaded routes and an auth context that persists sessions in local storage. Main areas include:
-
-- `frontend/src/app/pages/` - landing, auth, dashboard, assessment, roadmap, results, profile, assistant, and analysis pages
-- `frontend/src/app/components/` - shared UI, navigation, and visual components
-- `frontend/src/services/` - API wrappers for auth, jobs, roadmaps, assessment, and recommendations
-- `frontend/src/context/AuthContext.tsx` - session bootstrap and auth state
-
-### Backend
-
-The backend uses Express, Passport, Prisma, and MongoDB. Main areas include:
-
-- `backend/src/app.ts` - Express app setup, middleware, and route registration
-- `backend/src/server.ts` - startup validation, Prisma connection, and server boot
-- `backend/src/routes/` - API route modules
-- `backend/src/controllers/` - request handlers
-- `backend/src/services/` - business logic and AI helpers
-- `backend/prisma/schema.prisma` - database schema
-
-## API Areas
-
-The backend exposes grouped routes for:
-
-- authentication
-- roadmaps
-- progress tracking
-- assessments
-- AI recommendations
-- jobs and career matching
-- admin and utility workflows
-
-There is also a health endpoint at `/health`.
-
-## Troubleshooting
-
-### The frontend does not load
-
-- Confirm `frontend/` is running with `npm run dev`.
-- Confirm `backend/` is also running on port `5000`.
-- Check the browser console for `/api` failures.
-
-### The backend exits immediately
-
-- Check `backend/.env`.
-- Confirm `DATABASE_URL` points to a valid MongoDB instance.
-- Confirm the MongoDB cluster supports the Prisma MongoDB workflow.
-
-### Auth requests fail
-
-- Confirm `FRONTEND_URL` and `CORS_ORIGINS` include `http://localhost:5173`.
-- Make sure the backend is running before logging in.
-- Clear browser storage if you have an old invalid session.
-
-### Prisma setup fails
-
-- Run `npm run prisma:generate` again.
-- Re-check `backend/prisma/schema.prisma`.
-- Run `npm run prisma:push` after the database connection is fixed.
-
-## Notes
-
-- The canonical Vite config for the app is `frontend/vite.config.ts`.
-- The backend startup code validates env values before serving traffic.
-- Keep placeholder CSS files only if they are still imported by the build.
+**Made with ❤️ for career engineering and explainable AI**

@@ -1,12 +1,27 @@
 import { Request, Response } from 'express';
 import { asyncHandler } from '@/middleware/errorHandler';
 import { sendError, sendSuccess } from '@/utils/response';
-import { storeJobs } from '@/services/job-sync';
+import { ensureJobsSynced, storeJobs } from '@/services/job-sync';
 import { getJobFeedForUser, markJobApplied } from '@/services/job-match-engine';
 
 export const getJobs = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     return sendError(res, 401, 'Unauthorized');
+  }
+
+  const syncResult = await ensureJobsSynced();
+  if (!syncResult.jobs.length) {
+    return sendSuccess(
+      res,
+      {
+        recentJobs: [],
+        recommendedJobs: [],
+        appliedJobs: [],
+        syncWarning: 'No job feed was returned from RapidAPI. Check RAPID_API_KEY and the JSearch API status.',
+      },
+      200,
+      'Job feed fetched successfully'
+    );
   }
 
   const feed = await getJobFeedForUser(req.user.id);

@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { NotFoundError } from '@/utils/errors';
+import { xpService } from '@/services/xp';
 
 interface UpsertRoadmapProgressInput {
   roadmapId: string;
@@ -111,14 +112,7 @@ export class ProgressService {
     });
 
     // Update user XP
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        xp: {
-          increment: xpReward,
-        },
-      },
-    });
+    await xpService.awardXp(userId, xpReward, 'task-complete', { taskId, roadmapId });
 
     return updatedProgress;
   }
@@ -288,15 +282,11 @@ export class ProgressService {
       const previousStreak = user?.streak ?? 0;
       const nextStreak = xpDelta > 0 ? await this.calculateNextStreak(userId, today) : previousStreak;
 
-      await prisma.user.update({
-        where: { id: userId },
-        data: {
-          xp: {
-            increment: xpDelta,
-          },
-          ...(xpDelta > 0 ? { streak: nextStreak } : {}),
-        },
-      });
+      await xpService.awardXp(userId, xpDelta, 'task-complete', { taskId, roadmapId: input.roadmapId });
+
+      if (xpDelta > 0) {
+        await prisma.user.update({ where: { id: userId }, data: { streak: nextStreak } });
+      }
 
       if (xpDelta > 0) {
         await prisma.completedTaskHistory.upsert({

@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { MongoClient, ObjectId } from 'mongodb';
+import axios from 'axios';
 import { getMongoUrl } from '@/config/mongo';
 import { randomBytes } from 'crypto';
 import { hashPassword, comparePasswords } from '@/utils/password';
@@ -35,6 +36,32 @@ const userProfileSelect = {
   createdAt: true,
   updatedAt: true,
 } as const;
+
+type OAuthProviderKey = 'google' | 'github';
+
+type ProviderConnectionStatus = {
+  linked: boolean;
+  email?: string;
+  username?: string;
+  verified?: boolean;
+  avatar?: string | null;
+};
+
+type ProviderStatusMap = Record<OAuthProviderKey, ProviderConnectionStatus>;
+
+type GitHubRepositoryPayload = {
+  id: number;
+  name: string;
+  full_name: string;
+  html_url: string;
+  description: string | null;
+  language: string | null;
+  stargazers_count: number;
+  forks_count: number;
+  private: boolean;
+  default_branch: string;
+  pushed_at: string | null;
+};
 
 function buildUserSession(user: {
   id: string;
@@ -151,6 +178,55 @@ export class AuthService {
     } finally {
       await client.close();
     }
+  }
+
+  private async syncGitHubRepositories(userId: string, accessToken?: string | null) {
+    if (!accessToken) {
+      return;
+    }
+
+    const response = await axios.get<GitHubRepositoryPayload[]>('https://api.github.com/user/repos', {
+      params: {
+        per_page: 100,
+        sort: 'updated',
+        affiliation: 'owner,collaborator,organization_member',
+      },
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+        'User-Agent': 'Pragyan',
+      },
+    });
+
+    const repositories = Array.isArray(response.data) ? response.data : [];
+
+    await prisma.githubRepository.deleteMany({ where: { userId } });
+
+    if (!repositories.length) {
+      return;
+    }
+
+    await Promise.all(
+      repositories.map((repository) =>
+        prisma.githubRepository.create({
+          data: {
+            userId,
+            repoId: String(repository.id),
+            name: repository.name,
+            fullName: repository.full_name,
+            htmlUrl: repository.html_url,
+            description: repository.description,
+            language: repository.language,
+            stars: repository.stargazers_count || 0,
+            forks: repository.forks_count || 0,
+            isPrivate: Boolean(repository.private),
+            defaultBranch: repository.default_branch || null,
+            pushedAt: repository.pushed_at ? new Date(repository.pushed_at) : null,
+          },
+        })
+      )
+    );
   }
 
   async register(input: RegisterInput) {
@@ -387,67 +463,47 @@ export class AuthService {
       const emailVerified = profile.emailVerified ?? true;
       const fullName = profile.fullName || profile.email.split('@')[0] || 'Pragyan User';
       const now = new Date();
+      const normalizedEmail = profile.email.trim();
 
-      // First, check for an existing SocialAccount linking this provider id
+      // Resolve the login target by email first so we do not create duplicate users.
       let user = null as any;
-      console.log(Object.keys(prisma));
-      console.log('user:', prisma.user);
-      console.log('socialAccount:', (prisma as any).socialAccount);
-      console.log('Prisma object:', prisma);
-      console.log('prisma.user exists:', !!prisma.user);
-      console.log('prisma.socialAccount exists:', !!(prisma as any).socialAccount);
-      // @ts-ignore
-      console.log('Prisma client version:', (prisma as any)._clientVersion ?? 'unknown');
-      const existingSocial = await (prisma as any).socialAccount.findFirst({
-        where: { provider: profile.provider, providerId: profile.providerId },
+      console.log('[OAuth:loginWithOAuth:lookup]', {
+        provider: profile.provider,
+        providerId: profile.providerId,
+        email: normalizedEmail,
+        sessionId: (globalThis as any)?.sessionID || undefined,
+      });
+      const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+      console.log('[OAuth:loginWithOAuth:existingUser]', {
+        found: Boolean(existingUser),
+        userId: existingUser?.id || null,
+        provider: existingUser?.provider || null,
+        providerId: existingUser?.providerId || null,
       });
 
-      if (existingSocial) {
-        console.log('Prisma object:', prisma);
-        console.log('prisma.user exists:', !!prisma.user);
-        console.log('prisma.socialAccount exists:', !!(prisma as any).socialAccount);
-        // @ts-ignore
-        console.log('Prisma client version:', (prisma as any)._clientVersion ?? 'unknown');
-        user = await prisma.user.findUnique({ where: { id: existingSocial.userId } });
-      }
-
-      // If not found via social account, fall back to matching by email
-      if (!user) {
-        console.log('Prisma object:', prisma);
-        console.log('prisma.user exists:', !!prisma.user);
-        console.log('prisma.socialAccount exists:', !!(prisma as any).socialAccount);
-        // @ts-ignore
-        console.log('Prisma client version:', (prisma as any)._clientVersion ?? 'unknown');
-        user = await prisma.user.findFirst({ where: { email: profile.email } });
-      }
-
-      if (user) {
-        console.log('Prisma object:', prisma);
-        console.log('prisma.user exists:', !!prisma.user);
-        console.log('prisma.socialAccount exists:', !!(prisma as any).socialAccount);
-        // @ts-ignore
-        console.log('Prisma client version:', (prisma as any)._clientVersion ?? 'unknown');
-        user = await prisma.user.update({
-          where: { id: user.id },
-          data: {
-            fullName: user.fullName || fullName,
-            provider: profile.provider,
-            providerId: profile.providerId,
-            avatar,
-            emailVerified,
-            updatedAt: now,
-          },
+      if (existingUser) {
+        console.log('[OAuth:loginWithOAuth:attachExistingUser]', {
+          userId: existingUser.id,
+          email: existingUser.email,
+          hasProviderId: Boolean(existingUser.providerId),
+        });
+        user = await this.attachOAuthAccountToUser(existingUser.id, {
+          ...profile,
+          email: normalizedEmail,
+          avatar,
+          emailVerified,
+          fullName: existingUser.fullName || fullName,
         });
       } else {
         const hashedPassword = await hashPassword(randomBytes(32).toString('hex'));
-        console.log('Prisma object:', prisma);
-        console.log('prisma.user exists:', !!prisma.user);
-        console.log('prisma.socialAccount exists:', !!(prisma as any).socialAccount);
-        // @ts-ignore
-        console.log('Prisma client version:', (prisma as any)._clientVersion ?? 'unknown');
-        user = await prisma.user.create({
+        console.log('[OAuth:loginWithOAuth:createUser]', {
+          email: normalizedEmail,
+          provider: profile.provider,
+          providerId: profile.providerId,
+        });
+        const created = await prisma.user.create({
           data: {
-            email: profile.email,
+            email: normalizedEmail,
             fullName,
             password: hashedPassword,
             provider: profile.provider,
@@ -471,23 +527,31 @@ export class AuthService {
             streak: 0,
           },
         });
+
+        user = await this.attachOAuthAccountToUser(created.id, {
+          ...profile,
+          email: normalizedEmail,
+          avatar,
+          emailVerified,
+          fullName,
+        });
       }
 
       console.log('[OAuth:loginWithOAuth]', {
         provider: profile.provider,
         providerId: profile.providerId,
-        email: profile.email,
-        action: user ? 'updated' : 'created',
+        email: normalizedEmail,
+        action: existingUser ? 'login-existing-user' : 'created-new-user',
         userId: user.id,
       });
 
       let refreshToken = generateRefreshToken(user.id);
       try {
-        console.log('Prisma object:', prisma);
-        console.log('prisma.user exists:', !!prisma.user);
-        console.log('prisma.socialAccount exists:', !!(prisma as any).socialAccount);
-        // @ts-ignore
-        console.log('Prisma client version:', (prisma as any)._clientVersion ?? 'unknown');
+        console.log('[OAuth:loginWithOAuth:refreshTokenCreate]', {
+          userId: user.id,
+          provider: profile.provider,
+          providerId: profile.providerId,
+        });
         await prisma.refreshToken.create({
           data: {
             token: refreshToken,
@@ -560,58 +624,152 @@ export class AuthService {
     }
   }
 
+  private async attachOAuthAccountToUser(userId: string, profile: OAuthUserProfile) {
+    const now = new Date();
+    const existingAccount = await prisma.socialAccount.findUnique({
+      where: {
+        provider_providerId: {
+          provider: profile.provider,
+          providerId: profile.providerId,
+        },
+      },
+    });
+
+    console.log('[OAuth:attachOAuthAccountToUser]', {
+      userId,
+      provider: profile.provider,
+      providerId: profile.providerId,
+      email: profile.email,
+      existingAccountUserId: existingAccount?.userId || null,
+      willReassign: Boolean(existingAccount && existingAccount.userId !== userId),
+    });
+
+    await prisma.socialAccount.upsert({
+      where: {
+        provider_providerId: {
+          provider: profile.provider,
+          providerId: profile.providerId,
+        },
+      },
+      create: {
+        userId,
+        provider: profile.provider,
+        providerId: profile.providerId,
+        email: profile.email,
+        username: profile.username ?? null,
+        avatar: profile.avatar ?? null,
+        accessToken: profile.accessToken ?? null,
+        refreshToken: profile.refreshToken ?? null,
+        emailVerified: profile.emailVerified ?? true,
+      },
+      update: {
+        userId,
+        email: profile.email,
+        username: profile.username ?? null,
+        avatar: profile.avatar ?? null,
+        accessToken: profile.accessToken ?? null,
+        refreshToken: profile.refreshToken ?? null,
+        emailVerified: profile.emailVerified ?? true,
+      },
+    });
+
+    if (profile.provider === 'github') {
+      try {
+        await this.syncGitHubRepositories(userId, profile.accessToken);
+      } catch (syncErr) {
+        console.warn('GitHub repository sync failed during OAuth login:', (syncErr as any)?.message || String(syncErr));
+      }
+    }
+
+    await prisma.user.updateMany({
+      where: { id: userId },
+      data: {
+        provider: profile.provider,
+        providerId: profile.providerId,
+        fullName: profile.fullName || undefined,
+        avatar: profile.avatar ?? undefined,
+        emailVerified: profile.emailVerified ?? undefined,
+        updatedAt: now,
+      } as any,
+    });
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: userProfileSelect,
+    });
+
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+
+    return user;
+  }
+
   async linkProviderToUser(userId: string, profile: OAuthUserProfile) {
     if (!profile.providerId) {
       throw new BadRequestError('OAuth provider did not return a provider identifier');
     }
 
     // Check if providerId already linked to another user
-    console.log('Prisma object:', prisma);
-    console.log('prisma.user exists:', !!prisma.user);
-    console.log('prisma.socialAccount exists:', !!(prisma as any).socialAccount);
-    // @ts-ignore
-    console.log('Prisma client version:', (prisma as any)._clientVersion ?? 'unknown');
-    const existing = await (prisma as any).socialAccount.findFirst({
-      where: { provider: profile.provider, providerId: profile.providerId },
+    const existing = await prisma.socialAccount.findUnique({
+      where: {
+        provider_providerId: {
+          provider: profile.provider,
+          providerId: profile.providerId,
+        },
+      },
     });
 
     if (existing && existing.userId !== userId) {
-      throw new ConflictError('This social account is already linked to another user');
+      console.log('[OAuth:linkProviderToUser:conflict]', {
+        userId,
+        existingUserId: existing.userId,
+        provider: profile.provider,
+        providerId: profile.providerId,
+        email: profile.email,
+      });
+      throw new ConflictError('Account already linked with different user');
     }
 
     // Upsert social account for this user
     const now = new Date();
 
-    console.log('Prisma object:', prisma);
-    console.log('prisma.user exists:', !!prisma.user);
-    console.log('prisma.socialAccount exists:', !!(prisma as any).socialAccount);
-    // @ts-ignore
-    console.log('Prisma client version:', (prisma as any)._clientVersion ?? 'unknown');
-    await (prisma as any).socialAccount.upsert({
+    await prisma.socialAccount.upsert({
       where: existing ? { id: existing.id } : { provider_providerId: { provider: profile.provider, providerId: profile.providerId } },
       create: {
         userId,
         provider: profile.provider,
         providerId: profile.providerId,
+        email: profile.email,
+        username: profile.username ?? null,
         avatar: profile.avatar ?? null,
+        accessToken: profile.accessToken ?? null,
+        refreshToken: profile.refreshToken ?? null,
         emailVerified: profile.emailVerified ?? true,
       },
       update: {
+        email: profile.email,
+        username: profile.username ?? null,
         avatar: profile.avatar ?? null,
+        accessToken: profile.accessToken ?? null,
+        refreshToken: profile.refreshToken ?? null,
         emailVerified: profile.emailVerified ?? true,
       },
     });
 
+    if (profile.provider === 'github') {
+      try {
+        await this.syncGitHubRepositories(userId, profile.accessToken);
+      } catch (syncErr) {
+        console.warn('GitHub repository sync failed during linking:', (syncErr as any)?.message || String(syncErr));
+      }
+    }
+
     // Optionally update primary user record with avatar/fullName if missing
-    console.log('Prisma object:', prisma);
-    console.log('prisma.user exists:', !!prisma.user);
-    console.log('prisma.socialAccount exists:', !!(prisma as any).socialAccount);
-    // @ts-ignore
-    console.log('Prisma client version:', (prisma as any)._clientVersion ?? 'unknown');
     await prisma.user.updateMany({
       where: { id: userId },
       data: {
-        fullName: { set: profile.fullName || undefined },
+        fullName: profile.fullName || undefined,
         avatar: profile.avatar ?? undefined,
         emailVerified: profile.emailVerified ?? undefined,
         updatedAt: now,
@@ -656,6 +814,92 @@ export class AuthService {
     return user;
   }
 
+  async getProviderStatus(userId: string) {
+    const [socialAccounts, user] = await Promise.all([
+      prisma.socialAccount.findMany({
+        where: { userId },
+        select: {
+          provider: true,
+          email: true,
+          username: true,
+          avatar: true,
+          emailVerified: true,
+        },
+      }),
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, email: true, emailVerified: true },
+      }),
+    ]);
+
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+
+    const status: ProviderStatusMap = {
+      google: { linked: false },
+      github: { linked: false },
+    };
+
+    for (const account of socialAccounts) {
+      if (account.provider === 'google' || account.provider === 'github') {
+        const provider = account.provider as OAuthProviderKey;
+        status[provider] = {
+          linked: true,
+          email: account.email || user.email,
+          username: account.username || undefined,
+          verified: Boolean(account.emailVerified),
+          avatar: account.avatar ?? null,
+        };
+      }
+    }
+
+    return status;
+  }
+
+  async unlinkProviderFromUser(userId: string, provider: OAuthProviderKey) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, provider: true, providerId: true },
+    });
+
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+
+    const existing = await prisma.socialAccount.findFirst({
+      where: { userId, provider },
+    });
+
+    if (!existing) {
+      throw new NotFoundError('Linked account not found');
+    }
+
+    const linkedCount = await prisma.socialAccount.count({ where: { userId } });
+    if (linkedCount <= 1 && user.provider !== 'local') {
+      throw new BadRequestError('You must keep at least one login method linked');
+    }
+
+    await prisma.socialAccount.delete({ where: { id: existing.id } });
+
+    const remaining = await prisma.socialAccount.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'asc' },
+      select: { provider: true, providerId: true },
+    });
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        provider: remaining[0]?.provider || 'local',
+        providerId: remaining[0]?.providerId || null,
+        updatedAt: new Date(),
+      },
+    });
+
+    return this.getProviderStatus(userId);
+  }
+
   async getUserById(userId: string) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -667,12 +911,7 @@ export class AuthService {
     }
 
     // Include linked social accounts
-    console.log('Prisma object:', prisma);
-    console.log('prisma.user exists:', !!prisma.user);
-    console.log('prisma.socialAccount exists:', !!(prisma as any).socialAccount);
-    // @ts-ignore
-    console.log('Prisma client version:', (prisma as any)._clientVersion ?? 'unknown');
-    const linked = await (prisma as any).socialAccount.findMany({
+    const linked = await prisma.socialAccount.findMany({
       where: { userId },
       select: { provider: true, providerId: true, avatar: true, emailVerified: true },
     });
@@ -715,6 +954,7 @@ export class AuthService {
           id: true,
           fullName: true,
           email: true,
+          avatar: true,
           role: true,
           age: true,
           location: true,
@@ -769,6 +1009,7 @@ export class AuthService {
         id: updated.id,
         fullName: updated.fullName,
         email: updated.email,
+        avatar: updated.avatar,
         role: updated.role,
         age: updated.age,
         location: updated.location,

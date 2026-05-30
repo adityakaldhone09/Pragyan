@@ -1,25 +1,8 @@
-import { createContext, useContext, useEffect, useMemo, useCallback, useState } from "react";
+import { useEffect, useMemo, useCallback, useState } from "react";
 import { authService } from "@/services/authService";
 import { clearStoredAuthSession, AUTH_SESSION_KEY } from "@/services/apiClient";
-import type { AuthSession, AuthUser } from "@/types/api";
-
-type AuthStatus = "initializing" | "authenticated" | "anonymous";
-
-interface AuthContextValue {
-  user: AuthUser | null;
-  session: AuthSession | null;
-  status: AuthStatus;
-  isAuthenticated: boolean;
-  login: typeof authService.login;
-  register: typeof authService.register;
-  refreshToken: typeof authService.refreshToken;
-  updateProfile: typeof authService.updateProfile;
-  logout: () => Promise<void>;
-  reloadUser: () => Promise<void>;
-  setSession: (session: AuthSession | null) => void;
-}
-
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+import type { AuthSession } from "@/types/api";
+import { AuthContext, type AuthStatus, type AuthContextValue } from "@/context/auth-context";
 
 function readStoredSession() {
   try {
@@ -137,6 +120,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         clearStoredAuthSession();
       }
+
+      sessionStorage.clear();
       persistSession(null);
       setStatus("anonymous");
     },
@@ -153,13 +138,4 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }), [session, status]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-
-  return context;
 }

@@ -1,5 +1,5 @@
 import { apiClient } from "./apiClient";
-import type { AssessmentMatch } from "@/types/api";
+import type { AssessmentMatch, RoadmapDomainSection } from "@/types/api";
 
 export interface RecommendationProfile {
   skills?: string[];
@@ -29,6 +29,10 @@ export const recommendationService = {
 
   getRoadmapRecommendations() {
     return apiClient.get<RecommendationBundle["roadmapRecommendations"]>("/recommendations/roadmaps");
+  },
+
+  getRoadmapSections() {
+    return apiClient.get<RoadmapDomainSection[]>("/recommendations/roadmap-sections");
   },
 
   getSkillRecommendations() {

@@ -123,8 +123,51 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 }
 
 export async function apiPaginatedRequest<T>(path: string, options: RequestOptions = {}) {
-  const result = await apiRequest<PaginatedResponse<T>>(path, options);
-  return result;
+  const { timeoutMs = DEFAULT_TIMEOUT, retryCount = 1, skipAuth = false, headers, body, signal, ...rest } = options;
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+  const mergedHeaders = new Headers(headers);
+
+  if (!skipAuth) {
+    const token = getAccessToken();
+    if (token) mergedHeaders.set('Authorization', `Bearer ${token}`);
+  }
+
+  try {
+    const response = await fetch(resolveUrl(path), {
+      ...rest,
+      signal: signal ?? controller.signal,
+      credentials: 'include',
+      headers: mergedHeaders,
+      body: body === undefined ? undefined : typeof body === 'string' ? body : JSON.stringify(body),
+    });
+
+    const text = await response.text();
+    const parsed = text ? JSON.parse(text) : null;
+
+    if (!response.ok || (parsed && typeof parsed === 'object' && 'success' in parsed && parsed.success === false)) {
+      throw new Error(normalizeErrorMessage(parsed, response.statusText || 'Request failed'));
+    }
+
+    // If server wraps with { success, data, pagination }, return the full parsed object
+    if (parsed && typeof parsed === 'object' && 'data' in parsed && 'pagination' in parsed) {
+      return parsed as PaginatedResponse<T>;
+    }
+
+    // Fallback: server may have returned just data array (legacy); wrap into pagination-less shape
+    return {
+      success: true,
+      data: (parsed as any) || [],
+      pagination: {
+        page: 1,
+        limit: Array.isArray(parsed) ? (parsed as any).length : 0,
+        total: Array.isArray(parsed) ? (parsed as any).length : 0,
+        totalPages: 1,
+      },
+    } as PaginatedResponse<T>;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export const apiClient = {

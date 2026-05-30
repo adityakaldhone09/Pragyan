@@ -18,9 +18,10 @@ export interface RoadmapTaskProgressInput {
 }
 
 export const roadmapService = {
-  getAllRoadmaps(query?: { category?: string; level?: string; page?: number; limit?: number; query?: string }) {
+  getAllRoadmaps(query?: { category?: string; careerPath?: string; level?: string; page?: number; limit?: number; query?: string }) {
     const params = new URLSearchParams();
     if (query?.category) params.set("category", query.category);
+    if (query?.careerPath) params.set("careerPath", query.careerPath);
     if (query?.level) params.set("level", query.level);
     if (query?.query) params.set("query", query.query);
     if (query?.page) params.set("page", String(query.page));

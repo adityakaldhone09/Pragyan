@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Bot, Send, Sparkles, Brain, Rocket, FileText, MessageSquare, RefreshCw } from "lucide-react";
+import { useLocation } from "react-router";
 import { NeuralBackground } from "../components/NeuralBackground";
 import { GlassCard } from "../components/GlassCard";
 import { GlowButton } from "../components/GlowButton";
@@ -9,6 +10,7 @@ import { GradientIconWrapper } from "../components/GradientIconWrapper";
 import { aiService } from "../../services/aiService";
 import { recommendationService } from "../../services/recommendationService";
 import type { AssistantChatMessage } from "../../services/aiService";
+import { useAuth } from "@/context/useAuth";
 
 const quickPrompts = [
   "Help me plan my next career move",
@@ -25,8 +27,12 @@ function renderSimpleMarkdown(text: string) {
 }
 
 export function Assistant() {
+  const { user } = useAuth();
+  const location = useLocation();
+  const autoPromptHandled = useRef(false);
+  const firstName = user?.fullName?.split(" ")[0] || "there";
   const [messages, setMessages] = useState<AssistantChatMessage[]>([
-    { role: "assistant", content: "I’m your Pragyan career assistant. Ask me about careers, roadmaps, resumes, or interviews." },
+    { role: "assistant", content: `Hi ${firstName}, I’m your Pragyan career assistant. Ask me about careers, roadmaps, resumes, or interviews.` },
   ]);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
@@ -71,6 +77,19 @@ export function Assistant() {
     };
   }, []);
 
+  useEffect(() => {
+    const prompt = new URLSearchParams(location.search).get("prompt");
+
+    if (!prompt || autoPromptHandled.current) {
+      return;
+    }
+
+    autoPromptHandled.current = true;
+    setInput(prompt);
+    void sendMessage(prompt);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
+
   const contextSummary = useMemo(
     () => ({
       career: careerContext,
@@ -79,6 +98,34 @@ export function Assistant() {
     }),
     [careerContext, roadmapContext]
   );
+
+  const streamAssistantReply = async (fullReply: string) => {
+    setMessages((current) => [...current, { role: "assistant", content: "" }]);
+
+    const step = Math.max(1, Math.round(fullReply.length / 80));
+    let cursor = 0;
+
+    await new Promise<void>((resolve) => {
+      const timer = setInterval(() => {
+        cursor = Math.min(fullReply.length, cursor + step);
+        const partial = fullReply.slice(0, cursor);
+
+        setMessages((current) => {
+          const next = [...current];
+          const idx = next.length - 1;
+          if (idx >= 0 && next[idx].role === "assistant") {
+            next[idx] = { ...next[idx], content: partial };
+          }
+          return next;
+        });
+
+        if (cursor >= fullReply.length) {
+          clearInterval(timer);
+          resolve();
+        }
+      }, 18);
+    });
+  };
 
   const sendMessage = async (message: string) => {
     const normalized = message.trim();
@@ -99,7 +146,7 @@ export function Assistant() {
       });
 
       setProvider(response.provider || provider);
-      setMessages((current) => [...current, { role: "assistant", content: response.reply }]);
+      await streamAssistantReply(response.reply);
     } catch (chatError) {
       setError(chatError instanceof Error ? chatError.message : "Unable to reach the AI assistant");
       setMessages((current) => [...current, { role: "assistant", content: "I can still help. Try one of the quick prompts or review your roadmap and job matches." }]);
@@ -148,7 +195,10 @@ export function Assistant() {
                         <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-2">
                           {message.role === "user" ? "You" : "Pragyan"}
                         </div>
-                        <div className="whitespace-pre-wrap text-sm leading-6">{renderSimpleMarkdown(message.content)}</div>
+                        <div className="whitespace-pre-wrap text-sm leading-6">
+                          {renderSimpleMarkdown(message.content)}
+                          {typing && message.role === "assistant" && index === messages.length - 1 ? <span className="inline-block w-2 h-4 ml-1 bg-primary/70 animate-pulse align-middle" /> : null}
+                        </div>
                       </div>
                     </motion.div>
                   ))}
@@ -158,7 +208,7 @@ export function Assistant() {
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
                     <div className="rounded-2xl px-4 py-3 border bg-card/50 border-border text-sm text-muted-foreground flex items-center gap-3">
                       <Bot className="w-4 h-4 text-primary animate-pulse" />
-                      Thinking with backend AI...
+                      Pragyan is typing...
                     </div>
                   </motion.div>
                 )}

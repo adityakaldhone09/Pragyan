@@ -19,7 +19,7 @@ const SEED_TASKS: SeedTask[] = [
   },
   {
     name: 'Roadmaps',
-    script: 'seedRoadmaps.ts',
+    script: 'seedRoadmapCatalog.ts',
   },
   {
     name: 'Jobs',
@@ -77,7 +77,7 @@ async function runAllSeeds(): Promise<void> {
   console.log('║  ✨ All Seeding Complete!                      ║');
   console.log('║  Pragyan is now populated with:                ║');
   console.log('║  • 16 Career tracks with skill mappings        ║');
-  console.log('║  • 5 Comprehensive roadmaps                    ║');
+  console.log('║  • 240+ roadmap catalog entries                ║');
   console.log('║  • 20+ Realistic job listings                  ║');
   console.log('│                                                ║');
   console.log('║  Ready for end-to-end testing! 🚀             ║');
