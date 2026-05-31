@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { recommendationEngineService } from '@/services/recommendation-engine';
+import { careerIntelligenceService } from '@/services/career-intelligence';
 import { sendError, sendSuccess } from '@/utils/response';
 import { asyncHandler } from '@/middleware/errorHandler';
 
@@ -12,6 +13,15 @@ export const generateRecommendations = asyncHandler(async (req: Request, res: Re
   // This will call the career matching engine which handles MongoDB operations
   const data = await recommendationEngineService.generateRecommendations(req.user.id, req.body);
   return sendSuccess(res, data, 200, 'AI recommendations generated successfully');
+});
+
+export const generateCareerIntelligence = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    return sendError(res, 401, 'Unauthorized');
+  }
+
+  const data = await careerIntelligenceService.generateCareerIntelligenceResponse(req.body || {});
+  return sendSuccess(res, data, 200, 'Career intelligence generated successfully');
 });
 
 export const getTopCareer = asyncHandler(async (req: Request, res: Response) => {

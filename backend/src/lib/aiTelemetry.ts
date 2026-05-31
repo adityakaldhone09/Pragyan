@@ -1,3 +1,5 @@
+import { prisma } from '@/lib/prisma';
+
 interface TelemetryStats {
   calls: number;
   tokens: number;
@@ -10,6 +12,8 @@ interface TelemetryStats {
   providerFailures: Record<string, number>;
   providerFallbacks: Record<string, number>;
   providerServiceUnavailable: Record<string, number>;
+  lastError?: { provider: string; reason: string; at: string } | null;
+  errorHistory: Array<{ provider: string; reason: string; at: string }>;
 }
 
 const stats: TelemetryStats = {
@@ -24,7 +28,34 @@ const stats: TelemetryStats = {
   providerFailures: {},
   providerFallbacks: {},
   providerServiceUnavailable: {},
+  lastError: null,
+  errorHistory: [],
 };
+
+function persistTelemetryEvent(event: {
+  eventType: 'call' | 'failure' | 'fallback' | 'service_unavailable';
+  provider: string;
+  tokens?: number;
+  latencyMs?: number;
+  reason?: string;
+  model?: string;
+  success?: boolean;
+  fallbackUsed?: boolean;
+}) {
+  try {
+    void prisma.$runCommandRaw({
+      insert: 'AITelemetry',
+      documents: [
+        {
+          ...event,
+          createdAt: new Date(),
+        },
+      ],
+    }).catch(() => undefined);
+  } catch {
+    // Non-blocking telemetry persistence.
+  }
+}
 
 function normalizeProvider(providerOrTokens: string | number, tokensOrLatency?: number, latencyMaybe?: number) {
   if (typeof providerOrTokens === 'string') {
@@ -42,12 +73,39 @@ function normalizeProvider(providerOrTokens: string | number, tokensOrLatency?: 
   };
 }
 
-export function recordCall(providerOrTokens: string | number, tokensOrLatency?: number, latencyMaybe?: number) {
+function normalizeCallMeta(modelOrMeta?: string | { model?: string; success?: boolean; fallbackUsed?: boolean }) {
+  if (typeof modelOrMeta === 'string') {
+    return { model: modelOrMeta };
+  }
+
+  return {
+    model: modelOrMeta?.model,
+    success: modelOrMeta?.success,
+    fallbackUsed: modelOrMeta?.fallbackUsed,
+  };
+}
+
+export function recordCall(
+  providerOrTokens: string | number,
+  tokensOrLatency?: number,
+  latencyMaybe?: number,
+  modelOrMeta?: string | { model?: string; success?: boolean; fallbackUsed?: boolean }
+) {
+  const meta = normalizeCallMeta(modelOrMeta);
   const { provider, tokens, latency } = normalizeProvider(providerOrTokens, tokensOrLatency, latencyMaybe);
   stats.calls += 1;
   stats.tokens += tokens;
   stats.totalLatencyMs += latency;
   stats.providerCalls[provider] = (stats.providerCalls[provider] || 0) + 1;
+  persistTelemetryEvent({
+    eventType: 'call',
+    provider,
+    tokens,
+    latencyMs: latency,
+    success: meta.success ?? true,
+    fallbackUsed: meta.fallbackUsed ?? false,
+    model: meta.model,
+  });
   try {
     const redis = require('@/lib/redis').redisClient;
     if (redis && redis.isReady && redis.isReady()) {
@@ -66,21 +124,40 @@ export function recordCacheHit() {
   stats.cacheHits += 1;
 }
 
-export function recordFailure(provider = 'unknown') {
+export function recordFailure(provider = 'unknown', reason = '', model?: string) {
   stats.failures += 1;
   stats.providerFailures[provider] = (stats.providerFailures[provider] || 0) + 1;
+  if (reason) {
+    const entry = { provider, reason, at: new Date().toISOString() };
+    stats.lastError = entry;
+    stats.errorHistory.push(entry);
+    if (stats.errorHistory.length > 50) {
+      stats.errorHistory.shift();
+    }
+  }
+  persistTelemetryEvent({ eventType: 'failure', provider, reason, model, success: false, fallbackUsed: false });
   try { const redis = require('@/lib/redis').redisClient; if (redis && redis.isReady && redis.isReady()) redis.incr('telemetry:ai:failures').catch(()=>{}); } catch {}
 }
 
-export function recordFallback(provider = 'unknown') {
+export function recordFallback(provider = 'unknown', model?: string) {
   stats.fallbackCount += 1;
   stats.providerFallbacks[provider] = (stats.providerFallbacks[provider] || 0) + 1;
+  persistTelemetryEvent({ eventType: 'fallback', provider, model, fallbackUsed: true });
   try { const redis = require('@/lib/redis').redisClient; if (redis && redis.isReady && redis.isReady()) redis.incr('telemetry:ai:fallbacks').catch(()=>{}); } catch {}
 }
 
-export function recordServiceUnavailable(provider = 'unknown') {
+export function recordServiceUnavailable(provider = 'unknown', reason = '', model?: string) {
   stats.serviceUnavailable = (stats.serviceUnavailable || 0) + 1;
   stats.providerServiceUnavailable[provider] = (stats.providerServiceUnavailable[provider] || 0) + 1;
+  if (reason) {
+    const entry = { provider, reason, at: new Date().toISOString() };
+    stats.lastError = entry;
+    stats.errorHistory.push(entry);
+    if (stats.errorHistory.length > 50) {
+      stats.errorHistory.shift();
+    }
+  }
+  persistTelemetryEvent({ eventType: 'service_unavailable', provider, reason, model, success: false, fallbackUsed: true });
   try { const redis = require('@/lib/redis').redisClient; if (redis && redis.isReady && redis.isReady()) redis.incr('telemetry:ai:service_unavailable').catch(()=>{}); } catch {}
 }
 

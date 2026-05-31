@@ -8,7 +8,7 @@ import { GlassCard } from "../GlassCard";
 import { GlowButton } from "../GlowButton";
 import { SectionHeader } from "../SectionHeader";
 import { cn } from "../../utils/cn";
-import type { JourneyDay, JourneyJobEligibility, JourneyPayload, JourneySkillProgress, MentorMessage, PlacementReadiness } from "@/types/api";
+import type { JourneyJobEligibility, JourneyPayload, JourneySkillProgress, MentorMessage, PlacementReadiness } from "@/types/api";
 
 export function LearningProgressRing({ value, xp, streak }: { value: number; xp: number; streak: number }) {
   const clamped = Math.max(0, Math.min(100, value));
@@ -102,72 +102,6 @@ function StatCard({ icon: Icon, label, value, hint }: { icon: ComponentType<{ cl
         <Icon className="h-5 w-5 text-secondary" />
       </div>
     </div>
-  );
-}
-
-export function DayTimeline({ days, currentDay, selectedDay, onSelectDay }: { days: JourneyDay[]; currentDay: number; selectedDay: number; onSelectDay: (dayNumber: number) => void }) {
-  return (
-    <GlassCard glow glowColor="secondary">
-      <SectionHeader title="Journey Path" subtitle="A milestone rail instead of a flat day list" className="mb-5" />
-      <div className="overflow-x-auto pb-2">
-        <div className="flex min-w-max items-stretch gap-4">
-          {days.map((day, index) => {
-            const active = day.dayNumber === selectedDay;
-            const completed = day.completed || day.dayNumber < currentDay;
-            const current = currentDay === day.dayNumber;
-
-            return (
-              <motion.button
-                key={day.dayNumber}
-                type="button"
-                onClick={() => onSelectDay(day.dayNumber)}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.035 }}
-                className={cn(
-                  "relative w-[250px] text-left rounded-[1.5rem] border p-4 transition-all",
-                  active ? "border-primary/40 bg-primary/10 shadow-[0_0_0_1px_rgba(34,211,238,0.08)]" : "border-white/10 bg-white/5 hover:bg-white/8"
-                )}
-              >
-                <div className="absolute left-6 top-14 h-[calc(100%-3.5rem)] w-px bg-gradient-to-b from-white/20 via-white/10 to-transparent" />
-                <div className="relative z-10 space-y-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className={cn("flex h-10 w-10 items-center justify-center rounded-full border text-sm font-semibold", completed ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-300" : current ? "border-primary/30 bg-primary/15 text-primary" : "border-white/10 bg-white/5 text-muted-foreground")}>
-                          {completed ? <CheckCircle className="h-4 w-4" /> : day.dayNumber}
-                        </span>
-                        <div>
-                          <p className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">{completed ? "Completed" : current ? "Current" : "Upcoming"}</p>
-                          <h3 className="mt-1 text-base font-semibold">{day.focus}</h3>
-                        </div>
-                      </div>
-                      <p className="pl-12 text-xs text-muted-foreground">Day {day.dayNumber} · {day.topics.slice(0, 2).join(" · ")}</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 pl-12">
-                    <AnimatedProgress value={completed ? 100 : current ? 58 : 14} showLabel={false} />
-                    <div className="flex flex-wrap gap-2">
-                      <span className="rounded-full border border-white/10 bg-background/40 px-3 py-1 text-[11px] text-muted-foreground">+{day.xpReward} XP</span>
-                      <span className="rounded-full border border-white/10 bg-background/40 px-3 py-1 text-[11px] text-muted-foreground">{Math.round(day.estimatedMinutes)} min</span>
-                    </div>
-                  </div>
-
-                  <div className="pl-12 space-y-2">
-                    {day.tasks.slice(0, 3).map((task) => (
-                      <div key={task.id} className="rounded-2xl border border-white/10 bg-background/35 px-3 py-2 text-xs text-muted-foreground">
-                        {task.title}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </motion.button>
-            );
-          })}
-        </div>
-      </div>
-    </GlassCard>
   );
 }
 

@@ -114,23 +114,23 @@ export abstract class AIProviderBase implements AIProviderAdapter {
     while (attempt <= this.maxRetries) {
       try {
         const result = await withTimeout(operation(), timeoutMs);
-        recordCall(this.getProviderName(), result.tokensUsed ?? 0, Date.now() - start);
+        recordCall(this.getProviderName(), result.tokensUsed ?? 0, Date.now() - start, this.getModel());
         return result.value;
       } catch (err: any) {
         attempt += 1;
 
         if (this.isQuotaOrAuthError(err)) {
           this.markCooldown();
-          recordFailure(this.getProviderName());
+          recordFailure(this.getProviderName(), err?.message || String(err), this.getModel());
           throw err;
         }
 
         if (!this.shouldRetryError(err) || attempt > this.maxRetries) {
-          recordFailure(this.getProviderName());
+          recordFailure(this.getProviderName(), err?.message || String(err), this.getModel());
           throw err;
         }
 
-        recordFailure(this.getProviderName());
+        recordFailure(this.getProviderName(), err?.message || String(err), this.getModel());
 
         let delayMs = this.baseDelay * Math.pow(2, attempt - 1);
         delayMs = Math.round(delayMs + Math.random() * 100);
@@ -182,16 +182,16 @@ export abstract class AIProviderBase implements AIProviderAdapter {
 
         if (this.isQuotaOrAuthError(err)) {
           this.markCooldown();
-          recordFailure(this.getProviderName());
+          recordFailure(this.getProviderName(), err?.message || String(err), this.getModel());
           throw err;
         }
 
         if (!this.shouldRetryValidationError(err) || attempt > this.maxRetries) {
-          recordFallback(this.getProviderName());
+          recordFallback(this.getProviderName(), this.getModel());
           throw err;
         }
 
-        recordFailure(this.getProviderName());
+        recordFailure(this.getProviderName(), '', this.getModel());
 
         const delayMs = this.baseDelay * Math.pow(2, attempt - 1) + Math.random() * 100;
         await sleep(Math.round(delayMs));

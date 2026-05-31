@@ -32,6 +32,8 @@ const userProfileSelect = {
   education: true,
   educationEntries: true,
   skillLevel: true,
+  currentTitle: true,
+  careerTrack: true,
   xp: true,
   createdAt: true,
   updatedAt: true,
@@ -83,6 +85,8 @@ function buildUserSession(user: {
   education?: string | null;
   educationEntries?: unknown;
   skillLevel?: string | null;
+  currentTitle?: string | null;
+  careerTrack?: string | null;
   xp?: number;
   createdAt?: Date;
   updatedAt?: Date;
@@ -107,6 +111,8 @@ function buildUserSession(user: {
     education: user.education,
     educationEntries: user.educationEntries ?? [],
     skillLevel: user.skillLevel,
+    currentTitle: user.currentTitle,
+    careerTrack: user.careerTrack,
     xp: user.xp ?? 0,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
@@ -131,6 +137,8 @@ export class AuthService {
     education: string | null;
     educationEntries: unknown;
     skillLevel: string | null;
+    currentTitle: string | null;
+    careerTrack: string | null;
     xp: number;
     streak?: number;
     createdAt: Date;
@@ -163,6 +171,8 @@ export class AuthService {
             education: user.education,
             educationEntries: user.educationEntries,
             skillLevel: user.skillLevel,
+            currentTitle: user.currentTitle,
+            careerTrack: user.careerTrack,
             xp: user.xp,
             streak: user.streak ?? 0,
             active,
@@ -937,6 +947,8 @@ export class AuthService {
       ...(input.experienceType !== undefined ? { experienceType: input.experienceType } : {}),
       ...(input.education !== undefined ? { education: input.education } : {}),
       ...(input.skillLevel !== undefined ? { skillLevel: input.skillLevel } : {}),
+          ...(input.currentTitle !== undefined ? { currentTitle: input.currentTitle } : {}),
+          ...(input.careerTrack !== undefined ? { careerTrack: input.careerTrack } : {}),
     };
 
     if (Object.keys(data).length === 0) {
@@ -967,6 +979,8 @@ export class AuthService {
           experienceType: true,
           education: true,
           skillLevel: true,
+          currentTitle: true,
+          careerTrack: true,
           xp: true,
           createdAt: true,
           updatedAt: true,
@@ -993,6 +1007,8 @@ export class AuthService {
             education: updated.education ?? null,
             educationEntries: [],
             skillLevel: updated.skillLevel ?? null,
+            currentTitle: updated.currentTitle ?? null,
+            careerTrack: updated.careerTrack ?? null,
             xp: updated.xp ?? 0,
             streak: 0,
             createdAt: updated.createdAt ?? new Date(),
@@ -1022,6 +1038,8 @@ export class AuthService {
         experienceType: updated.experienceType,
         education: updated.education,
         skillLevel: updated.skillLevel,
+        currentTitle: updated.currentTitle,
+        careerTrack: updated.careerTrack,
         xp: updated.xp,
         createdAt: updated.createdAt,
         updatedAt: updated.updatedAt,

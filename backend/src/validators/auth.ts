@@ -30,6 +30,8 @@ export const profileUpdateSchema = z.object({
   location: z.string().trim().max(100).optional(),
   phone: z.string().trim().max(30).optional(),
   linkedin: z.string().trim().max(200).optional(),
+  currentTitle: z.string().trim().max(120).optional(),
+  careerTrack: z.string().trim().max(120).optional(),
   skills: z.array(z.string().trim().min(1)).max(50).optional(),
   interests: z.array(z.string().trim().min(1)).max(50).optional(),
   preferences: z.array(z.string().trim().min(1)).max(50).optional(),

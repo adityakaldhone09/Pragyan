@@ -2,7 +2,7 @@ import { config } from '@/config/env';
 
 import { AIProviderBase, AIProviderOptions, AIProviderResult } from './AIProviderBase';
 
-const DEFAULT_MODEL = 'llama-3.1-70b-versatile';
+const DEFAULT_MODEL = 'llama-3.3-70b-versatile';
 
 export class GroqProvider extends AIProviderBase {
   private apiKey: string | null;

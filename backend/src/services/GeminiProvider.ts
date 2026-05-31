@@ -35,7 +35,12 @@ export class GeminiProvider extends AIProviderBase {
     return this.client;
   }
 
-  private async callModel(prompt: string, systemInstruction: string, opts?: AIProviderOptions): Promise<AIProviderResult<string>> {
+  private async callModel(
+    prompt: string,
+    systemInstruction: string,
+    opts?: AIProviderOptions,
+    responseMimeType?: 'application/json'
+  ): Promise<AIProviderResult<string>> {
     const client = this.getClient();
     const model = client.getGenerativeModel({
       model: this.model,
@@ -47,7 +52,7 @@ export class GeminiProvider extends AIProviderBase {
       generationConfig: {
         temperature: opts?.temperature ?? 0.2,
         maxOutputTokens: opts?.maxTokens ?? 900,
-        responseMimeType: 'application/json',
+        ...(responseMimeType ? { responseMimeType } : {}),
       },
     } as any);
 
@@ -76,7 +81,8 @@ export class GeminiProvider extends AIProviderBase {
     return this.callModel(
       prompt,
       'Return valid JSON only. Do not include markdown.',
-      opts
+      opts,
+      'application/json'
     );
   }
 }

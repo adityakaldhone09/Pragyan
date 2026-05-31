@@ -37,12 +37,12 @@ export const config = {
 
   gemini: {
     apiKey: process.env.GEMINI_API_KEY || null,
-    model: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
+    model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
   },
 
   groq: {
     apiKey: process.env.GROQ_API_KEY || null,
-    model: process.env.GROQ_MODEL || 'llama-3.1-70b-versatile',
+    model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
   },
   
   database: {

@@ -3,22 +3,34 @@ import { RequireAuth } from '@/app/components/RequireAuth';
 import { useAuth } from '@/context/useAuth';
 import { intelligenceService } from '@/services/intelligenceService';
 
+type AIHealthSnapshot = Awaited<ReturnType<typeof intelligenceService.getAiHealth>>;
+
 export default function AdminIntelligence() {
   const { user } = useAuth();
   const [payload, setPayload] = useState<any | null>(null);
+  const [aiHealth, setAiHealth] = useState<AIHealthSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
+  const [healthLoading, setHealthLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [healthError, setHealthError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
     if (user.role !== 'ADMIN') return;
 
     setLoading(true);
+    setHealthLoading(true);
     intelligenceService
       .getDebugPayload()
       .then((res) => setPayload(res.data ?? res))
       .catch((err) => setError(err?.message || 'Failed to fetch debug payload'))
       .finally(() => setLoading(false));
+
+    intelligenceService
+      .getAiHealth()
+      .then((res) => setAiHealth(res.data ?? res))
+      .catch((err) => setHealthError(err?.message || 'Failed to fetch AI health'))
+      .finally(() => setHealthLoading(false));
   }, [user]);
 
   if (!user) {
@@ -37,6 +49,36 @@ export default function AdminIntelligence() {
     <RequireAuth>
       <div className="p-6 space-y-6">
         <h1 className="text-2xl font-semibold">Intelligence Debug — Admin</h1>
+
+        <div className="bg-card p-4 rounded">
+          <h2 className="text-lg font-medium mb-3">AI Status</h2>
+          {healthLoading && <div>Checking providers...</div>}
+          {healthError && <div className="text-destructive">{healthError}</div>}
+          {aiHealth ? (
+            <div className="grid gap-3 md:grid-cols-3 text-sm">
+              <div className="rounded border border-border/70 p-3">
+                <div className="font-medium">Gemini</div>
+                <div>Status: <span className={aiHealth.gemini.status === 'healthy' ? 'text-emerald-500' : 'text-destructive'}>{aiHealth.gemini.status}</span></div>
+                <div>Model: {aiHealth.gemini.model}</div>
+                <div>Latency: {aiHealth.gemini.latency}ms</div>
+              </div>
+              <div className="rounded border border-border/70 p-3">
+                <div className="font-medium">Groq</div>
+                <div>Status: <span className={aiHealth.groq.status === 'healthy' ? 'text-emerald-500' : 'text-destructive'}>{aiHealth.groq.status}</span></div>
+                <div>Model: {aiHealth.groq.model}</div>
+                <div>Latency: {aiHealth.groq.latency}ms</div>
+              </div>
+              <div className="rounded border border-border/70 p-3">
+                <div className="font-medium">Fallback Rate</div>
+                <div className="text-2xl font-semibold">{aiHealth.telemetry.fallbackRate}%</div>
+                <div>Calls: {aiHealth.telemetry.calls}</div>
+                <div>Fallbacks: {aiHealth.telemetry.fallbackCount}</div>
+              </div>
+            </div>
+          ) : !healthLoading ? (
+            <div className="text-sm text-muted-foreground">No AI health data available.</div>
+          ) : null}
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="col-span-2 bg-card p-4 rounded">

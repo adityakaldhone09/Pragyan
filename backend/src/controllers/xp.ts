@@ -13,3 +13,10 @@ export const awardXp = asyncHandler(async (req: Request, res: Response) => {
 
   return sendSuccess(res, result.user, 200, 'XP awarded');
 });
+
+export const getProgression = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) return sendError(res, 401, 'Unauthorized');
+
+  const progression = await xpService.getUserProgression(req.user.id);
+  return sendSuccess(res, progression, 200, 'XP progression fetched');
+});

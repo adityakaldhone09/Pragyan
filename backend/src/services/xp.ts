@@ -1,22 +1,72 @@
 import { prisma } from '@/lib/prisma';
 
-function computeLevelFromXp(xp: number) {
+export interface XpProgression {
+  xp: number;
+  level: number;
+  title: string;
+  currentThreshold: number;
+  nextThreshold: number;
+  xpToNextLevel: number;
+  progressPercent: number;
+  nextTitle: string;
+  milestone: string;
+}
+
+export const XP_LEVEL_TITLES: Record<number, string> = {
+  1: 'Explorer',
+  2: 'Learner',
+  3: 'Builder',
+  4: 'Developer',
+  5: 'Professional',
+  6: 'Expert',
+};
+
+export function computeXpProgression(xp: number): XpProgression {
   const safeXp = Math.max(0, Number(xp) || 0);
   const level = Math.max(1, Math.floor(Math.sqrt(safeXp / 100)) + 1);
+  const currentThreshold = Math.max(0, Math.pow(Math.max(1, level) - 1, 2) * 100);
+  const nextThreshold = Math.max(currentThreshold + 100, Math.pow(Math.max(1, level), 2) * 100);
+  const progressPercent = Math.max(0, Math.min(100, Math.round(((safeXp - currentThreshold) / Math.max(1, nextThreshold - currentThreshold)) * 100)));
+  const title = XP_LEVEL_TITLES[level] ?? 'Learner';
+  const nextTitle = XP_LEVEL_TITLES[level + 1] ?? 'Legend';
 
-  const titles = {
-    1: 'Novice',
-    2: 'Apprentice',
-    3: 'Skilled',
-    4: 'Pro',
-    5: 'Expert',
-    6: 'Master',
-  } as Record<number, string>;
+  return {
+    xp: safeXp,
+    level,
+    title,
+    currentThreshold,
+    nextThreshold,
+    xpToNextLevel: Math.max(0, nextThreshold - safeXp),
+    progressPercent,
+    nextTitle,
+    milestone: safeXp >= nextThreshold ? `Ready for ${nextTitle}` : `Earn ${Math.max(0, nextThreshold - safeXp)} XP to reach ${nextTitle}`,
+  };
+}
 
-  return { level, title: titles[level] ?? 'Learner' };
+function computeLevelFromXp(xp: number) {
+  const progression = computeXpProgression(xp);
+  return { level: progression.level, title: progression.title };
 }
 
 export class XpService {
+  getProgression(xp: number): XpProgression {
+    return computeXpProgression(xp);
+  }
+
+  async getUserProgression(userId: string) {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, xp: true, level: true, currentTitle: true, streak: true } });
+    if (!user) throw new Error('User not found');
+
+    const progression = computeXpProgression(user.xp || 0);
+
+    return {
+      ...progression,
+      storedLevel: user.level,
+      storedTitle: user.currentTitle || progression.title,
+      streak: user.streak || 0,
+    };
+  }
+
   async awardXp(userId: string, amount: number, reason = 'award', meta?: any) {
     if (!amount || amount === 0) {
       const user = await prisma.user.findUnique({ where: { id: userId } });

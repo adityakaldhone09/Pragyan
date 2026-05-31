@@ -19,6 +19,7 @@ import { AnimatedProgress } from "../components/AnimatedProgress";
 import { GlassCard } from "../components/GlassCard";
 import { GlowButton } from "../components/GlowButton";
 import { NeuralBackground } from "../components/NeuralBackground";
+import LevelBoard from '../components/LevelBoard';
 import { cn } from "../utils/cn";
 import { useAuth } from "@/context/useAuth";
 import LevelUpModal from "../components/LevelUpModal";
@@ -26,7 +27,8 @@ import { assessmentService } from "../../services/assessmentService";
 import { recommendationService } from "../../services/recommendationService";
 import { jobsService } from "../../services/jobsService";
 import { journeyService } from "../../services/journeyService";
-import type { JobFeedItem, JourneyDashboardSnapshot, JourneyJobEligibility } from "@/types/api";
+import { xpService } from "../../services/xpService";
+import type { JobFeedItem, JourneyDashboardSnapshot, JourneyJobEligibility, XpProgression } from "@/types/api";
 
 type SidebarItem = {
   label: string;
@@ -226,18 +228,20 @@ export function Dashboard() {
   const [jobFeed, setJobFeed] = useState<JobFeedItem[]>([]);
   const [journeySnapshot, setJourneySnapshot] = useState<JourneyDashboardSnapshot | null>(null);
   const [latestAssessment, setLatestAssessment] = useState<AssessmentSnapshot | null>(null);
+  const [xpProgression, setXpProgression] = useState<XpProgression | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [levelUpState, setLevelUpState] = useState<{ open: boolean; previousLevel?: number; newLevel?: number; newTitle?: string | null; xpGained?: number } | null>(null);
 
   const loadDashboard = useCallback(async () => {
     try {
-      const [careerResponse, skillResponse, jobsResponse, journeyResponse, assessmentResponse] = await Promise.allSettled([
+      const [careerResponse, skillResponse, jobsResponse, journeyResponse, assessmentResponse, xpResponse] = await Promise.allSettled([
         recommendationService.getTopCareer(),
         recommendationService.getSkillRecommendations(),
         jobsService.getJobs(),
         journeyService.getDashboardJourney(),
         assessmentService.getLatestAssessment(),
+        xpService.getProgression(),
       ]);
 
       if (careerResponse.status === "fulfilled") setTopCareer(careerResponse.value);
@@ -245,6 +249,7 @@ export function Dashboard() {
       if (jobsResponse.status === "fulfilled") setJobFeed(jobsResponse.value.recommendedJobs?.slice(0, 6) || []);
       if (journeyResponse.status === "fulfilled") setJourneySnapshot(journeyResponse.value);
       if (assessmentResponse.status === "fulfilled") setLatestAssessment(assessmentResponse.value as AssessmentSnapshot | null);
+      if (xpResponse.status === "fulfilled") setXpProgression(xpResponse.value);
     } catch {
       // keep whatever data we have
     }
@@ -293,12 +298,11 @@ export function Dashboard() {
     return map;
   })();
 
-  const currentXp = journeySnapshot?.xp || currentJourney?.xp || user?.xp || 0;
-  const serverLevel = currentJourney?.userLevel ?? (user?.level ?? undefined);
-  const displayLevel = serverLevel || Math.max(1, Math.floor(Math.sqrt(Math.max(0, currentXp) / 100)) + 1);
-  const currentThreshold = Math.max(0, Math.pow(Math.max(1, displayLevel) - 1, 2) * 100);
-  const nextThreshold = Math.max(currentThreshold + 100, Math.pow(Math.max(1, displayLevel), 2) * 100);
-  const xpProgressPercent = Math.round(((currentXp - currentThreshold) / Math.max(1, nextThreshold - currentThreshold)) * 100);
+  const currentXp = xpProgression?.xp ?? journeySnapshot?.xp ?? currentJourney?.xp ?? user?.xp ?? 0;
+  const displayLevel = xpProgression?.level || currentJourney?.userLevel || (user?.level ?? undefined) || Math.max(1, Math.floor(Math.sqrt(Math.max(0, currentXp) / 100)) + 1);
+  const currentThreshold = xpProgression?.currentThreshold ?? Math.max(0, Math.pow(Math.max(1, displayLevel) - 1, 2) * 100);
+  const nextThreshold = xpProgression?.nextThreshold ?? Math.max(currentThreshold + 100, Math.pow(Math.max(1, displayLevel), 2) * 100);
+  const xpProgressPercent = xpProgression?.progressPercent ?? Math.round(((currentXp - currentThreshold) / Math.max(1, nextThreshold - currentThreshold)) * 100);
 
   const topSkillStrengths = useMemo(
     () => [...skillProgress].sort((left, right) => right.mastery - left.mastery).slice(0, 4),
@@ -423,9 +427,11 @@ export function Dashboard() {
                       </div>
                     </div>
                       <div className="grid flex-1 gap-3 sm:grid-cols-2">
-                      <div className="rounded-3xl border border-white/10 bg-white/5 p-4"><p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Roadmap day</p><p className="mt-2 text-lg font-semibold text-foreground">Day {currentDay}</p><p className="mt-1 text-sm text-muted-foreground">{currentDayData?.title || todaysMissionFocus}</p></div>
-                      <div className="rounded-3xl border border-white/10 bg-white/5 p-4"><p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Readiness</p><p className="mt-2 text-lg font-semibold text-foreground">{Math.round(readinessScore)}%</p><p className="mt-1 text-sm text-muted-foreground">{placementReadiness?.label || "Placement signal"}</p></div>
+                      <div className="p-0 sm:col-span-2">
+                        <LevelBoard progression={xpProgression} level={displayLevel} xp={currentXp} percent={xpProgressPercent} xpToNext={Math.max(0, nextThreshold - currentXp)} />
+                      </div>
                     </div>
+                      
                   </div>
                 </div>
               </GlassCard>

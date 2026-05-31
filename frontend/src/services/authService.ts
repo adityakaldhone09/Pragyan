@@ -1,5 +1,14 @@
 import { apiClient, clearStoredAuthSession, setStoredAuthSession } from "./apiClient";
-import type { AuthSession, AuthUser, ConnectedProvidersResponse } from "@/types/api";
+import type {
+  AuthSession,
+  AuthUser,
+  Certification,
+  ConnectedProvidersResponse,
+  GitHubRepositorySummary,
+  PortfolioProject,
+  ProfileBuilderSnapshot,
+  ProfileCoachResponse,
+} from "@/types/api";
 
 export interface LoginInput {
   email: string;
@@ -17,11 +26,46 @@ export interface RefreshTokenInput {
 export interface UpdateProfileInput {
   fullName?: string;
   avatar?: string | null;
-  bio?: string;
+  age?: number;
+  location?: string;
+  phone?: string;
+  linkedin?: string;
   skills?: string[];
   interests?: string[];
+  preferences?: string[];
+  educationEntries?: Array<{
+    qualification: string;
+    city: string;
+    percentage: number;
+  }>;
   education?: string;
   experience?: string;
+  experienceType?: 'fresher' | 'experienced';
+  skillLevel?: string;
+}
+
+export interface PortfolioProjectInput {
+  title: string;
+  description?: string;
+  techStack?: string[];
+  highlights?: string[];
+  liveUrl?: string;
+  repoUrl?: string;
+  featured?: boolean;
+}
+
+export interface CertificationInput {
+  title: string;
+  issuer: string;
+  credentialId?: string;
+  credentialUrl?: string;
+  issuedAt?: string;
+  expiresAt?: string;
+  description?: string;
+}
+
+export interface GithubImportInput {
+  repoIds: string[];
 }
 
 export interface LinkProviderResponse {
@@ -74,6 +118,46 @@ export const authService = {
 
   async getLinkedProviders() {
     return apiClient.get<ConnectedProvidersResponse>("/profile/providers");
+  },
+
+  async getProfileBuilder() {
+    return apiClient.get<ProfileBuilderSnapshot>("/profile/builder");
+  },
+
+  async getProfileCoach() {
+    return apiClient.get<ProfileCoachResponse>("/profile/builder/coach");
+  },
+
+  async updateProfileBuilder(input: UpdateProfileInput) {
+    return apiClient.patch<AuthUser>("/profile/builder", input);
+  },
+
+  async createPortfolioProject(input: PortfolioProjectInput) {
+    return apiClient.post<PortfolioProject>("/profile/builder/projects", input);
+  },
+
+  async updatePortfolioProject(projectId: string, input: PortfolioProjectInput) {
+    return apiClient.patch<PortfolioProject>(`/profile/builder/projects/${projectId}`, input);
+  },
+
+  async deletePortfolioProject(projectId: string) {
+    return apiClient.delete<{ deleted: boolean }>(`/profile/builder/projects/${projectId}`);
+  },
+
+  async createCertification(input: CertificationInput) {
+    return apiClient.post<Certification>("/profile/builder/certifications", input);
+  },
+
+  async updateCertification(certificationId: string, input: CertificationInput) {
+    return apiClient.patch<Certification>(`/profile/builder/certifications/${certificationId}`, input);
+  },
+
+  async deleteCertification(certificationId: string) {
+    return apiClient.delete<{ deleted: boolean }>(`/profile/builder/certifications/${certificationId}`);
+  },
+
+  async importGithubRepositories(input: GithubImportInput) {
+    return apiClient.post<{ imported: PortfolioProject[] }>("/profile/builder/github/import", input);
   },
 
   async startLink(provider: "google" | "github") {

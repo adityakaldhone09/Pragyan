@@ -102,7 +102,7 @@ const careerData = {
   },
   topCompanies: [
     { name: "Google DeepMind", type: "Big Tech", hiring: "Active" },
-    { name: "OpenAI", type: "AI Lab", hiring: "Active" },
+    { name: "Cohere", type: "AI Lab", hiring: "Active" },
     { name: "Meta AI", type: "Big Tech", hiring: "Active" },
     { name: "Tesla", type: "Automotive", hiring: "Limited" },
     { name: "Anthropic", type: "AI Safety", hiring: "Active" }
