@@ -42,8 +42,8 @@ Create a cinematic dark-mode interface with:
 * animated gradient overlays
 
 Visual inspiration:
-
-* OpenAI
+-
+* Anthropic
 * Vercel
 * Linear
 * Perplexity

@@ -41,6 +41,8 @@ model User {
   refreshTokens           RefreshToken[]
   socialAccounts          SocialAccount[]
   githubRepositories      GithubRepository[]
+  portfolioProjects       UserPortfolioProject[]
+  certifications          UserCertification[]
   assessmentAnswers       AssessmentAnswer[]
   assessmentResults       AssessmentResult[]
   assessmentSessions      AssessmentSession[]
@@ -123,6 +125,43 @@ model GithubRepository {
   updatedAt     DateTime @updatedAt
 
   @@unique([userId, repoId])
+  @@index([userId])
+}
+
+model UserPortfolioProject {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  techStack   String[] @default([])
+  highlights  String[] @default([])
+  liveUrl     String?
+  repoUrl     String?
+  featured    Boolean  @default(false)
+  source      String   @default("manual")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model UserCertification {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String   @db.ObjectId
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title         String
+  issuer        String
+  credentialId  String?
+  credentialUrl String?
+  issuedAt      DateTime?
+  expiresAt     DateTime?
+  description   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([userId])
 }
 
@@ -459,6 +498,27 @@ model AssessmentSession {
 
   @@index([userId])
   @@index([completedAt])
+}
+
+// Persisted decision-tree assessment path for each user session
+model AssessmentPath {
+  id                   String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId               String   @db.ObjectId
+  assessmentSessionId  String?  
+
+  selectedCategory     String?
+  selectedSector       String?
+  selectedQualification String?
+  selectedBranch       String?
+  selectedRole         String?
+
+  finalCareerPath      String
+  confidence           Int?
+
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([userId])
 }
 
 model UserProgress {

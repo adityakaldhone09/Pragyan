@@ -8,6 +8,7 @@ import { validate } from '@/middleware/validator';
 import { assessmentAnswersSchema } from '@/validators/assessment';
 import { assessmentCreateSchema } from '@/validators/assessment';
 import { prisma } from '@/lib/prisma';
+import * as decisionController from '@/controllers/assessmentDecisionTree';
 
 const router = Router();
 
@@ -77,5 +78,11 @@ router.post('/generate', authenticate, authorize('ADMIN'), assessmentController.
 
 // Adaptive next-question endpoint
 router.post('/next', assessmentController.getNextQuestions);
+
+// Decision-tree assessment endpoints (configuration-driven)
+router.get('/decision/start', decisionController.startDecision);
+router.post('/decision/next', decisionController.answerDecision);
+router.post('/decision/complete', authenticate, decisionController.finishDecision);
+router.get('/decision/result/:sessionId', authenticate, decisionController.getResult);
 
 export default router;

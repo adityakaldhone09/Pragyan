@@ -115,7 +115,15 @@ export const chatAssistant = asyncHandler(async (req: Request, res: Response) =>
     return sendSuccess(res, { reply, provider: aiProvider.getRuntime().provider, fallbackUsed: false }, 200, 'AI assistant response');
   } catch (error) {
     const fallback = 'I can help with that. Based on your current Pragyan data, focus on the top recommended career, align your roadmap, and keep your resume targeted to the skills gap.';
-    return sendSuccess(res, { reply: fallback, provider: 'local', fallbackUsed: true }, 200, 'AI assistant fallback response');
+    console.error('AI assistant generation failed:', error);
+    const runtime = typeof aiProvider?.getRuntime === 'function' ? aiProvider.getRuntime() : { provider: 'unknown', model: 'unknown' };
+    const errorMsg = error && error instanceof Error ? error.message : String(error);
+    return sendSuccess(
+      res,
+      { reply: fallback, provider: runtime.provider || 'local', fallbackUsed: true, error: errorMsg },
+      200,
+      'AI assistant fallback response'
+    );
   }
 });
 

@@ -24,11 +24,22 @@ export interface AuthUser {
   avatar?: string | null;
   provider?: string;
   emailVerified?: boolean;
-  bio?: string | null;
+  age?: number | null;
+  location?: string | null;
+  phone?: string | null;
+  linkedin?: string | null;
   skills?: string[];
   interests?: string[];
+  preferences?: string[];
   education?: string | null;
   experience?: string | null;
+  experienceType?: 'fresher' | 'experienced' | null;
+  educationEntries?: Array<{
+    qualification: string;
+    city: string;
+    percentage: number;
+  }>;
+  skillLevel?: string | null;
   xp?: number;
   streak?: number;
   level?: number;
@@ -63,6 +74,117 @@ export interface ProviderConnectionStatus {
 export interface ConnectedProvidersResponse {
   google: ProviderConnectionStatus;
   github: ProviderConnectionStatus;
+}
+
+export interface PortfolioProject {
+  id: string;
+  userId: string;
+  title: string;
+  description?: string | null;
+  techStack: string[];
+  highlights: string[];
+  liveUrl?: string | null;
+  repoUrl?: string | null;
+  featured: boolean;
+  source: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Certification {
+  id: string;
+  userId: string;
+  title: string;
+  issuer: string;
+  credentialId?: string | null;
+  credentialUrl?: string | null;
+  issuedAt?: string | null;
+  expiresAt?: string | null;
+  description?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GitHubRepositorySummary {
+  id: string;
+  userId: string;
+  repoId: string;
+  name: string;
+  fullName: string;
+  htmlUrl: string;
+  description?: string | null;
+  language?: string | null;
+  stars: number;
+  forks: number;
+  isPrivate: boolean;
+  defaultBranch?: string | null;
+  pushedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProfileCompletionSection {
+  key: string;
+  label: string;
+  score: number;
+}
+
+export interface ProfileBuilderSnapshot {
+  user: AuthUser;
+  providerStatus: ConnectedProvidersResponse;
+  completion: {
+    score: number;
+    sections: ProfileCompletionSection[];
+    missing: string[];
+  };
+  githubRepositories: GitHubRepositorySummary[];
+  projects: PortfolioProject[];
+  certifications: Certification[];
+}
+
+export interface AIProviderHealthResult {
+  status: 'healthy' | 'unhealthy';
+  model: string;
+  latency: number;
+  error?: string;
+}
+
+export interface AIHealthSnapshot {
+  gemini: AIProviderHealthResult;
+  groq: AIProviderHealthResult;
+  telemetry: {
+    calls: number;
+    failures: number;
+    fallbackCount: number;
+    fallbackRate: number;
+  };
+  checkedAt: string;
+  overallStatus: 'healthy' | 'degraded';
+}
+
+export interface XpProgression {
+  xp: number;
+  level: number;
+  title: string;
+  currentThreshold: number;
+  nextThreshold: number;
+  xpToNextLevel: number;
+  progressPercent: number;
+  nextTitle: string;
+  milestone: string;
+  storedLevel?: number;
+  storedTitle?: string;
+  streak?: number;
+}
+
+export interface ProfileCoachResponse {
+  summary: string;
+  completionScore: number;
+  strengths: string[];
+  missingFields: string[];
+  nextSteps: string[];
+  suggestedHeadline: string;
+  suggestedCareerTrack: string;
 }
 
 export interface AssessmentQuestion {

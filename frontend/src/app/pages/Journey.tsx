@@ -6,7 +6,7 @@ import { FloatingParticles } from "../components/FloatingParticles";
 import { GlassCard } from "../components/GlassCard";
 import { AnimatedProgress } from "../components/AnimatedProgress";
 import { GlowButton } from "../components/GlowButton";
-import { JourneyHeader, DayTimeline, SkillRadar, AIInsightsCard, EligibleJobsCard, PlacementReadinessWidget } from "../components/journey/JourneySections";
+import { JourneyHeader, SkillRadar, AIInsightsCard, EligibleJobsCard, PlacementReadinessWidget } from "../components/journey/JourneySections";
 import { SectionHeader } from "../components/SectionHeader";
 import { journeyService } from "../../services/journeyService";
 import { mentorService } from "../../services/mentorService";
@@ -251,8 +251,6 @@ export function Journey() {
               </div>
             </div>
           </GlassCard>
-
-          <DayTimeline days={journey.roadmapDays} currentDay={journey.currentDay} selectedDay={selectedDay} onSelectDay={setSelectedDay} />
 
           <GlassCard glow glowColor="secondary" className="relative overflow-hidden">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.16),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(124,58,237,0.14),transparent_32%)]" />

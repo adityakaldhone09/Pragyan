@@ -65,10 +65,10 @@ class AIProviderFacade implements AIProviderAdapter {
     const start = Date.now();
     try {
       const result = await this.provider.generateText(prompt, opts);
-      aiTelemetry.recordCall(primary, 0, Date.now() - start);
+      aiTelemetry.recordCall(primary, 0, Date.now() - start, this.getModel());
       return result;
     } catch (error: any) {
-      aiTelemetry.recordFailure(primary);
+      aiTelemetry.recordFailure(primary, error?.message || String(error), this.getModel());
       for (const fallback of this.getFallbackProviders()) {
         if (fallback.getProviderName() === this.provider.getProviderName()) {
           continue;
@@ -77,11 +77,11 @@ class AIProviderFacade implements AIProviderAdapter {
           const fbName = fallback.getProviderName();
           const fbStart = Date.now();
           const result = await fallback.generateText(prompt, opts);
-          aiTelemetry.recordFallback(primary);
-          aiTelemetry.recordCall(fbName, 0, Date.now() - fbStart);
+          aiTelemetry.recordFallback(primary, this.getModel());
+          aiTelemetry.recordCall(fbName, 0, Date.now() - fbStart, fallback.getModel());
           return result;
         } catch (fallbackError: any) {
-          aiTelemetry.recordFailure(this.provider.getProviderName());
+          aiTelemetry.recordFailure(fallback.getProviderName(), fallbackError?.message || String(fallbackError), fallback.getModel());
           continue;
         }
       }
@@ -95,10 +95,10 @@ class AIProviderFacade implements AIProviderAdapter {
     const start = Date.now();
     try {
       const result = await this.provider.generateJsonRaw(prompt, opts);
-      aiTelemetry.recordCall(primary, 0, Date.now() - start);
+      aiTelemetry.recordCall(primary, 0, Date.now() - start, this.getModel());
       return result;
     } catch (error: any) {
-      aiTelemetry.recordFailure(primary);
+      aiTelemetry.recordFailure(primary, error?.message || String(error), this.getModel());
       for (const fallback of this.getFallbackProviders()) {
         if (fallback.getProviderName() === this.provider.getProviderName()) {
           continue;
@@ -107,11 +107,11 @@ class AIProviderFacade implements AIProviderAdapter {
           const fbName = fallback.getProviderName();
           const fbStart = Date.now();
           const result = await fallback.generateJsonRaw(prompt, opts);
-          aiTelemetry.recordFallback(primary);
-          aiTelemetry.recordCall(fbName, 0, Date.now() - fbStart);
+          aiTelemetry.recordFallback(primary, this.getModel());
+          aiTelemetry.recordCall(fbName, 0, Date.now() - fbStart, fallback.getModel());
           return result;
         } catch (fallbackError: any) {
-          aiTelemetry.recordFailure(this.provider.getProviderName());
+          aiTelemetry.recordFailure(fallback.getProviderName(), fallbackError?.message || String(fallbackError), fallback.getModel());
           continue;
         }
       }
@@ -121,7 +121,20 @@ class AIProviderFacade implements AIProviderAdapter {
   }
 
   async generateJsonValidated<T>(prompt: string, validateFn: (raw: unknown) => T, opts?: AIProviderOptions): Promise<T> {
-    return (this.provider as any).generateJsonValidated(prompt, validateFn, opts);
+    const raw = await this.generateJsonRaw(prompt, opts);
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      const match = raw.match(/\{[\s\S]*\}|\[[\s\S]*\]/m);
+      if (!match) {
+        throw new Error('Failed to parse JSON from model output');
+      }
+      parsed = JSON.parse(match[0]);
+    }
+
+    return validateFn(parsed);
   }
 }
 

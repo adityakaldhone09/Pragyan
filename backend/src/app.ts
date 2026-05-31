@@ -22,6 +22,7 @@ import adminRoutes from '@/routes/admin';
 import profileRoutes from '@/routes/profile';
 import skillRoutes from '@/routes/skill';
 import taskRoutes from '@/routes/task';
+import healthRoutes from '@/routes/health';
 import careerMatchingRoutes from '@/routes/career-matching';
 import careersRoutes from '@/routes/careers';
 import jobsRoutes from '@/routes/jobs';
@@ -126,6 +127,8 @@ if (config.nodeEnv === 'development') {
 app.get('/health', (_req: Request, res: Response) => {
   res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
 });
+
+app.use('/api/health', healthRoutes);
 
 app.post('/api/top-career', (_req: Request, res: Response) => {
   res.json({
