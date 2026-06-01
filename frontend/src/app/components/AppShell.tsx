@@ -77,6 +77,26 @@ export function AppShell() {
             })}
           </nav>
 
+          <div className="pt-4">
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  await logout();
+                } finally {
+                  navigate("/auth");
+                  window.location.reload();
+                }
+              }}
+              className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-muted-foreground transition-all hover:border-red-400/20 hover:bg-red-500/10 hover:text-red-100"
+            >
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-red-200">
+                <LogOut className="h-5 w-5" />
+              </span>
+              <span className="min-w-0 flex-1 text-left">Logout</span>
+            </button>
+          </div>
+
           {/* Bottom signed-in card removed per design request */}
         </div>
       </aside>
