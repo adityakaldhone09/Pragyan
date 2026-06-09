@@ -10,7 +10,7 @@ import { GradientIconWrapper } from "../components/GradientIconWrapper";
 
 export function LandingPage() {
   return (
-    <div className="min-h-screen relative overflow-hidden">
+    <div className="min-h-screen relative overflow-hidden bg-background">
       <NeuralBackground />
 
       {/* Hero Section */}
@@ -38,7 +38,9 @@ export function LandingPage() {
               Your AI Career
             </span>
             <br />
-            <span className="text-foreground">Intelligence System</span>
+            <span className="bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+              Intelligence System
+            </span>
           </motion.h1>
 
           <motion.p

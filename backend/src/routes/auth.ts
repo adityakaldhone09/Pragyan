@@ -5,7 +5,15 @@ import rateLimit from 'express-rate-limit';
 import * as authController from '@/controllers/auth';
 import * as oauthController from '@/controllers/oauth';
 import { validate } from '@/middleware/validator';
-import { registerSchema, loginSchema, refreshTokenSchema, profileUpdateSchema } from '@/validators/auth';
+import {
+  registerSchema,
+  loginSchema,
+  refreshTokenSchema,
+  profileUpdateSchema,
+  forgotPasswordSchema,
+  verifyResetOtpSchema,
+  resetPasswordSchema,
+} from '@/validators/auth';
 import { authenticate } from '@/middleware/auth';
 
 const router = Router();
@@ -23,8 +31,22 @@ const authAttemptLimiter = rateLimit({
 	},
 });
 
+const passwordResetLimiter = rateLimit({
+	windowMs: 15 * 60 * 1000,
+	max: isDevelopment ? 30 : 10,
+	standardHeaders: true,
+	legacyHeaders: false,
+	message: rateLimitMessage,
+	handler: (_req, res) => {
+		res.status(429).json(rateLimitMessage);
+	},
+});
+
 router.post('/register', authAttemptLimiter, validate(registerSchema), authController.register);
 router.post('/login', authAttemptLimiter, validate(loginSchema), authController.login);
+router.post('/forgot-password', passwordResetLimiter, validate(forgotPasswordSchema), authController.forgotPassword);
+router.post('/verify-reset-otp', passwordResetLimiter, validate(verifyResetOtpSchema), authController.verifyResetOtp);
+router.post('/reset-password', passwordResetLimiter, validate(resetPasswordSchema), authController.resetPassword);
 router.get('/config', authController.getAuthConfig);
 router.get('/google', authAttemptLimiter, oauthController.startGoogleAuth);
 router.get('/google/callback', authAttemptLimiter, oauthController.handleGoogleCallback);

@@ -4,11 +4,19 @@ import { prisma } from '@/lib/prisma';
 import { MongoClient, ObjectId } from 'mongodb';
 import axios from 'axios';
 import { getMongoUrl } from '@/config/mongo';
-import { randomBytes } from 'crypto';
+import { randomBytes, randomInt } from 'crypto';
 import { hashPassword, comparePasswords } from '@/utils/password';
+import { sendPasswordResetOTP } from '@/services/emailService';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '@/utils/jwt';
 import { ConflictError, UnauthorizedError, NotFoundError, BadRequestError } from '@/utils/errors';
-import { RegisterInput, LoginInput, ProfileUpdateInput } from '@/validators/auth';
+import {
+  RegisterInput,
+  LoginInput,
+  ProfileUpdateInput,
+  ForgotPasswordInput,
+  VerifyResetOtpInput,
+  ResetPasswordInput,
+} from '@/validators/auth';
 import type { OAuthUserProfile } from '@/types/auth';
 
 const userProfileSelect = {
@@ -50,6 +58,15 @@ type ProviderConnectionStatus = {
 };
 
 type ProviderStatusMap = Record<OAuthProviderKey, ProviderConnectionStatus>;
+
+const PASSWORD_RESET_GENERIC_MESSAGE =
+  'If an account exists with this email, a verification code has been sent.';
+const OTP_EXPIRY_MS = 10 * 60 * 1000;
+const MAX_OTP_ATTEMPTS = 5;
+
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
 
 type GitHubRepositoryPayload = {
   id: number;
@@ -1084,6 +1101,110 @@ export class AuthService {
     return {
       accessToken: newAccessToken,
     };
+  }
+
+  async requestPasswordReset(input: ForgotPasswordInput) {
+    const email = normalizeEmail(input.email);
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    if (!user) {
+      return { message: PASSWORD_RESET_GENERIC_MESSAGE };
+    }
+
+    await prisma.passwordResetOTP.deleteMany({ where: { email } });
+
+    const otp = String(randomInt(100000, 1000000));
+    const otpHash = await hashPassword(otp);
+    const expiresAt = new Date(Date.now() + OTP_EXPIRY_MS);
+
+    await prisma.passwordResetOTP.create({
+      data: {
+        userId: user.id,
+        email,
+        otpHash,
+        expiresAt,
+        attempts: 0,
+        verified: false,
+      },
+    });
+
+    void sendPasswordResetOTP(email, otp).catch((error) => {
+      console.error('[AuthService.requestPasswordReset] email delivery failed:', error);
+    });
+
+    return { message: PASSWORD_RESET_GENERIC_MESSAGE };
+  }
+
+  async verifyResetOtp(input: VerifyResetOtpInput) {
+    const email = normalizeEmail(input.email);
+    const record = await prisma.passwordResetOTP.findFirst({
+      where: {
+        email,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!record) {
+      throw new UnauthorizedError('Invalid or expired verification code');
+    }
+
+    if (record.attempts >= MAX_OTP_ATTEMPTS) {
+      throw new BadRequestError('Too many failed attempts. Please request a new code.');
+    }
+
+    const isValidOtp = await comparePasswords(input.otp, record.otpHash);
+
+    if (!isValidOtp) {
+      await prisma.passwordResetOTP.update({
+        where: { id: record.id },
+        data: { attempts: { increment: 1 } },
+      });
+      throw new UnauthorizedError('Invalid or expired verification code');
+    }
+
+    await prisma.passwordResetOTP.update({
+      where: { id: record.id },
+      data: { verified: true },
+    });
+
+    return { message: 'Verification code confirmed. You can now reset your password.' };
+  }
+
+  async resetPassword(input: ResetPasswordInput) {
+    const email = normalizeEmail(input.email);
+    const record = await prisma.passwordResetOTP.findFirst({
+      where: {
+        email,
+        verified: true,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!record) {
+      throw new BadRequestError('Password reset verification is required or has expired');
+    }
+
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+
+    const hashedPassword = await hashPassword(input.newPassword);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        updatedAt: new Date(),
+      },
+    });
+
+    await prisma.passwordResetOTP.deleteMany({ where: { email } });
+
+    return { message: 'Password reset successfully. You can now sign in with your new password.' };
   }
 
   async logout(refreshToken: string) {

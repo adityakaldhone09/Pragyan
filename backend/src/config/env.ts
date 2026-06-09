@@ -91,6 +91,14 @@ export const config = {
     rounds: parseInt(process.env.BCRYPT_ROUNDS || '10', 10),
   },
 
+  email: {
+    host: process.env.EMAIL_HOST || null,
+    port: parseInt(process.env.EMAIL_PORT || '587', 10),
+    user: process.env.EMAIL_USER || null,
+    password: process.env.EMAIL_PASSWORD || null,
+    from: process.env.EMAIL_FROM || process.env.EMAIL_USER || null,
+  },
+
   rapidApi: {
     key: process.env.RAPID_API_KEY,
   },

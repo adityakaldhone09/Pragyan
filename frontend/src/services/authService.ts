@@ -72,6 +72,24 @@ export interface LinkProviderResponse {
   redirectUrl: string;
 }
 
+export interface ForgotPasswordInput {
+  email: string;
+}
+
+export interface VerifyResetOtpInput {
+  email: string;
+  otp: string;
+}
+
+export interface ResetPasswordInput {
+  email: string;
+  newPassword: string;
+}
+
+export interface PasswordResetMessageResponse {
+  message: string;
+}
+
 function normalizeSession(data: AuthSession | { user: AuthUser; accessToken?: string; refreshToken?: string }) {
   const accessToken = data.accessToken || "";
   const refreshToken = data.refreshToken || "";
@@ -114,6 +132,18 @@ export const authService = {
     } finally {
       clearStoredAuthSession();
     }
+  },
+
+  async requestPasswordReset(input: ForgotPasswordInput) {
+    return apiClient.post<PasswordResetMessageResponse>("/auth/forgot-password", input, { skipAuth: true });
+  },
+
+  async verifyResetOTP(input: VerifyResetOtpInput) {
+    return apiClient.post<PasswordResetMessageResponse>("/auth/verify-reset-otp", input, { skipAuth: true });
+  },
+
+  async resetPassword(input: ResetPasswordInput) {
+    return apiClient.post<PasswordResetMessageResponse>("/auth/reset-password", input, { skipAuth: true });
   },
 
   async getLinkedProviders() {

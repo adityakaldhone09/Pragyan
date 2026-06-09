@@ -63,6 +63,10 @@ function normalizeErrorMessage(payload: unknown, fallback = "Request failed") {
   return fallback;
 }
 
+function isAbortError(error: unknown) {
+  return error instanceof Error && (error.name === "AbortError" || error.message.includes("aborted"));
+}
+
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { timeoutMs = DEFAULT_TIMEOUT, retryCount = 1, skipAuth = false, headers, body, signal, ...rest } = options;
   const controller = new AbortController();
@@ -82,44 +86,55 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   let lastError: unknown = null;
 
-  for (let attempt = 0; attempt <= retryCount; attempt += 1) {
-    try {
-      const response = await fetch(resolveUrl(path), {
-        ...rest,
-        signal: signal ?? controller.signal,
-        credentials: "include",
-        headers: mergedHeaders,
-        body: body === undefined ? undefined : typeof body === "string" ? body : JSON.stringify(body),
-      });
+  try {
+    for (let attempt = 0; attempt <= retryCount; attempt += 1) {
+      try {
+        const response = await fetch(resolveUrl(path), {
+          ...rest,
+          signal: signal ?? controller.signal,
+          credentials: "include",
+          headers: mergedHeaders,
+          body: body === undefined ? undefined : typeof body === "string" ? body : JSON.stringify(body),
+        });
 
-      const text = await response.text();
-      const parsed = text ? JSON.parse(text) : null;
+        const text = await response.text();
+        const parsed = text ? JSON.parse(text) : null;
 
-      if (!response.ok || (parsed && typeof parsed === "object" && "success" in parsed && parsed.success === false)) {
-        throw new Error(normalizeErrorMessage(parsed, response.statusText || "Request failed"));
+        if (!response.ok || (parsed && typeof parsed === "object" && "success" in parsed && parsed.success === false)) {
+          throw new Error(normalizeErrorMessage(parsed, response.statusText || "Request failed"));
+        }
+
+        if (parsed && typeof parsed === "object" && "data" in parsed) {
+          return (parsed as ApiResponse<T>).data as T;
+        }
+
+        return parsed as T;
+      } catch (error) {
+        lastError = error;
+
+        if (isAbortError(error)) {
+          break;
+        }
+
+        if (attempt < retryCount && (rest.method === undefined || String(rest.method).toUpperCase() === "GET")) {
+          continue;
+        }
+        break;
       }
-
-      if (parsed && typeof parsed === "object" && "data" in parsed) {
-        return (parsed as ApiResponse<T>).data as T;
-      }
-
-      return parsed as T;
-    } catch (error) {
-      lastError = error;
-      if (attempt < retryCount && (rest.method === undefined || String(rest.method).toUpperCase() === "GET")) {
-        continue;
-      }
-      break;
     }
+
+    if (isAbortError(lastError)) {
+      throw new Error("Request timed out. Please try again.");
+    }
+
+    if (lastError instanceof Error) {
+      throw lastError;
+    }
+
+    throw new Error("Request failed");
+  } finally {
+    window.clearTimeout(timeout);
   }
-
-  clearTimeout(timeout);
-
-  if (lastError instanceof Error) {
-    throw lastError;
-  }
-
-  throw new Error("Request failed");
 }
 
 export async function apiPaginatedRequest<T>(path: string, options: RequestOptions = {}) {
@@ -134,39 +149,47 @@ export async function apiPaginatedRequest<T>(path: string, options: RequestOptio
   }
 
   try {
-    const response = await fetch(resolveUrl(path), {
-      ...rest,
-      signal: signal ?? controller.signal,
-      credentials: 'include',
-      headers: mergedHeaders,
-      body: body === undefined ? undefined : typeof body === 'string' ? body : JSON.stringify(body),
-    });
+    try {
+      const response = await fetch(resolveUrl(path), {
+        ...rest,
+        signal: signal ?? controller.signal,
+        credentials: 'include',
+        headers: mergedHeaders,
+        body: body === undefined ? undefined : typeof body === 'string' ? body : JSON.stringify(body),
+      });
 
-    const text = await response.text();
-    const parsed = text ? JSON.parse(text) : null;
+      const text = await response.text();
+      const parsed = text ? JSON.parse(text) : null;
 
-    if (!response.ok || (parsed && typeof parsed === 'object' && 'success' in parsed && parsed.success === false)) {
-      throw new Error(normalizeErrorMessage(parsed, response.statusText || 'Request failed'));
+      if (!response.ok || (parsed && typeof parsed === 'object' && 'success' in parsed && parsed.success === false)) {
+        throw new Error(normalizeErrorMessage(parsed, response.statusText || 'Request failed'));
+      }
+
+      // If server wraps with { success, data, pagination }, return the full parsed object
+      if (parsed && typeof parsed === 'object' && 'data' in parsed && 'pagination' in parsed) {
+        return parsed as PaginatedResponse<T>;
+      }
+
+      // Fallback: server may have returned just data array (legacy); wrap into pagination-less shape
+      return {
+        success: true,
+        data: (parsed as any) || [],
+        pagination: {
+          page: 1,
+          limit: Array.isArray(parsed) ? (parsed as any).length : 0,
+          total: Array.isArray(parsed) ? (parsed as any).length : 0,
+          totalPages: 1,
+        },
+      } as PaginatedResponse<T>;
+    } catch (error) {
+      if (isAbortError(error)) {
+        throw new Error("Request timed out. Please try again.");
+      }
+
+      throw error;
     }
-
-    // If server wraps with { success, data, pagination }, return the full parsed object
-    if (parsed && typeof parsed === 'object' && 'data' in parsed && 'pagination' in parsed) {
-      return parsed as PaginatedResponse<T>;
-    }
-
-    // Fallback: server may have returned just data array (legacy); wrap into pagination-less shape
-    return {
-      success: true,
-      data: (parsed as any) || [],
-      pagination: {
-        page: 1,
-        limit: Array.isArray(parsed) ? (parsed as any).length : 0,
-        total: Array.isArray(parsed) ? (parsed as any).length : 0,
-        totalPages: 1,
-      },
-    } as PaginatedResponse<T>;
   } finally {
-    clearTimeout(timeout);
+    window.clearTimeout(timeout);
   }
 }
 

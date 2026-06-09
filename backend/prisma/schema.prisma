@@ -177,6 +177,20 @@ model RefreshToken {
   @@index([userId])
 }
 
+model PasswordResetOTP {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String?  @db.ObjectId
+  email     String
+  otpHash   String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([expiresAt])
+}
+
 // ============ SKILL & ROADMAP MODELS ============
 
 model Skill {

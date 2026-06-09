@@ -3,7 +3,14 @@
 import { Request, Response } from 'express';
 import { authService } from '@/services/auth';
 import { sendSuccess, sendError } from '@/utils/response';
-import { RegisterInput, LoginInput, ProfileUpdateInput } from '@/validators/auth';
+import {
+  RegisterInput,
+  LoginInput,
+  ProfileUpdateInput,
+  ForgotPasswordInput,
+  VerifyResetOtpInput,
+  ResetPasswordInput,
+} from '@/validators/auth';
 import { asyncHandler } from '@/middleware/errorHandler';
 import { isGoogleOAuthConfigured, isGitHubOAuthConfigured } from '@/config/passport';
 import { config } from '@/config/env';
@@ -62,6 +69,27 @@ export const refreshToken = asyncHandler(async (req: Request, res: Response) => 
 
   const result = await authService.refreshAccessToken(token);
   return sendSuccess(res, result, 200, 'Access token refreshed');
+});
+
+export const forgotPassword = asyncHandler(async (req: Request, res: Response) => {
+  const input: ForgotPasswordInput = req.body;
+  const result = await authService.requestPasswordReset(input);
+
+  return sendSuccess(res, result, 200, result.message);
+});
+
+export const verifyResetOtp = asyncHandler(async (req: Request, res: Response) => {
+  const input: VerifyResetOtpInput = req.body;
+  const result = await authService.verifyResetOtp(input);
+
+  return sendSuccess(res, result, 200, result.message);
+});
+
+export const resetPassword = asyncHandler(async (req: Request, res: Response) => {
+  const input: ResetPasswordInput = req.body;
+  const result = await authService.resetPassword(input);
+
+  return sendSuccess(res, result, 200, result.message);
 });
 
 export const getAuthConfig = asyncHandler(async (_req: Request, res: Response) => {

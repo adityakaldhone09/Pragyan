@@ -3,7 +3,6 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
 import morgan from 'morgan';
 import session from 'express-session';
 import passport from 'passport';
@@ -78,20 +77,6 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 const isDevelopment = config.nodeEnv !== 'production';
-const rateLimitMessage = { success: false, message: 'Too many requests' };
-
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: isDevelopment ? 1000 : 100, // allow higher burst in development
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: rateLimitMessage,
-  handler: (_req, res) => {
-    res.status(429).json(rateLimitMessage);
-  },
-});
-
-app.use('/api/', limiter);
 
 // CORS
 app.use(

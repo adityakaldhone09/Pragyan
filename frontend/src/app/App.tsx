@@ -25,7 +25,7 @@ const AdminIntelligenceAudits = lazy(() => import("./pages/AdminIntelligenceAudi
 
 export default function App() {
   return (
-    <div className="size-full dark">
+    <div className="size-full min-h-screen bg-background text-foreground dark">
       <AuthProvider>
         <Toaster richColors closeButton />
         <BrowserRouter>
