@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { journeyService } from '@/modules/journey/journey.service';
 import { xpService } from '@/services/xp';
+import { generateQuizWithGemini, evaluateQuizAnswers, type GeneratedQuiz, type QuizEvaluation } from '@/services/quiz-generation';
 
 export class QuizService {
   async getTodayQuizForUser(userId: string, roadmapId?: string) {
@@ -18,110 +19,107 @@ export class QuizService {
       return { generated: true, questions: [] };
     }
 
-    // Try to find a persisted DailyQuiz for this roadmap/day
-    const possible = await prisma.dailyQuiz.findMany({ where: { roadmapId } });
-    const titleMatch = possible.find((q) => q.title?.includes(`Day ${currentDay}`));
-
-    if (titleMatch) {
-      return { generated: false, quiz: titleMatch };
-    }
-
-    // Fallback: generate simple quiz from current day's topics
+    // Get journey details for Gemini context
     const journey = await journeyService.getJourney(userId, roadmap);
     const selectedDay = journey.roadmapDays.find((d) => d.dayNumber === currentDay) || journey.roadmapDays[0];
-    const focus = selectedDay?.focus || journey.roadmapTitle || 'topic';
-    const topics = selectedDay?.topics || [focus];
+    const topic = selectedDay?.focus || selectedDay?.dailyTopics?.[0] || 'topic';
+    const careerPath = journey.careerTitle || journey.roadmapTitle || 'Career Development';
 
-    const questions = topics.slice(0, 3).map((topic, i) => ({
-      id: `gen-${currentDay}-${i}`,
-      question: `Which topic best describes Day ${currentDay} focus on ${topic}?`,
-      options: [topic, focus, 'Related topic A', 'Related topic B'],
-      correctIndex: 0,
-      estimatedMinutes: 5,
-      xp: 25,
-    }));
+    // Determine user skill level based on journey progress
+    const userLevel = currentDay <= 20 ? 'beginner' : currentDay <= 50 ? 'intermediate' : 'advanced';
 
-    return { generated: true, quiz: { id: null, roadmapId, title: `Day ${currentDay} Quiz`, questions, generated: true } };
+    // Generate quiz using Gemini (no storage of questions)
+    const quiz = await generateQuizWithGemini({
+      careerPath,
+      topic,
+      dayNumber: currentDay,
+      userLevel,
+      resourcesCompleted: selectedDay?.resources?.map((r) => r.title) || [],
+    });
+
+    return { generated: true, quiz, dayNumber: currentDay, topic, careerPath };
   }
 
-  async submitQuiz(userId: string, input: { quizId?: string | null; answers: number[]; roadmapId?: string; dayNumber?: number }) {
-    const { quizId, answers, roadmapId, dayNumber } = input;
-    let quizRecord: any = null;
-    const resolvedRoadmapId = roadmapId || null;
+  async submitQuiz(userId: string, input: { quiz?: GeneratedQuiz; answers: number[]; roadmapId?: string; dayNumber?: number }) {
+    const { quiz, answers, roadmapId, dayNumber } = input;
 
-    if (quizId) {
-      quizRecord = await prisma.dailyQuiz.findUnique({ where: { id: quizId } });
-    }
-
-    if (!quizRecord) {
-      // regenerate the quiz to score answers
-      const fetched = await this.getTodayQuizForUser(userId, roadmapId);
-      quizRecord = fetched.quiz;
-    }
-
-    const questions: any[] = quizRecord?.questions || [];
-    const total = questions.length || 1;
-    let correct = 0;
-    for (let i = 0; i < total; i++) {
-      const q = questions[i];
-      const ans = answers[i];
-      if (typeof q.correctIndex === 'number' && ans === q.correctIndex) correct++;
-    }
-
-    const score = Math.round((correct / total) * 100);
-    // XP awarding rules
-    const baseXp = questions.reduce((s, q) => s + (q.xp || 25), 0) || 50;
-    let xpAwarded = 0;
-    if (score >= 90) xpAwarded = Math.round(baseXp * 1.2);
-    else if (score >= 70) xpAwarded = baseXp;
-    else if (score >= 50) xpAwarded = Math.round(baseXp * 0.5);
-    else xpAwarded = 0;
-
-    const existingAttempt = quizRecord?.id
-      ? await prisma.dailyQuizAttempt.findFirst({
-          where: { userId, quizId: quizRecord.id },
-        })
-      : null;
-
-    if (existingAttempt) {
+    if (!quiz) {
       return {
-        score: existingAttempt.score,
-        xpAwarded: existingAttempt.xpAwarded,
-        correct,
-        total,
+        score: 0,
+        xpAwarded: 0,
+        correct: 0,
+        total: 0,
         levelInfo: null,
-        alreadySubmitted: true,
+        error: 'No quiz provided',
       };
     }
 
+    // Get user's current skill level
+    const journey = roadmapId ? await journeyService.getJourney(userId, roadmapId) : null;
+    const userSkillLevel = journey && journey.userLevel ? (journey.userLevel as 'beginner' | 'intermediate' | 'advanced') : 'beginner';
+
+    // Evaluate quiz using Gemini analysis
+    const evaluation: QuizEvaluation = await evaluateQuizAnswers({
+      quiz,
+      userAnswers: answers,
+      userSkillLevel,
+    });
+
+    // Update user with new level if progressed
     let levelInfo: any = null;
-    if (xpAwarded > 0) {
-      const res = await xpService.awardXp(userId, xpAwarded, 'daily-quiz', { quizId: quizRecord?.id, roadmapId, dayNumber });
-      levelInfo = { levelUp: res.levelUp, previousLevel: res.previousLevel, newLevel: res.newLevel, user: res.user };
+    if (evaluation.xpAwarded > 0) {
+      const xpResult = await xpService.awardXp(userId, evaluation.xpAwarded, 'quiz-completion', {
+        topic: quiz.topic,
+        careerPath: quiz.careerPath,
+        quizLevel: quiz.difficulty,
+      });
+      levelInfo = { levelUp: xpResult.levelUp, previousLevel: xpResult.previousLevel, newLevel: xpResult.newLevel };
     }
 
-    if (quizRecord?.id) {
-      await prisma.dailyQuizAttempt.create({ data: { userId, quizId: quizRecord.id, score, xpAwarded } });
-    }
+    // Store assessment result with analysis (NOT questions)
+    const assessmentResult = await prisma.assessmentResult.create({
+      data: {
+        userId,
+        score: evaluation.score,
+        level: evaluation.level,
+        strengths: evaluation.strengths,
+        weaknesses: evaluation.weaknesses,
+        suggestedNextSteps: evaluation.suggestions,
+        careerMatch: quiz.careerPath,
+        roadmapId: roadmapId || undefined,
+        topicsTested: [quiz.topic],
+      },
+    });
 
-    if (resolvedRoadmapId) {
+    // Update user progress if roadmapId provided
+    if (roadmapId) {
       const progress = await prisma.userProgress.findUnique({
-        where: { userId_roadmapId: { userId, roadmapId: resolvedRoadmapId } },
+        where: { userId_roadmapId: { userId, roadmapId } },
       });
 
       if (progress) {
-        const nextDay = score >= 70 ? Math.max(progress.currentDay + 1, Number(dayNumber || progress.currentDay + 1)) : progress.currentDay;
+        const nextDay = evaluation.score >= 70 ? Math.max(progress.currentDay + 1, Number(dayNumber || progress.currentDay + 1)) : progress.currentDay;
         await prisma.userProgress.update({
-          where: { userId_roadmapId: { userId, roadmapId: resolvedRoadmapId } },
+          where: { userId_roadmapId: { userId, roadmapId } },
           data: {
             currentDay: nextDay,
             lastActiveDate: new Date(),
           },
         });
       }
+
+      // Update user skill level if improved
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (user && evaluation.level && evaluation.level !== (user.skillLevel as any)) {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { skillLevel: evaluation.level },
+        });
+      }
     }
 
-    if (score === 100) {
+    // Award achievement for perfect score
+    if (evaluation.score === 100) {
       await prisma.userAchievement.upsert({
         where: { userId_code: { userId, code: 'perfect-quiz' } },
         update: { unlockedAt: new Date() },
@@ -129,7 +127,30 @@ export class QuizService {
       });
     }
 
-    return { score, xpAwarded, correct, total, levelInfo };
+    // Award achievement for progressing level
+    if (levelInfo?.levelUp) {
+      await prisma.userAchievement.upsert({
+        where: { userId_code: { userId, code: `level-${evaluation.level}` } },
+        update: { unlockedAt: new Date() },
+        create: {
+          userId,
+          code: `level-${evaluation.level}`,
+          title: `${evaluation.level} Certified`,
+          description: `Reached ${evaluation.level} skill level`,
+        },
+      });
+    }
+
+    return {
+      score: evaluation.score,
+      level: evaluation.level,
+      xpAwarded: evaluation.xpAwarded,
+      strengths: evaluation.strengths,
+      weaknesses: evaluation.weaknesses,
+      suggestions: evaluation.suggestions,
+      levelInfo,
+      assessmentResultId: assessmentResult.id,
+    };
   }
 }
 

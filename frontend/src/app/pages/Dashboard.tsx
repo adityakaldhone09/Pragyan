@@ -453,7 +453,7 @@ export function Dashboard() {
                       ))}
                     </ul>
                     <div className="mt-4 flex items-center gap-3">
-                      <Link to={`/assistant?prompt=${encodeURIComponent(`Help me complete today's mission: ${todaysMissionFocus}`)}`}>
+                      <Link to="/learning-resources">
                         <GlowButton variant="primary" size="md">Let’s start<ArrowRight className="ml-2 inline h-5 w-5" /></GlowButton>
                       </Link>
                     </div>

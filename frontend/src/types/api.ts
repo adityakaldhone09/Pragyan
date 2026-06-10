@@ -24,27 +24,11 @@ export interface AuthUser {
   avatar?: string | null;
   provider?: string;
   emailVerified?: boolean;
-  age?: number | null;
-  location?: string | null;
-  phone?: string | null;
-  linkedin?: string | null;
+  bio?: string | null;
   skills?: string[];
   interests?: string[];
-  preferences?: string[];
   education?: string | null;
   experience?: string | null;
-  experienceType?: 'fresher' | 'experienced' | null;
-  educationEntries?: Array<{
-    qualification: string;
-    city: string;
-    percentage: number;
-  }>;
-  skillLevel?: string | null;
-  xp?: number;
-  streak?: number;
-  level?: number;
-  currentTitle?: string | null;
-  careerTrack?: string | null;
   linkedAccounts?: Array<{
     provider: string;
     providerId: string;
@@ -74,117 +58,6 @@ export interface ProviderConnectionStatus {
 export interface ConnectedProvidersResponse {
   google: ProviderConnectionStatus;
   github: ProviderConnectionStatus;
-}
-
-export interface PortfolioProject {
-  id: string;
-  userId: string;
-  title: string;
-  description?: string | null;
-  techStack: string[];
-  highlights: string[];
-  liveUrl?: string | null;
-  repoUrl?: string | null;
-  featured: boolean;
-  source: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface Certification {
-  id: string;
-  userId: string;
-  title: string;
-  issuer: string;
-  credentialId?: string | null;
-  credentialUrl?: string | null;
-  issuedAt?: string | null;
-  expiresAt?: string | null;
-  description?: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface GitHubRepositorySummary {
-  id: string;
-  userId: string;
-  repoId: string;
-  name: string;
-  fullName: string;
-  htmlUrl: string;
-  description?: string | null;
-  language?: string | null;
-  stars: number;
-  forks: number;
-  isPrivate: boolean;
-  defaultBranch?: string | null;
-  pushedAt?: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface ProfileCompletionSection {
-  key: string;
-  label: string;
-  score: number;
-}
-
-export interface ProfileBuilderSnapshot {
-  user: AuthUser;
-  providerStatus: ConnectedProvidersResponse;
-  completion: {
-    score: number;
-    sections: ProfileCompletionSection[];
-    missing: string[];
-  };
-  githubRepositories: GitHubRepositorySummary[];
-  projects: PortfolioProject[];
-  certifications: Certification[];
-}
-
-export interface AIProviderHealthResult {
-  status: 'healthy' | 'unhealthy';
-  model: string;
-  latency: number;
-  error?: string;
-}
-
-export interface AIHealthSnapshot {
-  gemini: AIProviderHealthResult;
-  groq: AIProviderHealthResult;
-  telemetry: {
-    calls: number;
-    failures: number;
-    fallbackCount: number;
-    fallbackRate: number;
-  };
-  checkedAt: string;
-  overallStatus: 'healthy' | 'degraded';
-}
-
-export interface XpProgression {
-  xp: number;
-  level: number;
-  title: string;
-  currentThreshold: number;
-  nextThreshold: number;
-  xpToNextLevel: number;
-  progressPercent: number;
-  nextTitle: string;
-  milestone: string;
-  storedLevel?: number;
-  storedTitle?: string;
-  streak?: number;
-}
-
-export interface ProfileCoachResponse {
-  summary: string;
-  completionScore: number;
-  strengths: string[];
-  missingFields: string[];
-  nextSteps: string[];
-  suggestedHeadline: string;
-  suggestedCareerTrack: string;
 }
 
 export interface AssessmentQuestion {
@@ -330,24 +203,6 @@ export interface RoadmapLearningDay {
   xp: number;
 }
 
-export interface RoadmapProjectResource {
-  title: string;
-  url: string;
-  provider: string;
-}
-
-export interface RoadmapProject {
-  id: string;
-  title: string;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-  unlockAfterTopics: string[];
-  estimatedMinutes: number;
-  xpReward: number;
-  skillsUsed: string[];
-  githubIdeas?: string[];
-  resources?: RoadmapProjectResource[];
-}
-
 export interface RoadmapSummary {
   id?: string;
   title: string;
@@ -364,190 +219,11 @@ export interface RoadmapSummary {
   milestones?: RoadmapMilestone[];
   requiredSkills?: string[];
   learningStructure?: RoadmapLearningDay[];
-  projects?: RoadmapProject[];
   progression?: Array<{
     stage: string;
     title: string;
     description: string;
   }>;
-}
-
-export type JourneyAdaptiveMode = 'recovery' | 'growth' | 'stretch';
-
-export interface JourneyTask {
-  id: string;
-  title: string;
-  type: 'learn' | 'practice' | 'quiz' | 'project' | 'revision' | string;
-  estimatedMinutes: number;
-  xp: number;
-  completed: boolean;
-  details?: string;
-}
-
-export interface JourneyDay {
-  dayNumber: number;
-  title: string;
-  focus: string;
-  topics: string[];
-  tasks: JourneyTask[];
-  resources: Array<{
-    title: string;
-    provider?: string;
-    type?: string;
-    url?: string;
-    estimatedMinutes?: number;
-  }>;
-  estimatedMinutes: number;
-  xpReward: number;
-  completed: boolean;
-}
-
-export interface JourneySkillProgress {
-  skill: string;
-  mastery: number;
-  completed: boolean;
-  weak: boolean;
-}
-
-export interface JourneyJobEligibility {
-  id: string;
-  title: string;
-  company: string;
-  location: string;
-  salary: string | null;
-  jobType: string;
-  role: string;
-  requiredSkills: string[];
-  missingSkills: string[];
-  matchPercentage: number;
-  eligible: boolean;
-  source: string;
-  applyLink: string;
-}
-
-export interface PlacementReadiness {
-  score: number;
-  label: string;
-  completedSkills: string[];
-  missingSkills: string[];
-  eligibleJobs: number;
-  strengths?: string[];
-  weakAreas?: string[];
-  recommendedNextStep?: string;
-  factors?: Array<{
-    label: string;
-    score: number;
-    weight: number;
-    note: string;
-  }>;
-}
-
-export interface DailyAnalyticsTrendPoint {
-  date: string;
-  readinessScore: number;
-  xp: number;
-  studyHours: number;
-  completedTasks: number;
-  streak: number;
-  eligibleJobs: number;
-  weakSkillCount: number;
-}
-
-export interface JourneyPayload {
-  careerSlug: string;
-  resolvedCareerSlug: string;
-  careerTitle: string;
-  roadmapId: string | null;
-  roadmapTitle: string;
-  duration: string;
-  industryDemand: string;
-  salaryRange: string;
-  completionPercentage: number;
-  xp: number;
-  streak: number;
-  currentDay: number;
-  adaptiveMode: JourneyAdaptiveMode;
-  adaptiveReason: string;
-  weakSkills: string[];
-  completedSkills: string[];
-  nextAction: string;
-  mentorContext: {
-    career: string;
-    roadmapTitle: string;
-    currentDay: string;
-    completedSkills: string[];
-    weakSkills: string[];
-    mentorLevel: string;
-    learningLevel: string;
-  };
-  roadmapDays: JourneyDay[];
-  skillProgress: JourneySkillProgress[];
-  aiInsights: string[];
-  eligibleJobs: JourneyJobEligibility[];
-  placementReadiness: PlacementReadiness;
-  topCareerMatch: number;
-  currentPlan: {
-    todayGoal: string;
-    estimatedMinutes: number;
-    tasks: Array<{ type: string; title: string; minutes: number; details?: string }>;
-    xpReward: number;
-    level: string;
-    adaptiveMode: JourneyAdaptiveMode;
-    adaptiveReason: string;
-    difficultyMultiplier: number;
-  };
-  userLevel?: number;
-  userTitle?: string | null;
-  careerTrack?: string | null;
-}
-
-export interface JourneyDashboardSnapshot {
-  currentJourney: JourneyPayload | null;
-  currentDay: number;
-  xp: number;
-  streak: number;
-  aiInsights: string[];
-  weakSkills: string[];
-  nextAction: string;
-  eligibleJobs: JourneyJobEligibility[];
-  placementReadiness: PlacementReadiness | null;
-  trend?: DailyAnalyticsTrendPoint[];
-}
-
-export interface MentorContextSnapshot {
-  career?: string;
-  roadmap?: string;
-  currentDay?: string;
-  weakSkills?: string[];
-  completedSkills?: string[];
-  adaptiveMode?: string;
-  currentGoal?: string;
-  placementReadiness?: number;
-  learningStyle?: string;
-}
-
-export interface MentorMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  createdAt: string;
-  contextSnapshot?: MentorContextSnapshot | null;
-}
-
-export interface MentorConversation {
-  conversationId: string;
-  title: string;
-  journeyId?: string | null;
-  messages: MentorMessage[];
-}
-
-export interface MentorChatResponse {
-  conversationId: string;
-  title: string;
-  reply: string;
-  provider?: string;
-  fallbackUsed?: boolean;
-  userMessageId?: string;
 }
 
 export type LearningResourceType = 'youtube' | 'documentation' | 'practice' | 'article' | 'mini-project' | 'certification';
@@ -585,7 +261,6 @@ export interface LearningResourceHistoryItem {
   roadmapId?: string | null;
   completed: boolean;
   progressPercent: number;
-  quizScore?: number | null;
   notes?: string | null;
   source?: string | null;
   completedAt?: string | null;
@@ -621,38 +296,9 @@ export interface LearningResourceRecommendation {
     provider: string;
     used: boolean;
     summary?: string;
-    adaptiveMode?: 'recovery' | 'growth' | 'stretch';
-    adaptiveReason?: string;
-    difficultyMultiplier?: number;
-    recommendedTaskMix?: {
-      learn: number;
-      practice: number;
-      quiz: number;
-      revision: number;
-      project: number;
-    };
   };
   totalTopics: number;
   topics: string[];
-}
-
-export interface SmartDailyPlanTask {
-  type: 'learn' | 'practice' | 'quiz' | 'revision' | 'project' | string;
-  title: string;
-  minutes: number;
-  details?: string;
-}
-
-export interface SmartDailyPlanResponse {
-  todayGoal: string;
-  estimatedMinutes: number;
-  tasks: SmartDailyPlanTask[];
-  xpReward: number;
-  level: string;
-  rationale?: string;
-  adaptiveMode?: 'recovery' | 'growth' | 'stretch';
-  adaptiveReason?: string;
-  difficultyMultiplier?: number;
 }
 
 export interface RoadmapDomainSection {

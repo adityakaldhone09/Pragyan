@@ -284,6 +284,383 @@ const resourceCatalog: Record<string, ResourceCatalogEntry> = {
       },
     ],
   },
+  "full stack developer": {
+    docs: [
+      {
+        title: "Full Stack Developer Learning Path",
+        url: "https://www.freecodecamp.org/learn/",
+        provider: "freeCodeCamp",
+        description: "A comprehensive full stack learning path with official curriculum and projects.",
+        estimatedMinutes: 30,
+      },
+    ],
+    video: [
+      {
+        title: "Full Stack Developer Roadmap",
+        url: "https://www.youtube.com/results?search_query=full+stack+developer+roadmap",
+        provider: "YouTube",
+        description: "A practical video roadmap for full stack developers.",
+        estimatedMinutes: 45,
+      },
+    ],
+    practice: [
+      {
+        title: "freeCodeCamp Full Stack Projects",
+        url: "https://www.freecodecamp.org/learn/",
+        provider: "freeCodeCamp",
+        description: "Hands-on full stack practice exercises and projects.",
+        estimatedMinutes: 50,
+      },
+    ],
+  },
+  "frontend developer": {
+    docs: [
+      {
+        title: "MDN Web Docs for Frontend",
+        url: "https://developer.mozilla.org/en-US/docs/Learn/Front-end_web_developer",
+        provider: "MDN",
+        description: "The official frontend web developer learning path.",
+        estimatedMinutes: 30,
+      },
+    ],
+    video: [
+      {
+        title: "Frontend Developer Tutorial",
+        url: "https://www.youtube.com/results?search_query=frontend+developer+course",
+        provider: "YouTube",
+        description: "A beginner-friendly frontend developer video course.",
+        estimatedMinutes: 45,
+      },
+    ],
+    practice: [
+      {
+        title: "Frontend Mentor Challenges",
+        url: "https://www.frontendmentor.io/",
+        provider: "Frontend Mentor",
+        description: "Practical frontend building challenges and templates.",
+        estimatedMinutes: 45,
+      },
+    ],
+  },
+  "backend developer": {
+    docs: [
+      {
+        title: "Node.js Official Docs",
+        url: "https://nodejs.org/en/docs/",
+        provider: "Node.js Docs",
+        description: "The official documentation for building backend services with Node.js.",
+        estimatedMinutes: 25,
+      },
+    ],
+    video: [
+      {
+        title: "Node.js Crash Course",
+        url: "https://www.youtube.com/results?search_query=nodejs+crash+course",
+        provider: "YouTube",
+        description: "A practical backend developer video walkthrough.",
+        estimatedMinutes: 45,
+      },
+    ],
+    practice: [
+      {
+        title: "freeCodeCamp APIs and Microservices",
+        url: "https://www.freecodecamp.org/learn/back-end-development-and-apis/",
+        provider: "freeCodeCamp",
+        description: "Hands-on backend API and Express.js practice.",
+        estimatedMinutes: 50,
+      },
+    ],
+  },
+  "data scientist": {
+    docs: [
+      {
+        title: "Kaggle Learn Data Science",
+        url: "https://www.kaggle.com/learn",
+        provider: "Kaggle",
+        description: "Data science learning modules and documentation.",
+        estimatedMinutes: 25,
+      },
+    ],
+    video: [
+      {
+        title: "Data Science Course",
+        url: "https://www.youtube.com/results?search_query=data+science+course",
+        provider: "YouTube",
+        description: "A beginner data science video course.",
+        estimatedMinutes: 45,
+      },
+    ],
+    practice: [
+      {
+        title: "freeCodeCamp Data Analysis",
+        url: "https://www.freecodecamp.org/learn/data-analysis-with-python/",
+        provider: "freeCodeCamp",
+        description: "Practical data analysis exercises.",
+        estimatedMinutes: 50,
+      },
+    ],
+  },
+  "data analyst": {
+    docs: [
+      {
+        title: "SQLBolt Interactive SQL",
+        url: "https://sqlbolt.com/",
+        provider: "SQLBolt",
+        description: "Structured SQL tutorials and exercises.",
+        estimatedMinutes: 25,
+      },
+    ],
+    video: [
+      {
+        title: "Data Analyst Course",
+        url: "https://www.youtube.com/results?search_query=data+analyst+course",
+        provider: "YouTube",
+        description: "A practical introduction to data analyst skills.",
+        estimatedMinutes: 45,
+      },
+    ],
+    practice: [
+      {
+        title: "Kaggle SQL and Data Analysis",
+        url: "https://www.kaggle.com/learn/sql",
+        provider: "Kaggle",
+        description: "Hands-on SQL and data analysis practice.",
+        estimatedMinutes: 45,
+      },
+    ],
+  },
+  "mobile app developer": {
+    docs: [
+      {
+        title: "React Native Docs",
+        url: "https://reactnative.dev/docs/getting-started",
+        provider: "React Native Docs",
+        description: "Official React Native documentation for mobile apps.",
+        estimatedMinutes: 25,
+      },
+    ],
+    video: [
+      {
+        title: "Flutter & React Native Tutorials",
+        url: "https://www.youtube.com/results?search_query=mobile+app+development+flutter+react+native",
+        provider: "YouTube",
+        description: "Mobile app development videos for cross-platform frameworks.",
+        estimatedMinutes: 45,
+      },
+    ],
+    practice: [
+      {
+        title: "React Native Project Practice",
+        url: "https://www.freecodecamp.org/learn/front-end-development-libraries/",
+        provider: "freeCodeCamp",
+        description: "Hands-on React Native and mobile web practice.",
+        estimatedMinutes: 50,
+      },
+    ],
+  },
+  "devops engineer": {
+    docs: [
+      {
+        title: "Docker Documentation",
+        url: "https://docs.docker.com/",
+        provider: "Docker Docs",
+        description: "Official Docker docs for container workflows.",
+        estimatedMinutes: 25,
+      },
+    ],
+    video: [
+      {
+        title: "DevOps Roadmap Video",
+        url: "https://www.youtube.com/results?search_query=devops+roadmap",
+        provider: "YouTube",
+        description: "DevOps learning path and CI/CD introduction videos.",
+        estimatedMinutes: 45,
+      },
+    ],
+    practice: [
+      {
+        title: "Linux Journey Practice",
+        url: "https://linuxjourney.com/",
+        provider: "Linux Journey",
+        description: "Hands-on Linux and DevOps skill practice.",
+        estimatedMinutes: 45,
+      },
+    ],
+  },
+  "cloud engineer": {
+    docs: [
+      {
+        title: "AWS Skill Builder",
+        url: "https://aws.amazon.com/training/",
+        provider: "AWS",
+        description: "Official cloud learning paths on AWS Skill Builder.",
+        estimatedMinutes: 30,
+      },
+    ],
+    video: [
+      {
+        title: "Cloud Engineer Introduction",
+        url: "https://www.youtube.com/results?search_query=cloud+engineer+course",
+        provider: "YouTube",
+        description: "Cloud engineering video walkthroughs and fundamentals.",
+        estimatedMinutes: 45,
+      },
+    ],
+    practice: [
+      {
+        title: "Google Cloud Skills Boost",
+        url: "https://cloud.google.com/skillsboost",
+        provider: "Google Cloud",
+        description: "Hands-on cloud labs and practical exercises.",
+        estimatedMinutes: 45,
+      },
+    ],
+  },
+  "cyber security engineer": {
+    docs: [
+      {
+        title: "PortSwigger Web Security Academy",
+        url: "https://portswigger.net/web-security",
+        provider: "PortSwigger",
+        description: "Official web security academy documentation and labs.",
+        estimatedMinutes: 25,
+      },
+    ],
+    video: [
+      {
+        title: "Cyber Security Course",
+        url: "https://www.youtube.com/results?search_query=cyber+security+course",
+        provider: "YouTube",
+        description: "Cyber security essentials and defensive tactics.",
+        estimatedMinutes: 45,
+      },
+    ],
+    practice: [
+      {
+        title: "TryHackMe Beginner Path",
+        url: "https://tryhackme.com/",
+        provider: "TryHackMe",
+        description: "Hands-on cyber security labs and exercises.",
+        estimatedMinutes: 60,
+      },
+    ],
+  },
+  "ui/ux designer": {
+    docs: [
+      {
+        title: "Figma Learn",
+        url: "https://www.figma.com/learn/",
+        provider: "Figma",
+        description: "Official Figma UX design learning resources.",
+        estimatedMinutes: 25,
+      },
+    ],
+    video: [
+      {
+        title: "UX Design Course",
+        url: "https://www.youtube.com/results?search_query=ux+design+course",
+        provider: "YouTube",
+        description: "Introductory UX design video lessons.",
+        estimatedMinutes: 45,
+      },
+    ],
+    practice: [
+      {
+        title: "Google UX Design Exercises",
+        url: "https://grow.google/programs/ux-design/",
+        provider: "Google UX",
+        description: "Practical UX research and prototyping exercises.",
+        estimatedMinutes: 45,
+      },
+    ],
+  },
+  "software engineer": {
+    docs: [
+      {
+        title: "CS50 Harvard",
+        url: "https://cs50.harvard.edu/x/2024/",
+        provider: "Harvard",
+        description: "Core software engineering concepts and system design documentation.",
+        estimatedMinutes: 30,
+      },
+    ],
+    video: [
+      {
+        title: "Software Engineering Course",
+        url: "https://www.youtube.com/results?search_query=software+engineering+course",
+        provider: "YouTube",
+        description: "A practical overview of programming, testing, and system design.",
+        estimatedMinutes: 45,
+      },
+    ],
+    practice: [
+      {
+        title: "LeetCode Practice",
+        url: "https://leetcode.com/",
+        provider: "LeetCode",
+        description: "Algorithm and problem-solving practice for software engineers.",
+        estimatedMinutes: 50,
+      },
+    ],
+  },
+  "game developer": {
+    docs: [
+      {
+        title: "Unity Learn",
+        url: "https://learn.unity.com/",
+        provider: "Unity",
+        description: "Official Unity tutorials and documentation.",
+        estimatedMinutes: 30,
+      },
+    ],
+    video: [
+      {
+        title: "Game Development Tutorial",
+        url: "https://www.youtube.com/results?search_query=game+development+tutorial+unity",
+        provider: "YouTube",
+        description: "Beginner-friendly game dev tutorials.",
+        estimatedMinutes: 45,
+      },
+    ],
+    practice: [
+      {
+        title: "Unity Project Practice",
+        url: "https://unity.com/resources/tutorials",
+        provider: "Unity",
+        description: "Hands-on game creation tutorials and exercises.",
+        estimatedMinutes: 50,
+      },
+    ],
+  },
+  "blockchain developer": {
+    docs: [
+      {
+        title: "Ethereum Developer Docs",
+        url: "https://ethereum.org/en/developers/docs/",
+        provider: "Ethereum",
+        description: "Official blockchain developer documentation.",
+        estimatedMinutes: 30,
+      },
+    ],
+    video: [
+      {
+        title: "Solidity and Web3 Course",
+        url: "https://www.youtube.com/results?search_query=solidity+developer+course",
+        provider: "YouTube",
+        description: "Introductory blockchain development videos.",
+        estimatedMinutes: 45,
+      },
+    ],
+    practice: [
+      {
+        title: "CryptoZombies Solidity Practice",
+        url: "https://cryptozombies.io/",
+        provider: "CryptoZombies",
+        description: "Interactive Solidity programming practice.",
+        estimatedMinutes: 45,
+      },
+    ],
+  },
 };
 
 const aliases: Record<string, string> = {
@@ -301,6 +678,23 @@ const aliases: Record<string, string> = {
   ml: "ml",
   machinelearning: "ml",
   "machine learning": "ml",
+  "full stack developer": "full stack developer",
+  "frontend developer": "frontend developer",
+  frontend: "frontend developer",
+  "backend developer": "backend developer",
+  backend: "backend developer",
+  "data scientist": "data scientist",
+  "data analyst": "data analyst",
+  "mobile app developer": "mobile app developer",
+  "devops engineer": "devops engineer",
+  devops: "devops engineer",
+  "cloud engineer": "cloud engineer",
+  "cyber security engineer": "cyber security engineer",
+  "ui/ux designer": "ui/ux designer",
+  "ui ux": "ui/ux designer",
+  "software engineer": "software engineer",
+  "game developer": "game developer",
+  "blockchain developer": "blockchain developer",
 };
 
 function normalize(value: string) {
