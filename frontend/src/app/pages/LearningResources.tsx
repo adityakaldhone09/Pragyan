@@ -5,7 +5,7 @@ import { GlassCard } from '../components/GlassCard';
 import { GlowButton } from '../components/GlowButton';
 import { SectionHeader } from '../components/SectionHeader';
 import { NeuralBackground } from '../components/NeuralBackground';
-import { useAuth } from '@/context/useAuth';
+import { useAuth } from '../../context/AuthContext';
 import { roadmapService } from '../../services/roadmapService';
 import { learningResourceService } from '../../services/learningResourceService';
 import type { LearningResourceDayGroup, LearningResourceHistoryItem, LearningResourceItem, LearningResourceRecommendation, RoadmapSummary } from '../../types/api';
@@ -158,24 +158,11 @@ export function LearningResources() {
   async function toggleCompletion(resource: LearningResourceItem, completed: boolean) {
     try {
       setSavingIds((current) => ({ ...current, [resource.id]: true }));
-      let quizScore: number | undefined;
-
-      if (completed && String(resource.resourceType || '').toLowerCase() === 'quiz') {
-        const rawScore = window.prompt(`Enter your quiz score for "${resource.title}" (0-100). Leave blank to skip.`);
-        if (rawScore !== null && rawScore.trim()) {
-          const parsedScore = Number(rawScore);
-          if (Number.isFinite(parsedScore)) {
-            quizScore = Math.max(0, Math.min(100, Math.round(parsedScore)));
-          }
-        }
-      }
-
       const updated = await learningResourceService.saveHistory({
         resourceId: resource.id,
         roadmapId: recommendation?.roadmap.id || selectedRoadmapId,
         completed,
         progressPercent: completed ? 100 : 0,
-        quizScore,
         source: 'resource-dashboard',
       });
 
@@ -258,7 +245,7 @@ export function LearningResources() {
                   >
                     <option value="all">All resource types</option>
                     <option value="youtube">YouTube</option>
-                    <option value="documentation">W3Schools reading</option>
+                    <option value="documentation">Official docs</option>
                     <option value="practice">Practice websites</option>
                     <option value="article">Articles</option>
                     <option value="mini-project">Mini projects</option>

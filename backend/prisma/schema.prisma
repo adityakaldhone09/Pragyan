@@ -53,6 +53,9 @@ model User {
   userXpLogs              UserXpLog[]
   dailyQuizAttempts       DailyQuizAttempt[]
   dailyLearning           UserDailyLearning[]
+  dailyLearningRecords    DailyLearning[]
+  learningProgressRecords  LearningProgress[]
+  resumes                 Resume[]
   userRoadmaps            UserRoadmap[]
   taskProgress            TaskProgress[]
   resourceLearningHistory  ResourceLearningHistory[]
@@ -640,6 +643,58 @@ model DailyQuizAttempt {
   @@index([quizId])
 }
 
+model DailyLearning {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String   @db.ObjectId
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roadmapId     String   @db.ObjectId
+  roadmap       Roadmap  @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  dayNumber     Int
+  topic         String
+  topicSlug     String
+  overview      String
+  task          String
+  resources     Json
+  unlockedQuiz  Boolean  @default(false)
+  completed     Boolean  @default(false)
+  xpReward      Int      @default(0)
+  streakReward  Int      @default(0)
+  weakTopics    String[] @default([])
+  metadata      Json?
+  completedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, roadmapId, dayNumber])
+  @@index([userId])
+  @@index([roadmapId])
+}
+
+model LearningProgress {
+  id                 String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId             String   @db.ObjectId
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roadmapId          String   @db.ObjectId
+  roadmap            Roadmap  @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  currentDay         Int      @default(1)
+  completedDays      String[] @default([])
+  progressPercentage Float    @default(0)
+  xp                 Int      @default(0)
+  streak             Int      @default(0)
+  quizUnlocked       Boolean  @default(false)
+  quizCompletedDays  String[] @default([])
+  weakTopics         String[] @default([])
+  lastCompletedAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, roadmapId])
+  @@index([userId])
+  @@index([roadmapId])
+}
+
 model UserDailyLearning {
   id             String @id @default(auto()) @map("_id") @db.ObjectId
   userId         String @db.ObjectId
@@ -674,6 +729,22 @@ model DailyAnalyticsSnapshot {
   @@unique([userId, date])
   @@index([userId])
   @@index([date])
+}
+
+model Resume {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  version     Int      @default(1)
+  summary     String?
+  data        Json
+  pdfUrl      String?
+  generatedAt DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }
 
 // ============ CAREER MODELS ============

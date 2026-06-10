@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { asyncHandler } from '@/middleware/errorHandler';
 import { sendError, sendSuccess } from '@/utils/response';
 import { quizService } from '@/services/quiz';
+import { quizService as aiQuizService } from '@/services/quizService';
 
 export const getTodayQuiz = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) return sendError(res, 401, 'Unauthorized');
@@ -21,4 +22,18 @@ export const submitQuiz = asyncHandler(async (req: Request, res: Response) => {
   const result = await quizService.submitQuiz(req.user.id, { quizId, answers, roadmapId, dayNumber });
 
   return sendSuccess(res, result, 200, 'Quiz submitted');
+});
+
+export const generateQuiz = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) return sendError(res, 401, 'Unauthorized');
+
+  const result = await aiQuizService.generateQuiz(req.user.id, req.body);
+  return sendSuccess(res, result, 200, 'Quiz generated');
+});
+
+export const evaluateQuiz = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) return sendError(res, 401, 'Unauthorized');
+
+  const result = await aiQuizService.evaluateQuiz(req.user.id, req.body);
+  return sendSuccess(res, result, 200, 'Quiz evaluated');
 });

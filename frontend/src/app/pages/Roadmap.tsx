@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from "motion/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
-import { CheckCircle, Circle, Lock, BookOpen, Code, Award, Clock, TrendingUp, Star, Play, ArrowRight, ChevronDown, Sparkles, Trophy, Flame, Zap } from "lucide-react";
+import { CheckCircle, Circle, Lock, BookOpen, Code, Award, Clock, TrendingUp, Star, Play, ArrowRight, ChevronDown, Sparkles } from "lucide-react";
 import { NeuralBackground } from "../components/NeuralBackground";
 import { GlassCard } from "../components/GlassCard";
 import { GlowButton } from "../components/GlowButton";
@@ -10,9 +10,7 @@ import { GradientIconWrapper } from "../components/GradientIconWrapper";
 import { AnimatedProgress } from "../components/AnimatedProgress";
 import { roadmapService } from "../../services/roadmapService";
 import { recommendationService } from "../../services/recommendationService";
-import { useAuth } from "@/context/useAuth";
-import { aiService } from "../../services/aiService";
-import type { RoadmapDomainSection, RoadmapLearningDay, RoadmapLearningResource, RoadmapProject, RoadmapSummary, SmartDailyPlanTask } from "../../types/api";
+import type { RoadmapDomainSection, RoadmapLearningDay, RoadmapSummary } from "../../types/api";
 
 type RoadmapProgressState = {
   completedTasks: string[];
@@ -39,98 +37,7 @@ function formatEstimatedTime(minutes: number) {
   return remainder > 0 ? `~${hours}h ${remainder}m` : `~${hours}h`;
 }
 
-type ResourceSlot = "docs" | "video" | "practice" | "quiz" | "project";
-
-const resourceSlotPriority: ResourceSlot[] = ["docs", "video", "practice", "quiz", "project"];
-
-function normalizeText(value?: string | null) {
-  return String(value || "").toLowerCase();
-}
-
-function getResourceSlot(resource: RoadmapLearningResource): ResourceSlot {
-  const haystack = normalizeText([resource.title, resource.provider, resource.type, resource.url].join(" "));
-
-  if (/(official|docs?|documentation|w3schools|roadmap\.sh|owasp|portswigger|linux journey|ubuntu)/i.test(haystack)) {
-    return "docs";
-  }
-
-  if (/(quiz|mcq|test|assessment|exercise|certification)/i.test(haystack)) {
-    return "quiz";
-  }
-
-  if (/(practice|project|build|lab|hackthebox|tryhackme|over the wire|leetcode)/i.test(haystack)) {
-    return "practice";
-  }
-
-  if (/(coursera|udemy|freecodecamp|youtube|video|hitesh|fireship|net ninja|programming with mosh|code with harry)/i.test(haystack)) {
-    return "video";
-  }
-
-  return "project";
-}
-
-function getSlotMeta(slot: ResourceSlot) {
-  switch (slot) {
-    case "docs":
-      return { label: "W3Schools Reading", icon: "📘", fallback: "W3Schools reading guide", action: "Read now" };
-    case "video":
-      return { label: "Video", icon: "🎥", fallback: "freeCodeCamp or trusted YouTube video", action: "Watch video" };
-    case "practice":
-      return { label: "Practice", icon: "🛠", fallback: "Build a short hands-on exercise", action: "Practice" };
-    case "quiz":
-      return { label: "Quiz", icon: "🧠", fallback: "5 MCQs to check retention", action: "Take quiz" };
-    case "project":
-    default:
-      return { label: "Project", icon: "🚀", fallback: "Mini project to apply the topic", action: "Start project" };
-  }
-}
-
-function buildStructuredResourceCards(day: RoadmapLearningDay) {
-  const grouped = new Map<ResourceSlot, RoadmapLearningResource[]>();
-
-  for (const slot of resourceSlotPriority) {
-    grouped.set(slot, []);
-  }
-
-  (day.resources || []).forEach((resource) => {
-    const slot = getResourceSlot(resource);
-    grouped.get(slot)?.push(resource);
-  });
-
-  return resourceSlotPriority.map((slot) => {
-    const meta = getSlotMeta(slot);
-    const resource = grouped.get(slot)?.[0];
-
-    return {
-      slot,
-      ...meta,
-      title: resource?.title || meta.fallback,
-      provider: resource?.provider,
-      url: resource?.url,
-      estimatedMinutes: resource?.estimatedMinutes || (slot === "quiz" ? 10 : slot === "project" ? 45 : 25),
-      description: resource?.description || meta.fallback,
-    };
-  });
-}
-
-type MentorLevel = "Beginner" | "Intermediate" | "Advanced";
-
-function pickMentorLevel(roadmap?: RoadmapSummary | null): MentorLevel {
-  const normalized = String(roadmap?.level || roadmap?.difficulty || "").toLowerCase();
-
-  if (normalized.includes("advanced") || normalized.includes("expert")) {
-    return "Advanced";
-  }
-
-  if (normalized.includes("intermediate") || normalized.includes("mid")) {
-    return "Intermediate";
-  }
-
-  return "Beginner";
-}
-
 export function Roadmap() {
-  const { user } = useAuth();
   const [selectedMilestone, setSelectedMilestone] = useState<number | null>(0);
   const [categories, setCategories] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -142,15 +49,6 @@ export function Roadmap() {
   const [savingProgress, setSavingProgress] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [aiSuggestion, setAiSuggestion] = useState<string>("Based on your progress, we recommend focusing on the next milestone.");
-  const [mentorQuestion, setMentorQuestion] = useState("");
-  const [mentorReply, setMentorReply] = useState<string>("");
-  const [mentorLoading, setMentorLoading] = useState(false);
-  const [mentorLevel, setMentorLevel] = useState<MentorLevel>("Beginner");
-  const [mentorTopic, setMentorTopic] = useState<string>("");
-  const mentorPanelRef = useRef<HTMLDivElement | null>(null);
-  const [availableMinutes, setAvailableMinutes] = useState(120);
-  const [dailyPlan, setDailyPlan] = useState<SmartDailyPlanResponse | null>(null);
-  const [dailyPlanLoading, setDailyPlanLoading] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -370,165 +268,6 @@ export function Roadmap() {
 
   const selectedLearningDays = roadmapData.learningStructure;
   const nextLearningDay = selectedLearningDays.find((day) => day.day >= (roadmapProgress?.currentDay || 1)) || selectedLearningDays[0] || null;
-  const mentorTopicOptions = useMemo(() => {
-    const topics = new Set<string>();
-
-    selectedLearningDays.slice(0, 4).forEach((day) => {
-      (day.dailyTopics || []).slice(0, 3).forEach((topic) => topics.add(topic));
-      if (day.focus) topics.add(day.focus);
-    });
-
-    return Array.from(topics).slice(0, 8);
-  }, [selectedLearningDays]);
-
-  useEffect(() => {
-    setMentorLevel(pickMentorLevel(selectedRoadmap));
-    setMentorTopic(selectedLearningDays[0]?.dailyTopics?.[0] || selectedLearningDays[0]?.focus || selectedRoadmap?.title || "");
-  }, [selectedLearningDays, selectedRoadmap]);
-
-  useEffect(() => {
-    const streak = Number(user?.streak || 0);
-    const completedDays = Number(roadmapProgress?.completedDays?.length || 0);
-    const missedDays = Math.max(0, (roadmapProgress?.currentDay || 1) - 1 - completedDays);
-
-    if (streak >= 14) {
-      setAvailableMinutes(180);
-    } else if (streak >= 7) {
-      setAvailableMinutes(150);
-    } else if (missedDays > 0) {
-      setAvailableMinutes(90);
-    } else {
-      setAvailableMinutes(120);
-    }
-  }, [roadmapProgress?.completedDays?.length, roadmapProgress?.currentDay, user?.streak]);
-
-  useEffect(() => {
-    let active = true;
-
-    async function loadDailyPlan() {
-      if (!selectedRoadmap?.id || !selectedLearningDays.length) {
-        setDailyPlan(null);
-        return;
-      }
-
-      const currentDay = selectedLearningDays.find((day) => day.day >= (roadmapProgress?.currentDay || 1)) || selectedLearningDays[0];
-      const missedDays = Math.max(0, (roadmapProgress?.currentDay || 1) - 1 - (roadmapProgress?.completedDays?.length || 0));
-
-      setDailyPlanLoading(true);
-
-      try {
-        const plan = await aiService.generateDailyPlan({
-          roadmapTitle: selectedRoadmap.title,
-          roadmapCategory: selectedRoadmap.category,
-          currentDay: roadmapProgress?.currentDay || currentDay?.day || 1,
-          completedTopics: selectedLearningDays
-            .filter((day) => roadmapProgress?.completedDays?.includes(`day-${day.day}`))
-            .flatMap((day) => day.dailyTopics || [])
-            .slice(0, 20),
-          weakSkills: selectedRoadmap.requiredSkills?.slice(0, 8) || [],
-          level: mentorLevel,
-          availableTime: availableMinutes,
-          missedDays,
-          streak: Number(user?.streak || 0),
-          currentFocus: currentDay?.focus || selectedRoadmap.title,
-          currentTopics: currentDay?.dailyTopics || [],
-        });
-
-        if (active) {
-          setDailyPlan(plan);
-        }
-      } catch {
-        if (active) {
-          setDailyPlan({
-            todayGoal: currentDay?.dailyTopics?.[0] || currentDay?.focus || selectedRoadmap.title,
-            estimatedMinutes: availableMinutes,
-            tasks: [
-              { type: 'learn', title: currentDay?.dailyTopics?.[0] || currentDay?.focus || selectedRoadmap.title, minutes: 25 },
-              { type: 'practice', title: 'Build a small hands-on exercise', minutes: 35 },
-              { type: 'quiz', title: 'Quick self-check quiz', minutes: 10 },
-              { type: 'revision', title: 'Review yesterday’s concepts', minutes: 15 },
-            ],
-            xpReward: 65,
-            level: mentorLevel,
-            rationale: 'Fallback plan used because the AI planner is unavailable.',
-          });
-        }
-      } finally {
-        if (active) {
-          setDailyPlanLoading(false);
-        }
-      }
-    }
-
-    void loadDailyPlan();
-
-    return () => {
-      active = false;
-    };
-  }, [availableMinutes, mentorLevel, roadmapProgress?.completedDays, roadmapProgress?.currentDay, selectedLearningDays, selectedRoadmap, user?.streak]);
-  const achievements = [
-    { icon: Flame, label: "7 Day Streak", earned: (user?.streak || 0) >= 7, hint: `${user?.streak || 0} day streak` },
-    { icon: Zap, label: "First 100 XP", earned: (user?.xp || 0) >= 100, hint: `${user?.xp || 0} XP total` },
-    { icon: BookOpen, label: "10 Topics Completed", earned: roadmapData.completedDays >= 10, hint: `${roadmapData.completedDays} days complete` },
-    { icon: Trophy, label: "First Project Built", earned: roadmapData.completedTasks >= 1, hint: `${roadmapData.completedTasks} tasks completed` },
-  ];
-
-  async function askMentor(promptOverride?: string, day?: RoadmapLearningDay) {
-    if (!selectedRoadmap?.id) {
-      return;
-    }
-
-    const currentDay = day || nextLearningDay || selectedLearningDays[0] || null;
-    const topic = promptOverride || mentorQuestion || mentorTopic || currentDay?.dailyTopics?.[0] || currentDay?.focus || selectedRoadmap.title;
-    const question = promptOverride || mentorQuestion || `Explain ${topic} like I'm ${mentorLevel.toLowerCase()}`;
-
-    setMentorLoading(true);
-    setMentorReply("");
-
-    try {
-      const response = await aiService.chat({
-        message: question,
-        context: {
-          roadmap: selectedRoadmap.title,
-          roadmapTitle: selectedRoadmap.title,
-          mentorLevel,
-          mentorDay: currentDay ? `Day ${currentDay.day}` : undefined,
-          mentorTopic: topic,
-          goal: selectedRoadmap.careerPath || selectedRoadmap.category || selectedRoadmap.title,
-          completedTopics: (roadmapProgress?.completedDays || []).slice(0, 20),
-          weakSkills: selectedRoadmap.requiredSkills?.slice(0, 8) || [],
-        },
-      });
-
-      setMentorReply(response.reply);
-      mentorPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    } catch (error) {
-      setMentorReply(error instanceof Error ? error.message : "Unable to get an AI mentor reply right now.");
-    } finally {
-      setMentorLoading(false);
-    }
-  }
-
-  const planTaskGroups = useMemo(() => {
-    const groups: Record<string, SmartDailyPlanTask[]> = {};
-    (dailyPlan?.tasks || []).forEach((task) => {
-      const key = task.type.toLowerCase();
-      if (!groups[key]) {
-        groups[key] = [];
-      }
-      groups[key].push(task);
-    });
-    return groups;
-  }, [dailyPlan]);
-
-  const unlockedProject = useMemo<RoadmapProject | null>(() => {
-    if (!selectedRoadmap?.projects?.length) {
-      return null;
-    }
-
-    const availableTime = dailyPlan?.estimatedMinutes || availableMinutes;
-    return selectedRoadmap.projects.find((project) => project.estimatedMinutes <= availableTime) || selectedRoadmap.projects[0] || null;
-  }, [availableMinutes, dailyPlan?.estimatedMinutes, selectedRoadmap]);
 
   if (loading && !roadmapList.length) {
     return (
@@ -606,164 +345,10 @@ export function Roadmap() {
                 </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-1">XP</p>
-                  <p className="text-2xl font-bold text-primary">{user?.xp || 0}</p>
-                  <p className="text-sm text-muted-foreground">Total learning points</p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-1">Streak</p>
-                  <p className="text-2xl font-bold text-secondary">{user?.streak || 0}</p>
-                  <p className="text-sm text-muted-foreground">Consecutive active days</p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-1">Achievement</p>
-                  <p className="text-2xl font-bold text-pink-400">{(user?.streak || 0) >= 3 ? "Daily Explorer" : "Starter"}</p>
-                  <p className="text-sm text-muted-foreground">Unlocked by regular progress</p>
-                </div>
-              </div>
-
               <AnimatedProgress value={roadmapData.progress} showLabel={false} />
             </div>
           </GlassCard>
         </motion.div>
-
-          <GlassCard glow glowColor="secondary" className="relative overflow-hidden border border-secondary/20 bg-gradient-to-br from-secondary/10 via-background/80 to-primary/10">
-            <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-secondary/10 blur-3xl" />
-            <div className="relative z-10 space-y-6">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div className="space-y-3">
-                  <div className="inline-flex items-center gap-2 rounded-full border border-secondary/20 bg-secondary/10 px-4 py-2 text-sm font-medium text-secondary">
-                    <Sparkles className="h-4 w-4" />
-                    Your Smart Daily Plan
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Today&apos;s Goal</p>
-                    <h2 className="mt-2 text-2xl md:text-3xl font-semibold text-foreground">
-                      {dailyPlanLoading ? 'Building your plan...' : dailyPlan?.todayGoal || nextLearningDay?.dailyTopics?.[0] || nextLearningDay?.focus || roadmapData.title}
-                    </h2>
-                    <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-                      {dailyPlan?.rationale || 'The plan adapts to your roadmap, streak, weak skills, and available time.'}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-muted-foreground">
-                      Estimated Time: {formatEstimatedTime(dailyPlan?.estimatedMinutes || availableMinutes)}
-                    </span>
-                    <span className="rounded-full border border-secondary/20 bg-secondary/10 px-3 py-1.5 text-xs text-secondary">
-                      XP Reward: +{dailyPlan?.xpReward || 65} XP
-                    </span>
-                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-muted-foreground">
-                      Level: {mentorLevel}
-                    </span>
-                    {dailyPlan?.adaptiveMode ? (
-                      <span className={`rounded-full border px-3 py-1.5 text-xs ${dailyPlan.adaptiveMode === 'stretch' ? 'border-primary/30 bg-primary/15 text-primary' : dailyPlan.adaptiveMode === 'recovery' ? 'border-secondary/30 bg-secondary/15 text-secondary' : 'border-white/10 bg-white/5 text-muted-foreground'}`}>
-                        Adaptive Mode: {dailyPlan.adaptiveMode}
-                      </span>
-                    ) : null}
-                  </div>
-                  {dailyPlan?.adaptiveReason ? <p className="text-xs text-muted-foreground max-w-2xl">{dailyPlan.adaptiveReason}</p> : null}
-                </div>
-
-                <div className="space-y-3 rounded-2xl border border-white/10 bg-black/10 p-4 lg:w-[320px]">
-                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Available Time</p>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-2">
-                    {[90, 120, 150, 180].map((minutes) => (
-                      <button
-                        key={minutes}
-                        type="button"
-                        onClick={() => setAvailableMinutes(minutes)}
-                        className={`rounded-xl border px-3 py-2 text-sm transition-all ${availableMinutes === minutes ? 'border-primary/40 bg-primary/20 text-primary' : 'border-white/10 bg-white/5 text-muted-foreground hover:border-primary/20 hover:text-foreground'}`}
-                      >
-                        {formatEstimatedTime(minutes)}
-                      </button>
-                    ))}
-                  </div>
-                  <p className="text-xs text-muted-foreground">The planner uses this budget to shape your day.</p>
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                {['learn', 'practice', 'quiz', 'revision'].map((type) => (
-                  <div key={type} className="rounded-2xl border border-white/10 bg-background/60 p-4">
-                    <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">{type}</p>
-                    <div className="mt-3 space-y-3">
-                      {(planTaskGroups[type] || []).map((task, index) => (
-                        <div key={`${type}-${index}`} className="rounded-xl border border-white/10 bg-white/5 p-3">
-                          <p className="text-sm font-medium text-foreground">{task.title}</p>
-                          <p className="mt-1 text-xs text-muted-foreground">{task.minutes} min</p>
-                          {task.details ? <p className="mt-2 text-xs text-muted-foreground/80">{task.details}</p> : null}
-                        </div>
-                      ))}
-                      {!planTaskGroups[type]?.length ? (
-                        <p className="text-xs text-muted-foreground">Waiting for plan generation.</p>
-                      ) : null}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {planTaskGroups.project?.length || unlockedProject ? (
-                <div className="rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/15 via-background/70 to-secondary/15 p-5 shadow-lg shadow-primary/10">
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="space-y-2">
-                      <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                        <Trophy className="h-3.5 w-3.5" />
-                        Mini Project Unlocked
-                      </div>
-                      <h3 className="text-2xl font-semibold text-foreground">
-                        {planTaskGroups.project?.[0]?.title || unlockedProject?.title || 'Build something today'}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        Learn → Build → Unlock. This is the outcome-driven step that turns the roadmap into a portfolio signal.
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-muted-foreground">
-                        Estimated Time: {formatEstimatedTime((planTaskGroups.project?.[0]?.minutes || unlockedProject?.estimatedMinutes || 45))}
-                      </span>
-                      <span className="rounded-full border border-secondary/20 bg-secondary/10 px-3 py-1.5 text-xs text-secondary">
-                        Reward: +{unlockedProject?.xpReward || dailyPlan?.xpReward || 120} XP
-                      </span>
-                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-muted-foreground">
-                        {unlockedProject?.difficulty || 'beginner'} tier
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="mt-5 grid gap-3 md:grid-cols-3">
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                      <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Skills Used</p>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {(unlockedProject?.skillsUsed || selectedRoadmap?.requiredSkills || []).slice(0, 4).map((skill) => (
-                          <span key={skill} className="rounded-full border border-white/10 bg-background/50 px-3 py-1 text-xs text-muted-foreground">
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                      <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Unlock After</p>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {(unlockedProject?.unlockAfterTopics || selectedLearningDays[0]?.dailyTopics || []).slice(0, 4).map((topic) => (
-                          <span key={topic} className="rounded-full border border-white/10 bg-background/50 px-3 py-1 text-xs text-muted-foreground">
-                            {topic}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                      <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Portfolio Signal</p>
-                      <p className="mt-2 text-sm text-muted-foreground">
-                        Finish this project to unlock a stronger badge, better momentum, and a resume-worthy artifact.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          </GlassCard>
 
         {roadmapSections.length ? (
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.03 }}>
@@ -859,22 +444,6 @@ export function Roadmap() {
                               </div>
                               <h3 className="text-xl font-semibold">{day.dailyTopics?.[0] || day.deliverable}</h3>
                               <p className="text-sm text-muted-foreground">{day.deliverable}</p>
-                              <div className="flex flex-wrap items-center gap-2 pt-1">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setMentorTopic(day.dailyTopics?.[0] || day.focus || day.deliverable);
-                                    void askMentor(`Explain ${day.dailyTopics?.[0] || day.focus || day.deliverable} like I'm ${mentorLevel.toLowerCase()}`, day);
-                                  }}
-                                  className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-all hover:border-primary/40 hover:bg-primary/15"
-                                >
-                                  <Sparkles className="h-3.5 w-3.5" />
-                                  Ask AI Mentor
-                                </button>
-                                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-muted-foreground">
-                                  Level: {mentorLevel}
-                                </span>
-                              </div>
                             </div>
                             <div className="flex flex-col items-start gap-2 xl:items-end">
                               <div className="text-2xl font-bold text-primary">{dayProgress}%</div>
@@ -910,7 +479,7 @@ export function Roadmap() {
                               })}
                             </div>
 
-                              <div className="space-y-3 rounded-2xl border border-white/10 bg-black/10 p-4">
+                            <div className="space-y-3 rounded-2xl border border-white/10 bg-black/10 p-4">
                               <div>
                                 <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Daily Topics</p>
                                 <div className="mt-2 flex flex-wrap gap-2">
@@ -923,31 +492,24 @@ export function Roadmap() {
                               </div>
 
                               <div>
-                                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Resources</p>
-                                  <div className="mt-2 grid gap-2">
-                                    {buildStructuredResourceCards(day).map((resource) => (
-                                      <div key={`${day.day}-${resource.slot}`} className="rounded-xl border border-white/10 bg-white/5 px-3 py-3">
-                                        <div className="flex items-start justify-between gap-3">
-                                          <div>
-                                            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                                              <span>{resource.icon}</span>
-                                              <span>{resource.label}</span>
-                                            </div>
-                                            <p className="mt-1 text-sm text-muted-foreground">{resource.title}</p>
-                                            {resource.provider ? <p className="mt-1 text-xs text-muted-foreground">{resource.provider}</p> : null}
-                                          </div>
-                                          <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-1 text-[11px] font-medium text-primary">
-                                            {resource.estimatedMinutes ? `${resource.estimatedMinutes}m` : "45m"}
-                                          </span>
-                                        </div>
-                                        {resource.url ? (
-                                          <a href={resource.url} target="_blank" rel="noreferrer" className="mt-2 inline-flex text-xs font-medium text-secondary hover:text-secondary/80">
-                                            {resource.action} →
-                                          </a>
-                                        ) : null}
-                                      </div>
-                                    ))}
-                                  </div>
+                                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Resources</p>
+                                <div className="mt-2 space-y-2">
+                                  {day.resources?.map((resource) => (
+                                    <a
+                                      key={resource.url}
+                                      href={resource.url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm transition-all hover:border-primary/20 hover:bg-primary/10"
+                                    >
+                                      <span>
+                                        {resource.title}
+                                        <span className="ml-2 text-xs text-muted-foreground">{resource.provider}</span>
+                                      </span>
+                                      <span className="text-xs text-primary">{resource.estimatedMinutes ? `${resource.estimatedMinutes}m` : resource.type}</span>
+                                    </a>
+                                  ))}
+                                </div>
                               </div>
 
                               {dayComplete ? (
@@ -1099,118 +661,6 @@ export function Roadmap() {
                     <ArrowRight className="w-4 h-4 ml-2 inline" />
                   </GlowButton>
                 </div>
-              </div>
-            </GlassCard>
-
-            <GlassCard glow glowColor="primary" className="space-y-4" ref={mentorPanelRef as any}>
-              <div className="flex items-start gap-4">
-                <GradientIconWrapper size="sm" gradient="pink" glow>
-                  <Sparkles className="w-5 h-5 text-white" />
-                </GradientIconWrapper>
-                <div className="flex-1 space-y-3">
-                  <div>
-                    <h3 className="text-xl font-semibold">Ask AI Mentor</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Get an explanation tuned to your roadmap level with analogy, code, mini quiz, and a practice task.
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    {(["Beginner", "Intermediate", "Advanced"] as MentorLevel[]).map((level) => (
-                      <button
-                        key={level}
-                        type="button"
-                        onClick={() => setMentorLevel(level)}
-                        className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${mentorLevel === level ? "border-primary/40 bg-primary/20 text-primary" : "border-white/10 bg-white/5 text-muted-foreground hover:border-primary/20 hover:text-foreground"}`}
-                      >
-                        {level}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    {mentorTopicOptions.length ? mentorTopicOptions.map((topic) => (
-                      <button
-                        key={topic}
-                        type="button"
-                        onClick={() => setMentorTopic(topic)}
-                        className={`rounded-full border px-3 py-1.5 text-xs transition-all ${mentorTopic === topic ? "border-secondary/40 bg-secondary/15 text-secondary" : "border-white/10 bg-white/5 text-muted-foreground hover:border-secondary/20 hover:text-foreground"}`}
-                      >
-                        {topic}
-                      </button>
-                    )) : null}
-                  </div>
-
-                  <textarea
-                    value={mentorQuestion}
-                    onChange={(event) => setMentorQuestion(event.target.value)}
-                    placeholder={`Ask about ${mentorTopic || selectedRoadmap?.title || "this roadmap"}...`}
-                    className="min-h-[110px] w-full rounded-2xl border border-white/10 bg-background/60 px-4 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary/40"
-                  />
-
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      `Explain ${mentorTopic || "this topic"} like I'm a ${mentorLevel.toLowerCase()}`,
-                      `Give me a mini quiz on ${mentorTopic || "this topic"}`,
-                      `What should I practice next after ${mentorTopic || "this topic"}?`,
-                    ].map((sample) => (
-                      <button
-                        key={sample}
-                        type="button"
-                        onClick={() => setMentorQuestion(sample)}
-                        className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-muted-foreground transition-all hover:border-primary/20 hover:text-foreground"
-                      >
-                        {sample}
-                      </button>
-                    ))}
-                  </div>
-
-                  <GlowButton variant="primary" className="w-full" onClick={() => void askMentor()}>
-                    {mentorLoading ? "Thinking..." : "Ask AI Mentor"}
-                    <ArrowRight className="ml-2 inline h-4 w-4" />
-                  </GlowButton>
-
-                  {mentorReply ? (
-                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-6 text-muted-foreground whitespace-pre-wrap">
-                      {mentorReply}
-                    </div>
-                  ) : (
-                    <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 p-4 text-sm text-muted-foreground">
-                      Ask a question to get a level-aware answer with analogy, example, quiz, and practice task.
-                    </div>
-                  )}
-                </div>
-              </div>
-            </GlassCard>
-
-            <GlassCard glow glowColor="secondary" className="space-y-4">
-              <div className="flex items-center gap-3">
-                <GradientIconWrapper size="sm" gradient="purple" glow>
-                  <Trophy className="w-5 h-5 text-white" />
-                </GradientIconWrapper>
-                <div>
-                  <h3 className="text-xl font-semibold">Achievements</h3>
-                  <p className="text-sm text-muted-foreground">Retention milestones powered by your progress.</p>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                {achievements.map((achievement) => (
-                  <div key={achievement.label} className={`flex items-center justify-between gap-4 rounded-2xl border px-4 py-3 ${achievement.earned ? "border-secondary/20 bg-secondary/10" : "border-white/10 bg-white/5"}`}>
-                    <div className="flex items-center gap-3">
-                      <div className={`flex h-10 w-10 items-center justify-center rounded-full ${achievement.earned ? "bg-secondary/20 text-secondary" : "bg-muted/20 text-muted-foreground"}`}>
-                        <achievement.icon className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <p className="font-medium">{achievement.label}</p>
-                        <p className="text-xs text-muted-foreground">{achievement.hint}</p>
-                      </div>
-                    </div>
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${achievement.earned ? "bg-secondary/15 text-secondary" : "bg-white/5 text-muted-foreground"}`}>
-                      {achievement.earned ? "Unlocked" : "Locked"}
-                    </span>
-                  </div>
-                ))}
               </div>
             </GlassCard>
 

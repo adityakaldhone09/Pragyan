@@ -26,8 +26,9 @@ export default function DailyQuizModal({
     void getTodayQuiz(roadmapId)
       .then((data) => {
         if (!mounted) return;
-        setQuiz(data || null);
-        setAnswers((data?.questions || []).map(() => -1));
+        const normalized = (data as any)?.quiz || data || null;
+        setQuiz(normalized);
+        setAnswers((normalized?.questions || []).map(() => -1));
       })
       .catch(() => {
         if (!mounted) return;
@@ -86,7 +87,7 @@ export default function DailyQuizModal({
           ) : (
             quiz.questions.map((q: any, qi: number) => (
               <div key={qi} className="mb-4 rounded-md border border-white/5 p-3">
-                <p className="font-medium">{qi + 1}. {q.prompt}</p>
+                <p className="font-medium">{qi + 1}. {q.question || q.prompt}</p>
                 <div className="mt-2 grid gap-2">
                   {(q.options || []).map((opt: string, oi: number) => (
                     <label key={oi} className="flex items-center gap-3">

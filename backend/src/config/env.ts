@@ -37,12 +37,12 @@ export const config = {
 
   gemini: {
     apiKey: process.env.GEMINI_API_KEY || null,
-    model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+    model: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
   },
 
   groq: {
     apiKey: process.env.GROQ_API_KEY || null,
-    model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
+    model: process.env.GROQ_MODEL || 'llama-3.1-70b-versatile',
   },
   
   database: {
@@ -89,14 +89,6 @@ export const config = {
   
   bcrypt: {
     rounds: parseInt(process.env.BCRYPT_ROUNDS || '10', 10),
-  },
-
-  email: {
-    host: process.env.EMAIL_HOST || null,
-    port: parseInt(process.env.EMAIL_PORT || '587', 10),
-    user: process.env.EMAIL_USER || null,
-    password: process.env.EMAIL_PASSWORD || null,
-    from: process.env.EMAIL_FROM || process.env.EMAIL_USER || null,
   },
 
   rapidApi: {

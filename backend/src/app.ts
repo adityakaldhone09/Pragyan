@@ -3,6 +3,7 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import morgan from 'morgan';
 import session from 'express-session';
 import passport from 'passport';
@@ -21,20 +22,13 @@ import adminRoutes from '@/routes/admin';
 import profileRoutes from '@/routes/profile';
 import skillRoutes from '@/routes/skill';
 import taskRoutes from '@/routes/task';
-import healthRoutes from '@/routes/health';
 import careerMatchingRoutes from '@/routes/career-matching';
 import careersRoutes from '@/routes/careers';
 import jobsRoutes from '@/routes/jobs';
 import learningResourcesRoutes from '@/routes/learningResources';
-import xpRoutes from '@/routes/xp';
-import quizRoutes from '@/routes/quiz';
 import { redisRateLimiter } from '@/middleware/redisRateLimiter';
 import debugRoutes from '@/routes/debug';
 import adminDevRoutes from '@/routes/adminDev';
-import journeyRoutes from '@/modules/journey/journey.routes';
-import mentorRoutes from '@/modules/mentor/mentor.routes';
-import intelligenceRoutes from '@/modules/intelligence/intelligence.routes';
-import { ensureIntelligenceIndexes } from '@/modules/intelligence/intelligence.indexes';
 import path from 'path';
 import fs from 'fs';
 
@@ -77,6 +71,20 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 const isDevelopment = config.nodeEnv !== 'production';
+const rateLimitMessage = { success: false, message: 'Too many requests' };
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: isDevelopment ? 1000 : 100, // allow higher burst in development
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: rateLimitMessage,
+  handler: (_req, res) => {
+    res.status(429).json(rateLimitMessage);
+  },
+});
+
+app.use('/api/', limiter);
 
 // CORS
 app.use(
@@ -113,8 +121,6 @@ app.get('/health', (_req: Request, res: Response) => {
   res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-app.use('/api/health', healthRoutes);
-
 app.post('/api/top-career', (_req: Request, res: Response) => {
   res.json({
     success: true,
@@ -138,11 +144,6 @@ app.use('/api/career-matching', careerMatchingRoutes);
 app.use('/api/careers', careersRoutes);
 app.use('/api/jobs', jobsRoutes);
 app.use('/api/learning-resources', learningResourcesRoutes);
-app.use('/api/xp', xpRoutes);
-app.use('/api/quiz', quizRoutes);
-app.use('/api/journey', journeyRoutes);
-app.use('/api/mentor', mentorRoutes);
-app.use('/api/intelligence', intelligenceRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Development-only debug routes (do not expose in production)
@@ -200,8 +201,5 @@ app.use((_req: Request, res: Response) => {
 // ============ ERROR HANDLING ============
 
 app.use(errorHandler);
-
-// Ensure intelligence audit indexes (non-blocking)
-void ensureIntelligenceIndexes();
 
 export default app;

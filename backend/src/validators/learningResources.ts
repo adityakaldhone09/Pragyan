@@ -24,7 +24,6 @@ export const ResourceHistoryUpsertSchema = z.object({
   roadmapId: z.string().min(1).optional(),
   completed: z.boolean().default(false),
   progressPercent: z.coerce.number().int().min(0).max(100).default(0),
-  quizScore: z.coerce.number().int().min(0).max(100).optional(),
   notes: z.string().max(1000).optional(),
   source: z.string().max(50).optional(),
 });

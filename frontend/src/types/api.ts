@@ -514,6 +514,143 @@ export interface JourneyDashboardSnapshot {
   trend?: DailyAnalyticsTrendPoint[];
 }
 
+export interface DailyLearningResourceItem {
+  title: string;
+  provider: string;
+  type: string;
+  url: string;
+  description: string;
+  estimatedMinutes: number;
+  isOfficial?: boolean;
+}
+
+export interface DailyLearningDay {
+  dayNumber: number;
+  title: string;
+  topic: string;
+  topicSlug: string;
+  overview: string;
+  task: string;
+  resources: DailyLearningResourceItem[];
+  xpReward: number;
+  streakReward: number;
+  completed: boolean;
+  quizUnlocked: boolean;
+  weakTopics: string[];
+}
+
+export interface DailyLearningProgress {
+  currentDay: number;
+  progressPercentage: number;
+  xp: number;
+  streak: number;
+  completedDays: string[];
+  quizCompletedDays: string[];
+  quizUnlocked: boolean;
+  weakTopics: string[];
+  lastCompletedAt: string | null;
+}
+
+export interface DailyLearningSnapshot {
+  roadmapId: string;
+  roadmapTitle: string;
+  careerTitle: string;
+  currentDay: number;
+  days: DailyLearningDay[];
+  today: DailyLearningDay;
+  progress: DailyLearningProgress;
+  xp: number;
+  streak: number;
+  totalDays: number;
+}
+
+export interface CompleteLearningInput {
+  roadmapId: string;
+  dayNumber: number;
+}
+
+export interface QuizQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  topic: string;
+}
+
+export interface QuizGenerationResponse {
+  roadmapId: string;
+  dayNumber: number;
+  topic: string;
+  skillLevel: string;
+  questions: QuizQuestion[];
+  quizUnlocked: boolean;
+}
+
+export interface QuizResponseChoice {
+  questionId?: string;
+  question: string;
+  selectedAnswer: string;
+  options?: string[];
+}
+
+export interface QuizEvaluationResponse {
+  score: number;
+  percentage: number;
+  correctAnswers: number;
+  weakTopics: string[];
+  improvementSuggestion: string;
+  xpEarned: number;
+  completionStatus: boolean;
+}
+
+export interface ResumeProject {
+  title: string;
+  description: string;
+  impact: string;
+  technologies: string[];
+  url?: string | null;
+}
+
+export interface ResumeExperience {
+  title: string;
+  company: string;
+  period: string;
+  description: string;
+  achievements: string[];
+}
+
+export interface ResumeEducation {
+  school: string;
+  qualification: string;
+  year?: string;
+  description?: string;
+}
+
+export interface ResumeCertification {
+  title: string;
+  issuer: string;
+  date?: string;
+  url?: string | null;
+}
+
+export interface ResumeSnapshot {
+  summary: string;
+  skills: string[];
+  projects: ResumeProject[];
+  experience: ResumeExperience[];
+  education: ResumeEducation[];
+  certifications: ResumeCertification[];
+  achievements: string[];
+  targetRole: string;
+}
+
+export interface ResumeRecord {
+  id: string;
+  version: number;
+  generatedAt: string;
+  summary?: string | null;
+  data: ResumeSnapshot;
+}
+
 export interface MentorContextSnapshot {
   career?: string;
   roadmap?: string;

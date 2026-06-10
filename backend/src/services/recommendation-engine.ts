@@ -3,6 +3,7 @@ import { careerMatchingEngine, type AssessmentAnswers } from '@/services/career-
 import safeParseAIResponse from '@/ai/safeParser';
 import { ExplainSchema, RoadmapSectionResponseSchema } from '@/ai/schemas';
 import { generateContent } from '../ai/GeminiProvider';
+import { aiProvider } from '@/services/aiProvider';
 
 export interface RecommendationRequestProfile {
   skills?: string[];
@@ -149,7 +150,7 @@ export class RecommendationEngineService {
     ].join('\n\n');
 
     try {
-      const raw = await (await import('@/services/ai-layers')).aiLayers.generateStructuredJson(prompt, { timeoutMs: 15000 });
+      const raw = await aiProvider.generateJsonRaw(prompt, { timeoutMs: 15000 });
       const parsed = safeParseAIResponse(JSON.parse(raw), RoadmapSectionResponseSchema);
 
       return this.mapRoadmapSections(parsed.sections, roadmapCatalog);

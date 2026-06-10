@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation, useNavigate } from "react-router";
-import { Briefcase, BookOpen, LayoutDashboard, LogOut, Route, BadgeCheck } from "lucide-react";
+import { Briefcase, BookOpen, LayoutDashboard, LogOut, Route, BadgeCheck, FileText } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "../components/ui/avatar";
 import { cn } from "../utils/cn";
 import { useAuth } from "@/context/useAuth";
@@ -8,7 +8,9 @@ import { useAuth } from "@/context/useAuth";
 const shellNavItems = [
   { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { path: "/journey", label: "Journey", icon: Route },
-  { path: "/learning-resources", label: "Learning", icon: BookOpen },
+  { path: "/learning-resources", label: "Resources", icon: BookOpen },
+  { path: "/learning", label: "Daily Learning", icon: BookOpen },
+  { path: "/resume-builder", label: "Resume Builder", icon: FileText },
   { path: "/assessment", label: "Assessments", icon: BadgeCheck },
   { path: "/opportunities", label: "Jobs", icon: Briefcase },
 ];
