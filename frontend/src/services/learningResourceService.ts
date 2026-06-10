@@ -19,6 +19,7 @@ export interface LearningResourceHistoryInput {
   roadmapId?: string;
   completed: boolean;
   progressPercent?: number;
+  quizScore?: number;
   notes?: string;
   source?: string;
 }

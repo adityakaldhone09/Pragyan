@@ -530,10 +530,10 @@ function buildLearningResources(category: string, topic: string, focus: string):
   const practiceHub = getPracticeHub(category);
   return [
     {
-      title: `${topic} official docs`,
-      provider: 'Official Docs',
+      title: `${topic} W3Schools reading`,
+      provider: 'W3Schools',
       type: 'documentation',
-      url: `https://www.google.com/search?q=${encodeQuery(`${topic} ${category} official docs`)}`,
+      url: `https://www.google.com/search?q=${encodeQuery(`${topic} ${category} W3Schools`)}`,
       estimatedMinutes: 18,
     },
     {

@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { aiProvider } from '@/services/aiProvider';
+import { getResourceCatalogBlueprint } from '@/data/resourceCatalog';
+import { deriveAdaptiveLearningProfile as deriveSharedAdaptiveLearningProfile } from '@/services/adaptive-learning';
 
 const RESOURCE_TYPES = ['youtube', 'documentation', 'practice', 'article', 'mini-project', 'certification'] as const;
 const DIFFICULTY_ORDER = ['beginner', 'intermediate', 'advanced', 'expert'] as const;
@@ -72,7 +74,31 @@ type PersonalizationProfile = {
   assessmentWeaknesses: string[];
   assessmentStrengths: string[];
   skillSignal: string[];
+  streak: number;
+  xp: number;
+  quizScore?: number;
 };
+
+export type AdaptiveLearningMode = 'recovery' | 'growth' | 'stretch';
+
+export interface AdaptiveLearningContext {
+  streak: number;
+  completedTopicsCount: number;
+  weakSkillCount: number;
+  progressPercent?: number;
+  availableTime?: number;
+  quizScore?: number;
+  missedDays?: number;
+}
+
+export interface AdaptiveLearningProfile {
+  mode: AdaptiveLearningMode;
+  difficultyMultiplier: number;
+  revisionBias: number;
+  projectBias: number;
+  explanationDepth: 'simple' | 'practical' | 'advanced';
+  reason: string;
+}
 
 type ResourceBlueprint = {
   title: string;
@@ -94,10 +120,10 @@ const CURATED_RESOURCE_LIBRARY: Record<string, Partial<Record<typeof RESOURCE_TY
       isOfficial: false,
     },
     documentation: {
-      title: 'MDN JavaScript Guide',
+      title: 'W3Schools JavaScript Tutorial',
       description: 'Official JavaScript reference and learning guide.',
-      url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide',
-      provider: 'MDN',
+      url: 'https://www.w3schools.com/js/default.asp',
+      provider: 'W3Schools',
       estimatedMinutes: 20,
       isOfficial: true,
     },
@@ -272,10 +298,10 @@ const CURATED_RESOURCE_LIBRARY: Record<string, Partial<Record<typeof RESOURCE_TY
   },
   accessibility: {
     documentation: {
-      title: 'MDN Accessibility Guide',
+      title: 'W3Schools Accessibility Guide',
       description: 'Official accessibility documentation and patterns.',
-      url: 'https://developer.mozilla.org/en-US/docs/Web/Accessibility',
-      provider: 'MDN',
+      url: 'https://www.w3schools.com/html/html_accessibility.asp',
+      provider: 'W3Schools',
       estimatedMinutes: 20,
       isOfficial: true,
     },
@@ -310,6 +336,7 @@ export interface LearningResourceHistoryInput {
   roadmapId?: string;
   completed?: boolean;
   progressPercent?: number;
+  quizScore?: number;
   notes?: string;
   source?: string;
 }
@@ -402,11 +429,11 @@ function buildUrl(type: typeof RESOURCE_TYPES[number], topic: string, roadmapTit
 function resolveDocumentationUrl(topic: string, skill: string, roadmapTitle: string) {
   const normalized = `${topic} ${skill} ${roadmapTitle}`.toLowerCase();
 
-  if (normalized.includes('react')) return 'https://react.dev/learn';
+  if (normalized.includes('react')) return 'https://www.w3schools.com/react/';
   if (normalized.includes('typescript')) return 'https://www.typescriptlang.org/docs/';
-  if (normalized.includes('javascript')) return 'https://developer.mozilla.org/en-US/docs/Web/JavaScript';
+  if (normalized.includes('javascript')) return 'https://www.w3schools.com/js/default.asp';
   if (normalized.includes('html') || normalized.includes('css') || normalized.includes('accessibility')) {
-    return 'https://developer.mozilla.org/en-US/';
+    return 'https://www.w3schools.com/';
   }
   if (normalized.includes('node') || normalized.includes('express')) return 'https://nodejs.org/en/docs';
   if (normalized.includes('mongodb')) return 'https://www.mongodb.com/docs/';
@@ -497,6 +524,11 @@ function normalizeForLibrary(value: string) {
 }
 
 function findCuratedBlueprint(skill: string, topic: string, type: typeof RESOURCE_TYPES[number]) {
+  const catalogBlueprint = getResourceCatalogBlueprint(skill, topic, type);
+  if (catalogBlueprint) {
+    return catalogBlueprint;
+  }
+
   const normalizedSkill = normalizeForLibrary(skill);
   const normalizedTopic = normalizeForLibrary(topic);
 
@@ -577,7 +609,7 @@ function buildResourceCandidates(roadmap: RoadmapLike) {
       const provider = resourceType === 'youtube'
         ? 'YouTube'
         : resourceType === 'documentation'
-          ? 'Official Docs'
+          ? 'W3Schools'
           : resourceType === 'practice'
             ? 'Practice Site'
             : resourceType === 'article'
@@ -624,17 +656,20 @@ async function getPersonalizationProfile(userId?: string, roadmapId?: string): P
       assessmentWeaknesses: [],
       assessmentStrengths: [],
       skillSignal: [],
+      streak: 0,
+      xp: 0,
     };
   }
 
   const [user, history, latestAssessment] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
-      select: { interests: true, preferences: true, skills: true, experience: true, experienceType: true, education: true },
+      select: { interests: true, preferences: true, skills: true, experience: true, experienceType: true, education: true, streak: true, xp: true },
     }),
     prisma.resourceLearningHistory.findMany({
       where: { userId, ...(roadmapId ? { roadmapId } : {}) },
       include: { resource: true },
+      orderBy: { updatedAt: 'desc' },
     }),
     prisma.assessmentResult.findFirst({
       where: { userId },
@@ -651,6 +686,14 @@ async function getPersonalizationProfile(userId?: string, roadmapId?: string): P
 
   const assessmentStrengths = Array.isArray(latestAssessment?.strengths) ? latestAssessment.strengths : [];
   const assessmentWeaknesses = Array.isArray(latestAssessment?.weaknesses) ? latestAssessment.weaknesses : [];
+  const latestQuizEntry = history.find((entry) => ['quiz', 'certification'].includes(String(entry.resource?.resourceType || '').toLowerCase()));
+  const latestQuizScore = latestQuizEntry
+    ? Number.isFinite(Number(latestQuizEntry.quizScore))
+      ? Number(latestQuizEntry.quizScore)
+      : Number.isFinite(Number(latestQuizEntry.progressPercent))
+        ? Number(latestQuizEntry.progressPercent)
+        : undefined
+    : undefined;
   const skillSignal = Array.from(new Set([
     ...(user?.skills || []),
     ...(user?.interests || []),
@@ -665,12 +708,28 @@ async function getPersonalizationProfile(userId?: string, roadmapId?: string): P
     assessmentWeaknesses,
     assessmentStrengths,
     skillSignal,
+    streak: Number(user?.streak || 0),
+    xp: Number(user?.xp || 0),
+    quizScore: latestQuizScore,
   };
+}
+
+export function deriveAdaptiveLearningProfile(profile: PersonalizationProfile, context: AdaptiveLearningContext): AdaptiveLearningProfile {
+  return deriveSharedAdaptiveLearningProfile({
+    streak: Math.max(0, context.streak || profile.streak || 0),
+    completedTopicsCount: Math.max(0, context.completedTopicsCount || 0),
+    weakSkillCount: Math.max(0, context.weakSkillCount || 0),
+    progressPercent: Math.max(0, Math.min(100, Number(context.progressPercent || 0))),
+    availableTime: Math.max(0, Number(context.availableTime || 0)),
+    quizScore: context.quizScore ?? profile.quizScore,
+    missedDays: Math.max(0, Number(context.missedDays || 0)),
+  });
 }
 
 function rankByPersonalization(
   resources: Array<{ id: string; title: string; topic: string; resourceType: string; difficulty: string; provider: string; url: string; aiScore: number; tags: string[]; dayNumber?: number | null }>,
-  profile: PersonalizationProfile
+  profile: PersonalizationProfile,
+  adaptive: AdaptiveLearningProfile
 ) {
   const completedTopicSet = new Set(profile.completedTopics.map((item) => item.toLowerCase()));
   const weakSkillSet = new Set([...profile.weakSkills, ...profile.assessmentWeaknesses].map((item) => item.toLowerCase()));
@@ -689,6 +748,20 @@ function rankByPersonalization(
       if (profile.assessmentStrengths.some((token) => resourceTokens.includes(String(token).toLowerCase()))) score -= 6;
       if (resource.resourceType === 'documentation' || resource.resourceType === 'practice') score += 8;
       if (resource.resourceType === 'mini-project') score += 10;
+      if (adaptive.mode === 'recovery') {
+        if (resource.resourceType === 'documentation') score += 8;
+        if (resource.resourceType === 'practice') score += 10;
+        if (resource.resourceType === 'mini-project') score -= 6;
+        if (resource.resourceType === 'certification') score -= 4;
+      }
+      if (adaptive.mode === 'growth') {
+        if (resource.resourceType === 'practice') score += 6;
+        if (resource.resourceType === 'mini-project') score += 8;
+      }
+      if (adaptive.mode === 'stretch') {
+        if (resource.resourceType === 'mini-project') score += 14;
+        if (resource.resourceType === 'certification') score += 4;
+      }
 
       return {
         ...resource,
@@ -772,7 +845,10 @@ async function rankResourcesWithAI(roadmap: RoadmapLike, userSkills: string[], r
   }
 
   try {
-    const raw = await aiProvider.generateJsonRaw(buildAIResourcePrompt({ roadmap, userSkills, resources }), { timeoutMs: 12_000 });
+      const raw = await (await import('@/services/ai-layers')).aiLayers.generateStructuredJson(
+        buildAIResourcePrompt({ roadmap, userSkills, resources }),
+        { timeoutMs: 12_000 }
+      );
     const parsed = JSON.parse(raw) as { summary?: string; ranked?: Array<{ id: string; score?: number; reason?: string }> };
 
     if (Array.isArray(parsed.ranked) && parsed.ranked.length) {
@@ -859,6 +935,15 @@ export class LearningResourceService {
     const filtered = typeof dayNumber === 'number' ? resources.filter((resource) => resource.dayNumber === dayNumber) : resources;
 
     const profile = await getPersonalizationProfile(userId, roadmapId);
+    const adaptive = deriveAdaptiveLearningProfile(profile, {
+      streak: profile.streak,
+      completedTopicsCount: profile.completedTopics.length,
+      weakSkillCount: profile.weakSkills.length + profile.assessmentWeaknesses.length,
+      progressPercent: filtered.length ? Math.round((profile.completedTopics.length / Math.max(1, filtered.length)) * 100) : 0,
+      availableTime: dayNumber ? Math.max(45, 180 - dayNumber * 5) : 120,
+      quizScore: profile.quizScore,
+      missedDays: Math.max(0, profile.streak > 0 ? 0 : 1),
+    });
 
     const aiRanking = await rankResourcesWithAI(roadmap as RoadmapLike, profile.skillSignal, filtered.map((resource) => ({
       id: resource.id,
@@ -877,7 +962,8 @@ export class LearningResourceService {
         aiScore: rankMap.get(resource.id)?.score ?? resource.aiScore,
         aiReason: rankMap.get(resource.id)?.reason || undefined,
       })),
-      profile
+      profile,
+      adaptive
     )
       .sort((a, b) => (b.aiScore || 0) - (a.aiScore || 0));
 
@@ -920,6 +1006,9 @@ export class LearningResourceService {
         provider: aiProvider.getRuntime().provider,
         used: aiRanking.ranked.length > 0,
         summary: aiRanking.summary,
+        adaptiveMode: adaptive.mode,
+        adaptiveReason: adaptive.reason,
+        difficultyMultiplier: adaptive.difficultyMultiplier,
       },
       totalTopics: topicPlan.length,
       topics: topicPlan.map((item) => item.topic),
@@ -943,6 +1032,7 @@ export class LearningResourceService {
         roadmapId: input.roadmapId || resource.roadmapId || undefined,
         completed: input.completed ?? false,
         progressPercent: input.progressPercent ?? (input.completed ? 100 : 0),
+        quizScore: typeof input.quizScore === 'number' ? input.quizScore : undefined,
         notes: input.notes,
         source: input.source || 'manual',
         completedAt: input.completed ? new Date() : null,
@@ -953,6 +1043,7 @@ export class LearningResourceService {
         roadmapId: input.roadmapId || resource.roadmapId || undefined,
         completed: input.completed ?? false,
         progressPercent: input.progressPercent ?? (input.completed ? 100 : 0),
+        quizScore: typeof input.quizScore === 'number' ? input.quizScore : undefined,
         notes: input.notes,
         source: input.source || 'manual',
         completedAt: input.completed ? new Date() : null,
@@ -999,13 +1090,10 @@ export class LearningResourceService {
         },
       });
 
-      await prisma.user.update({
-        where: { id: userId },
-        data: {
-          streak: nextStreak,
-          xp: { increment: Math.max(5, Math.round((input.progressPercent ?? 100) / 10)) },
-        },
-      });
+      const xpDelta = Math.max(5, Math.round((input.progressPercent ?? 100) / 10));
+      const { xpService } = await import('@/services/xp');
+      await xpService.awardXp(userId, xpDelta, 'resource-complete', { resourceId: input.resourceId });
+      await prisma.user.update({ where: { id: userId }, data: { streak: nextStreak } });
     }
 
     return result;

@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma';
 import { config } from '@/config/env';
 import { NotFoundError } from '@/utils/errors';
 import { CreateRoadmapInput, SearchRoadmapInput } from '@/validators/roadmap';
+import { getRoadmapProjects } from '@/data/projectCatalog';
 
 function toJsonValue<T>(value: T): Prisma.InputJsonValue {
   return value as unknown as Prisma.InputJsonValue;
@@ -28,6 +29,7 @@ function mapRoadmapDocument(document: any) {
     milestones: document.milestones ?? [],
     progression: document.progression ?? [],
     tags: document.tags ?? [],
+    projects: Array.isArray(document.projects) ? document.projects : getRoadmapProjects(document),
     progress: document.progress ?? undefined,
   };
 }
@@ -97,51 +99,69 @@ export class RoadmapService {
       throw new NotFoundError('Roadmap not found');
     }
 
-    return roadmap;
+    return {
+      ...mapRoadmapDocument(roadmap as any),
+      weeks: roadmap.weeks,
+    };
   }
 
   async getAllRoadmaps(input: SearchRoadmapInput) {
     const { query, category, careerPath, level, page, limit } = input;
 
-    const where: any = {};
+    const useTextSearch = Boolean(query?.trim() || category || careerPath || level);
 
-    if (query) {
-      where.OR = [
-        { title: { contains: query, mode: 'insensitive' } },
-        { description: { contains: query, mode: 'insensitive' } },
-        { category: { contains: query, mode: 'insensitive' } },
-        { careerPath: { contains: query, mode: 'insensitive' } },
-        { requiredSkills: { hasSome: [query] } },
-        { tags: { hasSome: [query] } },
-      ];
-    }
+    if (useTextSearch) {
+      const normalizedQuery = query?.trim() || '';
+      const filter: Record<string, unknown> = {};
 
-    if (category) {
-      where.category = category;
-    }
+      if (category) {
+        filter.category = category;
+      }
 
-    if (careerPath) {
-      where.careerPath = careerPath;
-    }
+      if (careerPath) {
+        filter.careerPath = careerPath;
+      }
 
-    if (level) {
-      where.level = level;
+      if (level) {
+        filter.level = level;
+      }
+
+      if (normalizedQuery) {
+        filter.$text = { $search: normalizedQuery };
+      }
+
+      const collection = await getRoadmapCollection();
+      const [documents, total] = await Promise.all([
+        collection
+          .find(filter)
+          .sort(normalizedQuery ? { score: { $meta: 'textScore' }, updatedAt: -1 } : { updatedAt: -1 })
+          .skip((page - 1) * limit)
+          .limit(limit)
+          .toArray(),
+        collection.countDocuments(filter),
+      ]);
+
+      return {
+        roadmaps: documents.map(mapRoadmapDocument),
+        total,
+        page,
+        limit,
+      };
     }
 
     const [roadmaps, total] = await Promise.all([
       prisma.roadmap.findMany({
-        where,
         skip: (page - 1) * limit,
         take: limit,
         orderBy: {
           createdAt: 'desc',
         },
       }),
-      prisma.roadmap.count({ where }),
+      prisma.roadmap.count(),
     ]);
 
     return {
-      roadmaps,
+      roadmaps: roadmaps.map((roadmap) => mapRoadmapDocument(roadmap as any)),
       total,
       page,
       limit,
