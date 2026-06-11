@@ -8,10 +8,10 @@ export class GroqProvider extends AIProviderBase {
   private apiKey: string | null;
   private model: string;
 
-  constructor() {
+  constructor(model?: string) {
     super();
     this.apiKey = config.groq.apiKey || process.env.GROQ_API_KEY || null;
-    this.model = config.groq.model || DEFAULT_MODEL;
+    this.model = model || config.groq.reasoningModel || config.groq.chatModel || config.groq.fastModel || config.groq.model || DEFAULT_MODEL;
   }
 
   getProviderName(): string {

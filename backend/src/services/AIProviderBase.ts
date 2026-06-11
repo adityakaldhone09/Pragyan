@@ -6,6 +6,11 @@ export interface AIProviderOptions {
   maxTokens?: number;
   temperature?: number;
   timeoutMs?: number;
+  taskType?: string;
+  userId?: string;
+  input?: unknown;
+  promptVersion?: string;
+  format?: 'text' | 'json';
 }
 
 export interface AIProviderResult<T> {
@@ -23,6 +28,7 @@ export interface AIProviderAdapter {
   getModel(): string;
   generateText(prompt: string, opts?: AIProviderOptions): Promise<string>;
   generateJsonRaw(prompt: string, opts?: AIProviderOptions): Promise<string>;
+  getRuntime?(): AIProviderRuntime;
 }
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs?: number, timeoutMessage = 'AI request timed out') {

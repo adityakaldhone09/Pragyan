@@ -2,6 +2,8 @@
 
 import { Request, Response } from 'express';
 import { hasGroqKey, hasGeminiKey } from '@/config/env';
+import { routeAI } from '@/ai/aiRouter';
+import { buildAssessmentPrompt, buildRoadmapPrompt } from '@/ai/promptBuilder';
 import { aiRecommendationService } from '@/services/ai-recommendation';
 import { aiProvider } from '@/services/aiProvider';
 import { deriveAdaptiveLearningProfile, getRecommendedTaskMix, shouldTriggerRevision } from '@/services/adaptive-learning';
@@ -111,8 +113,8 @@ export const chatAssistant = asyncHandler(async (req: Request, res: Response) =>
   ].filter(Boolean).join('\n\n');
 
   try {
-    const reply = await (await import('@/services/ai-layers')).aiLayers.generateCreative(prompt);
-    return sendSuccess(res, { reply, provider: aiProvider.getRuntime().provider, fallbackUsed: false }, 200, 'AI assistant response');
+    const result = await routeAI('mentor_chat', { prompt, format: 'text' });
+    return sendSuccess(res, { reply: result.value, provider: result.provider, fallbackUsed: false }, 200, 'AI assistant response');
   } catch (error) {
     const fallback = 'I can help with that. Based on your current Pragyan data, focus on the top recommended career, align your roadmap, and keep your resume targeted to the skills gap.';
     console.error('AI assistant generation failed:', error);
@@ -201,8 +203,8 @@ export const generateDailyPlan = asyncHandler(async (req: Request, res: Response
   });
 
   try {
-    const raw = await (await import('@/services/ai-layers')).aiLayers.generateStructuredJson(prompt, { timeoutMs: 12_000 });
-    const parsed = JSON.parse(raw) as Partial<typeof fallback>;
+    const result = await routeAI('roadmap', { prompt, format: 'json' });
+    const parsed = JSON.parse(result.value) as Partial<typeof fallback>;
     const tasks = Array.isArray(parsed.tasks)
       ? parsed.tasks
           .map((task) => ({
@@ -300,26 +302,38 @@ export const generateDailyPlan = asyncHandler(async (req: Request, res: Response
 });
 
 export const generateAssessmentReport = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    return sendError(res, 401, 'Unauthorized');
+  }
+
   const { topMatches = [], confidence = 0, strengths = [], weaknesses = [], targetCareer } = req.body || {};
 
   if (!Array.isArray(topMatches) || !topMatches.length) {
     return sendError(res, 400, 'topMatches is required');
   }
 
-  const prompt = [
-    'You are an AI explainer for Pragyan career assessment.',
-    'Important: you are NOT allowed to choose or change careers. Recommendation ranking is already decided by deterministic engine.',
-    `Top matches (fixed): ${JSON.stringify(topMatches)}`,
-    `Confidence score (fixed): ${Number(confidence)}`,
-    `Strengths: ${Array.isArray(strengths) ? strengths.join(', ') : ''}`,
-    `Growth areas: ${Array.isArray(weaknesses) ? weaknesses.join(', ') : ''}`,
-    targetCareer ? `Primary target career: ${String(targetCareer)}` : '',
-    'Return JSON with keys: summary, insights (string[]), skillGapAnalysis (string[]), interviewPlan (string[]).',
-  ].filter(Boolean).join('\n\n');
+  const prompt = buildAssessmentPrompt({
+    topMatches,
+    confidence,
+    strengths,
+    weaknesses,
+    targetCareer,
+  });
 
   try {
-    const raw = await aiProvider.generateText(prompt);
-    return sendSuccess(res, { report: raw, mode: 'explainer-only' }, 200, 'AI report generated');
+    const result = await routeAI('summary', {
+      prompt,
+      input: {
+        topMatches,
+        confidence,
+        strengths,
+        weaknesses,
+        targetCareer,
+      },
+      format: 'json',
+    });
+
+    return sendSuccess(res, { report: result.value, mode: 'groq-summary' }, 200, 'AI report generated');
   } catch {
     const fallback = {
       summary: 'Your deterministic assessment indicates a strong fit for the top ranked role with actionable next steps.',
@@ -332,27 +346,37 @@ export const generateAssessmentReport = asyncHandler(async (req: Request, res: R
 });
 
 export const generateLearningRoadmap = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    return sendError(res, 401, 'Unauthorized');
+  }
+
   const { targetCareer, skillGaps = [], timelineWeeks = 12, profileSummary = '' } = req.body || {};
 
   if (!targetCareer) {
     return sendError(res, 400, 'targetCareer is required');
   }
 
-  const prompt = [
-    'You are a roadmap assistant for Pragyan.',
-    'Important: do not select careers or alter ranking. Only generate a learning roadmap for the already-selected target role.',
-    `Target career (fixed): ${String(targetCareer)}`,
-    `Skill gaps: ${Array.isArray(skillGaps) ? skillGaps.join(', ') : ''}`,
-    `Timeline in weeks: ${Number(timelineWeeks)}`,
-    `Profile summary: ${String(profileSummary)}`,
-    'Return concise markdown with week-by-week milestones, projects, and interview prep checkpoints.',
-  ].join('\n\n');
+  const prompt = buildRoadmapPrompt({
+    targetCareer,
+    skillGaps,
+    timelineWeeks,
+    profileSummary,
+  });
 
   console.log('[AI ROADMAP START]', { targetCareer, timestamp: new Date().toISOString() });
   try {
-    const roadmap = await aiProvider.generateText(prompt);
+    const result = await routeAI('roadmap', {
+      prompt,
+      input: {
+        targetCareer,
+        skillGaps,
+        timelineWeeks,
+        profileSummary,
+      },
+      format: 'text',
+    });
     console.log('[AI ROADMAP SUCCESS]', { targetCareer, timestamp: new Date().toISOString() });
-    return sendSuccess(res, { roadmap, mode: 'explainer-only' }, 200, 'AI roadmap generated');
+    return sendSuccess(res, { roadmap: result.value, mode: 'groq-reasoning' }, 200, 'AI roadmap generated');
   } catch (error) {
     console.error('[AI ROADMAP ERROR]', { error: (error as any)?.message || error, targetCareer, timestamp: new Date().toISOString() });
     const fallback = {

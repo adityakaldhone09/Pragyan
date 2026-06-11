@@ -9,7 +9,17 @@ type RequestOptions = Omit<RequestInit, "body"> & {
   timeoutMs?: number;
   retryCount?: number;
   skipAuth?: boolean;
+  cacheTtlMs?: number;
+  cacheKey?: string;
 };
+
+type CachedResponse = {
+  expiresAt: number;
+  value: unknown;
+};
+
+const GET_RESPONSE_CACHE = new Map<string, CachedResponse>();
+const GET_IN_FLIGHT = new Map<string, Promise<unknown>>();
 
 function resolveUrl(path: string) {
   if (/^https?:\/\//i.test(path)) {
@@ -40,6 +50,14 @@ function getAccessToken() {
   return readStoredAuth()?.accessToken || null;
 }
 
+function buildCacheKey(path: string, options: RequestOptions, token: string | null) {
+  return [
+    path,
+    options.cacheKey || '',
+    token || 'anonymous',
+  ].join('|');
+}
+
 export function setStoredAuthSession(session: unknown) {
   localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
 }
@@ -68,13 +86,15 @@ function isAbortError(error: unknown) {
 }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { timeoutMs = DEFAULT_TIMEOUT, retryCount = 1, skipAuth = false, headers, body, signal, ...rest } = options;
+  const { timeoutMs = DEFAULT_TIMEOUT, retryCount = 1, skipAuth = false, headers, body, signal, cacheTtlMs = 0, cacheKey, ...rest } = options;
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
   const mergedHeaders = new Headers(headers);
+  const token = skipAuth ? null : getAccessToken();
+  const shouldCache = (rest.method === undefined || String(rest.method).toUpperCase() === "GET") && cacheTtlMs > 0;
+  const resolvedCacheKey = shouldCache ? buildCacheKey(path, { ...options, cacheKey }, token) : null;
 
   if (!skipAuth) {
-    const token = getAccessToken();
     if (token) {
       mergedHeaders.set("Authorization", `Bearer ${token}`);
     }
@@ -87,6 +107,19 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   let lastError: unknown = null;
 
   try {
+    if (shouldCache && resolvedCacheKey) {
+      const cached = GET_RESPONSE_CACHE.get(resolvedCacheKey);
+      if (cached && cached.expiresAt > Date.now()) {
+        return cached.value as T;
+      }
+
+      const inFlight = GET_IN_FLIGHT.get(resolvedCacheKey);
+      if (inFlight) {
+        return (await inFlight) as T;
+      }
+    }
+
+    const fetchPromise = (async () => {
     for (let attempt = 0; attempt <= retryCount; attempt += 1) {
       try {
         const response = await fetch(resolveUrl(path), {
@@ -132,23 +165,57 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     }
 
     throw new Error("Request failed");
+    })();
+
+    if (shouldCache && resolvedCacheKey) {
+      GET_IN_FLIGHT.set(resolvedCacheKey, fetchPromise);
+    }
+
+    const result = await fetchPromise;
+
+    if (shouldCache && resolvedCacheKey) {
+      GET_RESPONSE_CACHE.set(resolvedCacheKey, {
+        expiresAt: Date.now() + cacheTtlMs,
+        value: result,
+      });
+    }
+
+    return result;
   } finally {
+    if (shouldCache && resolvedCacheKey) {
+      GET_IN_FLIGHT.delete(resolvedCacheKey);
+    }
     window.clearTimeout(timeout);
   }
 }
 
 export async function apiPaginatedRequest<T>(path: string, options: RequestOptions = {}) {
-  const { timeoutMs = DEFAULT_TIMEOUT, retryCount = 1, skipAuth = false, headers, body, signal, ...rest } = options;
+  const { timeoutMs = DEFAULT_TIMEOUT, retryCount = 1, skipAuth = false, headers, body, signal, cacheTtlMs = 0, cacheKey, ...rest } = options;
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
   const mergedHeaders = new Headers(headers);
+  const token = skipAuth ? null : getAccessToken();
+  const shouldCache = (rest.method === undefined || String(rest.method).toUpperCase() === "GET") && cacheTtlMs > 0;
+  const resolvedCacheKey = shouldCache ? buildCacheKey(path, { ...options, cacheKey }, token) : null;
 
   if (!skipAuth) {
-    const token = getAccessToken();
     if (token) mergedHeaders.set('Authorization', `Bearer ${token}`);
   }
 
   try {
+    if (shouldCache && resolvedCacheKey) {
+      const cached = GET_RESPONSE_CACHE.get(resolvedCacheKey);
+      if (cached && cached.expiresAt > Date.now()) {
+        return cached.value as PaginatedResponse<T>;
+      }
+
+      const inFlight = GET_IN_FLIGHT.get(resolvedCacheKey);
+      if (inFlight) {
+        return (await inFlight) as PaginatedResponse<T>;
+      }
+    }
+
+    const fetchPromise = (async () => {
     try {
       const response = await fetch(resolveUrl(path), {
         ...rest,
@@ -188,7 +255,26 @@ export async function apiPaginatedRequest<T>(path: string, options: RequestOptio
 
       throw error;
     }
+    })();
+
+    if (shouldCache && resolvedCacheKey) {
+      GET_IN_FLIGHT.set(resolvedCacheKey, fetchPromise);
+    }
+
+    const result = await fetchPromise;
+
+    if (shouldCache && resolvedCacheKey) {
+      GET_RESPONSE_CACHE.set(resolvedCacheKey, {
+        expiresAt: Date.now() + cacheTtlMs,
+        value: result,
+      });
+    }
+
+    return result;
   } finally {
+    if (shouldCache && resolvedCacheKey) {
+      GET_IN_FLIGHT.delete(resolvedCacheKey);
+    }
     window.clearTimeout(timeout);
   }
 }

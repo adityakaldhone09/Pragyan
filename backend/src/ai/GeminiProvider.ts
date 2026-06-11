@@ -1,4 +1,4 @@
-import { aiProvider } from '@/services/aiProvider';
+import { routeAI } from './aiRouter';
 
 function deterministicTestResponse() {
   return JSON.stringify([
@@ -14,8 +14,8 @@ function deterministicTestResponse() {
 
 export async function generateContent(prompt: string): Promise<string> {
   try {
-    const response = await aiProvider.generateJsonRaw(prompt, { timeoutMs: 20000 });
-    return response;
+    const response = await routeAI('summary', { prompt, format: 'json' });
+    return response.value;
   } catch (error) {
     console.warn('AI generation failed; using deterministic fallback:', error);
     return deterministicTestResponse();

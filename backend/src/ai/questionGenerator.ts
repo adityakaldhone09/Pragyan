@@ -1,6 +1,6 @@
 import { QuestionArraySchema } from './schemas';
 import safeParseAIResponse from './safeParser';
-import { generateContent } from '../ai/GeminiProvider';
+import { routeAI } from './aiRouter';
 import crypto from 'crypto';
 
 const QUESTIONS_TTL_SECONDS = 60 * 60 * 12; // 12 hours
@@ -49,8 +49,8 @@ export async function generateQuestionsWithAI(questions: RawQuestion[]): Promise
         if (waited) { try { return JSON.parse(waited) as GeneratedQuestion[]; } catch {} }
       }
 
-      const aiResponse = await generateContent(payload);
-      const structured = safeParseAIResponse(JSON.parse(aiResponse), QuestionArraySchema);
+      const aiResponse = await routeAI('summary', { prompt: payload, format: 'json' });
+      const structured = safeParseAIResponse(JSON.parse(aiResponse.value), QuestionArraySchema);
 
       const mapped = structured.map((item: any) => ({
         id: item.id || 'unknown',
@@ -74,8 +74,8 @@ export async function generateQuestionsWithAI(questions: RawQuestion[]): Promise
 
   // If cache path not used or AI fails, call AI directly and map results
   try {
-    const aiResponse = await generateContent(payload);
-    const structured = safeParseAIResponse(JSON.parse(aiResponse), QuestionArraySchema);
+    const aiResponse = await routeAI('summary', { prompt: payload, format: 'json' });
+    const structured = safeParseAIResponse(JSON.parse(aiResponse.value), QuestionArraySchema);
 
     return structured.map((item: any) => ({
       id: item.id || 'unknown',

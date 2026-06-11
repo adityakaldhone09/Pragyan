@@ -4,19 +4,19 @@ import { config } from '@/config/env';
 
 import { AIProviderBase, AIProviderOptions, AIProviderResult } from './AIProviderBase';
 
-const DEFAULT_MODEL = 'gemini-2.5-flash';
+const DEFAULT_MODEL = 'gemini-3.1-flash-lite';
 
 export class GeminiProvider extends AIProviderBase {
   private client: GoogleGenerativeAI | null = null;
   private model: string;
 
-  constructor() {
+  constructor(model?: string) {
     super();
     const apiKey = config.gemini.apiKey || process.env.GEMINI_API_KEY || null;
     if (apiKey) {
       this.client = new GoogleGenerativeAI(apiKey);
     }
-    this.model = config.gemini.model || DEFAULT_MODEL;
+    this.model = model || config.gemini.model || DEFAULT_MODEL;
   }
 
   getProviderName(): string {

@@ -24,30 +24,30 @@ export const recommendationService = {
   },
 
   getTopCareer() {
-    return apiClient.get<AssessmentMatch | null>("/recommendations/top-career");
+    return apiClient.get<AssessmentMatch | null>("/recommendations/top-career", { cacheTtlMs: 60_000, cacheKey: "recommendations-top-career" });
   },
 
   getRoadmapRecommendations() {
-    return apiClient.get<RecommendationBundle["roadmapRecommendations"]>("/recommendations/roadmaps");
+    return apiClient.get<RecommendationBundle["roadmapRecommendations"]>("/recommendations/roadmaps", { cacheTtlMs: 60_000, cacheKey: "recommendations-roadmaps" });
   },
 
   getRoadmapSections() {
-    return apiClient.get<RoadmapDomainSection[]>("/recommendations/roadmap-sections");
+    return apiClient.get<RoadmapDomainSection[]>("/recommendations/roadmap-sections", { cacheTtlMs: 60_000, cacheKey: "recommendations-roadmap-sections" });
   },
 
   getSkillRecommendations() {
-    return apiClient.get<RecommendationBundle["skillRecommendations"]>("/recommendations/skills");
+    return apiClient.get<RecommendationBundle["skillRecommendations"]>("/recommendations/skills", { cacheTtlMs: 60_000, cacheKey: "recommendations-skills" });
   },
 
   getCareerRecommendations() {
-    return apiClient.get<Array<{ career: string; score: number; reason: string }>>("/recommendations/careers");
+    return apiClient.get<Array<{ career: string; score: number; reason: string }>>("/recommendations/careers", { cacheTtlMs: 60_000, cacheKey: "recommendations-careers" });
   },
 
   getJobRecommendations() {
-    return apiClient.get<Array<{ id: string; title: string; company: string; location: string; matchScore: number }>>("/recommendations/jobs");
+    return apiClient.get<Array<{ id: string; title: string; company: string; location: string; matchScore: number }>>("/recommendations/jobs", { cacheTtlMs: 60_000, cacheKey: "recommendations-jobs" });
   },
 
   explainCareer(careerId: string) {
-    return apiClient.get<{ explanation: string; parsed?: unknown }>(`/recommendations/explain/${careerId}`);
+    return apiClient.get<{ explanation: string; parsed?: unknown }>(`/recommendations/explain/${careerId}`, { cacheTtlMs: 5 * 60_000, cacheKey: `recommendations-explain:${careerId}` });
   },
 };

@@ -66,7 +66,7 @@ export const assessmentService = {
       topMatches: Array<{ career: string; match: number }>;
       confidence: number;
       createdAt: string;
-    }>(`/assessment/results/${encodeURIComponent(resultId)}`);
+    }>(`/assessment/results/${encodeURIComponent(resultId)}`, { cacheTtlMs: 5 * 60_000, cacheKey: `assessment-result:${resultId}` });
   },
 
   getQuestions() {
@@ -96,11 +96,11 @@ export const assessmentService = {
   },
 
   getLatestAssessment() {
-    return apiClient.get<AssessmentHistoryEntry | null>("/assessment/latest");
+    return apiClient.get<AssessmentHistoryEntry | null>("/assessment/latest", { cacheTtlMs: 30_000, cacheKey: "assessment-latest" });
   },
 
   getAssessmentHistory() {
-    return apiPaginatedRequest<AssessmentHistoryEntry>("/assessment/history");
+    return apiPaginatedRequest<AssessmentHistoryEntry>("/assessment/history", { cacheTtlMs: 30_000, cacheKey: "assessment-history" });
   },
 
   getMetadata() {

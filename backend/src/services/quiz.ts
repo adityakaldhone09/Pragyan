@@ -22,7 +22,7 @@ export class QuizService {
     // Get journey details for Gemini context
     const journey = await journeyService.getJourney(userId, roadmap);
     const selectedDay = journey.roadmapDays.find((d) => d.dayNumber === currentDay) || journey.roadmapDays[0];
-    const topic = selectedDay?.focus || selectedDay?.dailyTopics?.[0] || 'topic';
+    const topic = selectedDay?.focus || selectedDay?.topics?.[0] || 'topic';
     const careerPath = journey.careerTitle || journey.roadmapTitle || 'Career Development';
 
     // Determine user skill level based on journey progress
@@ -56,7 +56,12 @@ export class QuizService {
 
     // Get user's current skill level
     const journey = roadmapId ? await journeyService.getJourney(userId, roadmapId) : null;
-    const userSkillLevel = journey && journey.userLevel ? (journey.userLevel as 'beginner' | 'intermediate' | 'advanced') : 'beginner';
+    const normalizedSkillLevel = String(journey?.userLevel || 'beginner').toLowerCase();
+    const userSkillLevel = normalizedSkillLevel === 'advanced'
+      ? 'advanced'
+      : normalizedSkillLevel === 'intermediate'
+        ? 'intermediate'
+        : 'beginner';
 
     // Evaluate quiz using Gemini analysis
     const evaluation: QuizEvaluation = await evaluateQuizAnswers({
@@ -80,14 +85,20 @@ export class QuizService {
     const assessmentResult = await prisma.assessmentResult.create({
       data: {
         userId,
-        score: evaluation.score,
-        level: evaluation.level,
+        answers: JSON.stringify({
+          quizId: quiz.topic,
+          roadmapId: roadmapId || null,
+          dayNumber: dayNumber || 1,
+          answers,
+        }),
+        suggestedCareers: [quiz.careerPath],
+        scores: JSON.stringify({
+          score: evaluation.score,
+          level: evaluation.level,
+          xpAwarded: evaluation.xpAwarded,
+        }),
         strengths: evaluation.strengths,
         weaknesses: evaluation.weaknesses,
-        suggestedNextSteps: evaluation.suggestions,
-        careerMatch: quiz.careerPath,
-        roadmapId: roadmapId || undefined,
-        topicsTested: [quiz.topic],
       },
     });
 

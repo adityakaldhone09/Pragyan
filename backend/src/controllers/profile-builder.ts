@@ -3,10 +3,11 @@ import { asyncHandler } from '@/middleware/errorHandler';
 import { profileBuilderService } from '@/services/profile-builder';
 import { sendError, sendSuccess } from '@/utils/response';
 import { authService } from '@/services/auth';
-import { aiProvider } from '@/services/aiProvider';
 import { safeParseAIResponse } from '@/ai/safeParser';
 import { profileCoachSchema, type ProfileCoachResult } from '@/validators/profile-builder-ai';
 import type { CertificationInput, GithubImportInput, PortfolioProjectInput } from '@/validators/profile-builder';
+import { routeAI } from '@/ai/aiRouter';
+import { buildResumeAnalysisPrompt } from '@/ai/promptBuilder';
 
 function requireUser(req: Request, res: Response) {
   if (!req.user) {
@@ -126,39 +127,29 @@ export const generateCoach = asyncHandler(async (req: Request, res: Response) =>
 
   const profile = await profileBuilderService.getProfile(userId);
 
-  const prompt = `
-You are Gemini, a concise career-profile coach for Pragyan.
-Use the following profile snapshot to produce JSON only.
-
-Rules:
-- Return only valid JSON that matches this structure:
-  {
-    "summary": string,
-    "completionScore": number,
-    "strengths": string[],
-    "missingFields": string[],
-    "nextSteps": string[],
-    "suggestedHeadline": string,
-    "suggestedCareerTrack": string
-  }
-- Do not invent achievements.
-- Keep suggestions practical and specific.
-- completionScore must match the provided score.
-
-Profile snapshot:
-${JSON.stringify({
-  user: profile.user,
-  completionScore: profile.completion.score,
-  projects: profile.projects.slice(0, 3),
-  certifications: profile.certifications.slice(0, 3),
-  githubRepositories: profile.githubRepositories.slice(0, 3),
-  missingFields: profile.completion.missing,
-}, null, 2)}
-`;
-
   try {
-    const raw = await aiProvider.generateJsonRaw(prompt, { timeoutMs: 20000 });
-    const parsed = safeParseAIResponse(JSON.parse(raw), profileCoachSchema);
+    const result = await routeAI('resume_analysis', {
+      prompt: buildResumeAnalysisPrompt({
+        profile: {
+          skills: profile.user.skills || [],
+          interests: profile.user.interests || [],
+          education: profile.user.education || '',
+          careerGoal: profile.user.careerTrack || profile.user.currentTitle || '',
+          experience: profile.user.experience || profile.user.experienceType || '',
+          personality: profile.user.preferences || [],
+        },
+        targetRole: profile.user.currentTitle || profile.user.careerTrack || 'Career builder',
+        notes: [
+          `completionScore:${profile.completion.score}`,
+          `projects:${profile.projects.length}`,
+          `certifications:${profile.certifications.length}`,
+          `githubRepositories:${profile.githubRepositories.length}`,
+          `missingFields:${profile.completion.missing.join(', ')}`,
+        ],
+      }),
+      format: 'json',
+    });
+    const parsed = safeParseAIResponse(JSON.parse(result.value), profileCoachSchema);
     return sendSuccess(res, parsed, 200, 'Profile coach generated successfully');
   } catch (error) {
     const fallback = deterministicCoach(profile);

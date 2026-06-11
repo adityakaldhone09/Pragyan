@@ -62,6 +62,7 @@ model User {
   // AI Memory & Personalization relations
   aiMemoryProfiles        AIMemoryProfile[]
   recommendationHistories RecommendationHistory[]
+  recommendationSnapshots RecommendationSnapshot[]
   roadmapMutations        RoadmapMutation[]
   personalityProfiles     PersonalityProfile[]
   learningVelocities      LearningVelocity[]
@@ -809,6 +810,28 @@ model RecommendationHistory {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+// Cached AI outputs to avoid repeat Gemini calls for identical prompts
+model RecommendationSnapshot {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String   @db.ObjectId
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind          String
+  requestHash   String
+  promptVersion String
+  provider      String
+  model         String
+  input         Json?
+  response      Json
+  expiresAt     DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, kind, requestHash, promptVersion, provider, model])
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model RoadmapMutation {

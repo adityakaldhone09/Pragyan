@@ -37,12 +37,15 @@ export const config = {
 
   gemini: {
     apiKey: process.env.GEMINI_API_KEY || null,
-    model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+    model: process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite',
   },
 
   groq: {
     apiKey: process.env.GROQ_API_KEY || null,
-    model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
+    model: process.env.GROQ_MODEL || process.env.ROQ_MODEL || process.env.GROQ_REASONING_MODEL || 'openai/gpt-oss-120b',
+    reasoningModel: process.env.GROQ_REASONING_MODEL || process.env.GROQ_MODEL || process.env.ROQ_MODEL || 'openai/gpt-oss-120b',
+    chatModel: process.env.GROQ_CHAT_MODEL || 'llama-3.3-70b-versatile',
+    fastModel: process.env.GROQ_FAST_MODEL || 'llama-3.1-8b-instant',
   },
   
   database: {

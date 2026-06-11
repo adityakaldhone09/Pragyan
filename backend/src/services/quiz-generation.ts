@@ -1,7 +1,6 @@
 // Quiz generation service using Gemini
 // Generates quiz on-demand without storing questions
 import { aiProvider } from '@/services/aiProvider';
-import { prisma } from '@/lib/prisma';
 
 export interface GeneratedQuizQuestion {
   id: string;
@@ -155,7 +154,6 @@ export async function evaluateQuizAnswers(params: {
   }
 
   const score = Math.round((correct / quiz.questions.length) * 100);
-  const total = quiz.questions.length;
 
   // Determine user level based on score
   let level: 'beginner' | 'intermediate' | 'advanced';

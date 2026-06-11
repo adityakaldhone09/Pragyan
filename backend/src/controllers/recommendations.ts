@@ -20,7 +20,7 @@ export const generateCareerIntelligence = asyncHandler(async (req: Request, res:
     return sendError(res, 401, 'Unauthorized');
   }
 
-  const data = await careerIntelligenceService.generateCareerIntelligenceResponse(req.body || {});
+  const data = await careerIntelligenceService.generateCareerIntelligenceResponse(req.body || {}, req.user.id);
   return sendSuccess(res, data, 200, 'Career intelligence generated successfully');
 });
 

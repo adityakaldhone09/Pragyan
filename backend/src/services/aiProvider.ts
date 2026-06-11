@@ -1,20 +1,21 @@
 import { config } from '@/config/env';
-
-import { AIProviderAdapter, AIProviderOptions } from './AIProviderBase';
+import { routeAI } from '@/ai/aiRouter';
 import { GeminiProvider } from './GeminiProvider';
 import { GroqProvider } from './GroqProvider';
 import { LocalAIProvider } from './LocalAIProvider';
-import aiTelemetry from '@/lib/aiTelemetry';
+import { AIProviderAdapter, AIProviderOptions } from './AIProviderBase';
 
 type ProviderMode = 'local' | 'gemini' | 'groq';
 
 class AIProviderFacade implements AIProviderAdapter {
   private provider: AIProviderAdapter;
   private mode: ProviderMode;
+  private lastRuntime: { provider: string; model: string };
 
   constructor() {
     this.mode = this.resolveMode();
     this.provider = this.createProvider(this.mode);
+    this.lastRuntime = this.provider.getRuntime ? this.provider.getRuntime() : { provider: this.mode, model: 'unknown' };
   }
 
   private resolveMode(): ProviderMode {
@@ -27,12 +28,8 @@ class AIProviderFacade implements AIProviderAdapter {
 
   private createProvider(mode: ProviderMode): AIProviderAdapter {
     if (mode === 'local') return new LocalAIProvider();
-    if (mode === 'groq') return new GroqProvider();
-    return new GeminiProvider();
-  }
-
-  private getFallbackProviders(): AIProviderAdapter[] {
-    return [new GroqProvider(), new LocalAIProvider()];
+    if (mode === 'groq') return new GroqProvider(config.groq.reasoningModel);
+    return new GeminiProvider(config.gemini.model);
   }
 
   setProvider(provider: AIProviderAdapter): void {
@@ -42,87 +39,69 @@ class AIProviderFacade implements AIProviderAdapter {
       : provider.getProviderName() === 'groq'
         ? 'groq'
         : 'gemini';
+    this.lastRuntime = provider.getRuntime ? provider.getRuntime() : { provider: this.mode, model: provider.getModel() };
   }
 
   getProviderName(): string {
-    return this.provider.getProviderName();
+    return this.lastRuntime.provider;
   }
 
   getModel(): string {
-    return this.provider.getModel();
+    return this.lastRuntime.model;
   }
 
   getRuntime() {
     return {
-      provider: this.getProviderName(),
-      model: this.getModel(),
+      provider: this.lastRuntime.provider,
+      model: this.lastRuntime.model,
       configuredMode: this.mode,
     };
   }
 
   async generateText(prompt: string, opts?: AIProviderOptions): Promise<string> {
-    const primary = this.provider.getProviderName();
-    const start = Date.now();
-    try {
+    if (this.mode === 'local') {
       const result = await this.provider.generateText(prompt, opts);
-      aiTelemetry.recordCall(primary, 0, Date.now() - start, this.getModel());
+      this.lastRuntime = this.provider.getRuntime ? this.provider.getRuntime() : { provider: this.mode, model: this.provider.getModel() };
       return result;
-    } catch (error: any) {
-      aiTelemetry.recordFailure(primary, error?.message || String(error), this.getModel());
-      for (const fallback of this.getFallbackProviders()) {
-        if (fallback.getProviderName() === this.provider.getProviderName()) {
-          continue;
-        }
-        try {
-          const fbName = fallback.getProviderName();
-          const fbStart = Date.now();
-          const result = await fallback.generateText(prompt, opts);
-          aiTelemetry.recordFallback(primary, this.getModel());
-          aiTelemetry.recordCall(fbName, 0, Date.now() - fbStart, fallback.getModel());
-          return result;
-        } catch (fallbackError: any) {
-          aiTelemetry.recordFailure(fallback.getProviderName(), fallbackError?.message || String(fallbackError), fallback.getModel());
-          continue;
-        }
-      }
-
-      throw error;
     }
+
+    const taskType = opts?.taskType || 'summary';
+    const result = await routeAI(taskType as any, {
+      prompt,
+      input: opts?.input,
+      userId: opts?.userId,
+      promptVersion: opts?.promptVersion,
+      format: 'text',
+      maxTokens: opts?.maxTokens,
+      temperature: opts?.temperature,
+    });
+    this.lastRuntime = { provider: result.provider, model: result.model };
+    return result.value;
   }
 
   async generateJsonRaw(prompt: string, opts?: AIProviderOptions): Promise<string> {
-    const primary = this.provider.getProviderName();
-    const start = Date.now();
-    try {
+    if (this.mode === 'local') {
       const result = await this.provider.generateJsonRaw(prompt, opts);
-      aiTelemetry.recordCall(primary, 0, Date.now() - start, this.getModel());
+      this.lastRuntime = this.provider.getRuntime ? this.provider.getRuntime() : { provider: this.mode, model: this.provider.getModel() };
       return result;
-    } catch (error: any) {
-      aiTelemetry.recordFailure(primary, error?.message || String(error), this.getModel());
-      for (const fallback of this.getFallbackProviders()) {
-        if (fallback.getProviderName() === this.provider.getProviderName()) {
-          continue;
-        }
-        try {
-          const fbName = fallback.getProviderName();
-          const fbStart = Date.now();
-          const result = await fallback.generateJsonRaw(prompt, opts);
-          aiTelemetry.recordFallback(primary, this.getModel());
-          aiTelemetry.recordCall(fbName, 0, Date.now() - fbStart, fallback.getModel());
-          return result;
-        } catch (fallbackError: any) {
-          aiTelemetry.recordFailure(fallback.getProviderName(), fallbackError?.message || String(fallbackError), fallback.getModel());
-          continue;
-        }
-      }
-
-      throw error;
     }
+
+    const taskType = opts?.taskType || 'summary';
+    const result = await routeAI(taskType as any, {
+      prompt,
+      input: opts?.input,
+      userId: opts?.userId,
+      promptVersion: opts?.promptVersion,
+      format: 'json',
+      maxTokens: opts?.maxTokens,
+      temperature: opts?.temperature,
+    });
+    this.lastRuntime = { provider: result.provider, model: result.model };
+    return result.value;
   }
 
   async generateJsonValidated<T>(prompt: string, validateFn: (raw: unknown) => T, opts?: AIProviderOptions): Promise<T> {
     const raw = await this.generateJsonRaw(prompt, opts);
-
     let parsed: unknown;
     try {
       parsed = JSON.parse(raw);
@@ -141,4 +120,3 @@ class AIProviderFacade implements AIProviderAdapter {
 export const aiProvider = new AIProviderFacade();
 
 export default aiProvider;
-

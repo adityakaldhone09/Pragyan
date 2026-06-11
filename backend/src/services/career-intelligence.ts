@@ -1,5 +1,5 @@
 import { careerCatalogAliases as careerIntelligenceAliases, careerCatalog as careerIntelligenceCatalog, CareerRoleProfile, calculatePlacementReadiness } from '@/data/careerCatalog';
-import { aiLayers } from '@/services/ai-layers';
+import { routeAI } from '@/ai/aiRouter';
 
 export interface CareerIntelligenceInput {
   category?: string;
@@ -110,17 +110,47 @@ export class CareerIntelligenceService {
     };
   }
 
-  async generateCareerIntelligenceResponse(input: CareerIntelligenceInput): Promise<CareerIntelligenceResult> {
+  async generateCareerIntelligenceResponse(input: CareerIntelligenceInput, userId?: string): Promise<CareerIntelligenceResult> {
     const base = this.generateCareerIntelligence(input);
 
     if (!input.enhanceWithAI) {
       return base;
     }
 
+    const promptVersion = 'career-intelligence-v1';
+    const normalizedInput = this.normalizeInputForCache(input);
+
+    try {
+      const result = await routeAI('decision_intelligence', {
+        prompt: this.buildCareerIntelligencePrompt(input, base),
+        input: {
+          input: normalizedInput,
+          base,
+        },
+        userId,
+        promptVersion,
+        format: 'json',
+      });
+
+      const parsed = JSON.parse(result.value) as { recommendedRoles?: CareerIntelligenceRoleEnhancement[]; placementReadinessScore?: number; futureGrowthOpportunities?: string[] };
+      return this.mergeEnhancedResult(base, parsed);
+    } catch {
+      return this.enhanceCareerIntelligenceResponse(input, base);
+    }
+  }
+
+  private async enhanceCareerIntelligenceResponse(
+    input: CareerIntelligenceInput,
+    base: CareerIntelligenceResult
+  ): Promise<CareerIntelligenceResult> {
     try {
       const prompt = this.buildCareerIntelligencePrompt(input, base);
-      const raw = await aiLayers.generateStructuredJson(prompt, { timeoutMs: 12000 });
-      const parsed = JSON.parse(raw) as { recommendedRoles?: CareerIntelligenceRoleEnhancement[]; placementReadinessScore?: number; futureGrowthOpportunities?: string[] };
+      const raw = await routeAI('decision_intelligence', {
+        prompt,
+        input: this.normalizeInputForCache(input),
+        format: 'json',
+      });
+      const parsed = JSON.parse(raw.value) as { recommendedRoles?: CareerIntelligenceRoleEnhancement[]; placementReadinessScore?: number; futureGrowthOpportunities?: string[] };
       return this.mergeEnhancedResult(base, parsed);
     } catch {
       return base;
@@ -143,6 +173,28 @@ export class CareerIntelligenceService {
       'Backend-selected roles to enhance:',
       JSON.stringify(base),
     ].join('\n\n');
+  }
+
+  private normalizeInputForCache(input: CareerIntelligenceInput) {
+    return {
+      category: input.category || '',
+      interest: input.interest || '',
+      interests: [...(input.interests || [])].sort(),
+      skills: [...(input.skills || [])].sort(),
+      qualification: input.qualification || '',
+      preferredSubjects: [...(input.preferredSubjects || [])].sort(),
+      subjects: [...(input.subjects || [])].sort(),
+      personality: [...(input.personality || [])].sort(),
+      personalityTraits: [...(input.personalityTraits || [])].sort(),
+      goal: input.goal || '',
+      careerGoals: [...(input.careerGoals || [])].sort(),
+      age: typeof input.age === 'number' ? input.age : null,
+      stream: input.stream || '',
+      roadmapProgress: typeof input.roadmapProgress === 'number' ? input.roadmapProgress : null,
+      projectCompletion: typeof input.projectCompletion === 'number' ? input.projectCompletion : null,
+      quizPerformance: typeof input.quizPerformance === 'number' ? input.quizPerformance : null,
+      enhanceWithAI: Boolean(input.enhanceWithAI),
+    };
   }
 
   private resolveCategory(category?: string): CareerRoleProfile['category'] | undefined {
