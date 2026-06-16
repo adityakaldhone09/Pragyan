@@ -197,7 +197,7 @@ function RadarTooltip({ active, payload }: { active?: boolean; payload?: Array<{
 
 function buildWeeklyMomentumSeries(snapshot: JourneyDashboardSnapshot | null): WeeklyMomentumPoint[] {
   if (snapshot?.trend?.length) {
-    return snapshot.trend.map((point) => ({
+    const basePoints = snapshot.trend.map((point) => ({
       label: format(parseISO(point.date), "EEE"),
       xp: point.xp,
       studyMinutes: Math.round(point.studyHours * 60),
@@ -205,15 +205,14 @@ function buildWeeklyMomentumSeries(snapshot: JourneyDashboardSnapshot | null): W
       readiness: clamp(Math.round(point.readinessScore), 0, 100),
       xpScore: 0,
       studyScore: 0,
-    })).map((point, index, points) => {
-      const maxXp = Math.max(...points.map((item) => item.xp), 1);
-      const maxStudy = Math.max(...points.map((item) => item.studyMinutes), 1);
-      return {
-        ...point,
-        xpScore: Math.round((point.xp / maxXp) * 100),
-        studyScore: Math.round((point.studyMinutes / maxStudy) * 100),
-      };
-    });
+    }));
+    const maxXp = Math.max(...basePoints.map((item) => item.xp), 1);
+    const maxStudy = Math.max(...basePoints.map((item) => item.studyMinutes), 1);
+    return basePoints.map((point) => ({
+      ...point,
+      xpScore: Math.round((point.xp / maxXp) * 100),
+      studyScore: Math.round((point.studyMinutes / maxStudy) * 100),
+    }));
   }
 
   const currentJourney = snapshot?.currentJourney;

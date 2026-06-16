@@ -76,18 +76,20 @@ export class CareerIntelligenceService {
     const age = typeof input.age === 'number' ? input.age : undefined;
 
     const scored = careerIntelligenceCatalog
-      .filter((role) => !category || role.category === category)
-      .map((role) => this.scoreRole(role, {
-        normalizedInterests,
-        normalizedSkills,
-        normalizedSubjects,
-        normalizedPersonality,
-        normalizedGoalSignals,
-        age,
-        roadmapProgress: input.roadmapProgress,
-        projectCompletion: input.projectCompletion,
-        quizPerformance: input.quizPerformance,
-      }))
+      .flatMap((role) => {
+        if (category && role.category !== category) return [];
+        return [this.scoreRole(role, {
+          normalizedInterests,
+          normalizedSkills,
+          normalizedSubjects,
+          normalizedPersonality,
+          normalizedGoalSignals,
+          age,
+          roadmapProgress: input.roadmapProgress,
+          projectCompletion: input.projectCompletion,
+          quizPerformance: input.quizPerformance,
+        })];
+      })
       .sort((a, b) => b.confidence - a.confidence)
       .slice(0, 5)
       .map((item) => ({
@@ -100,7 +102,7 @@ export class CareerIntelligenceService {
       : 0;
 
     const futureGrowthOpportunities = Array.from(
-      new Set(scored.flatMap((item) => item.futureGrowthOpportunities).filter(Boolean))
+      new Set(scored.flatMap((item) => item.futureGrowthOpportunities || []))
     ).slice(0, 10);
 
     return {
@@ -337,7 +339,7 @@ export class CareerIntelligenceService {
     base: CareerIntelligenceResult,
     enhanced: { recommendedRoles?: CareerIntelligenceRoleEnhancement[]; placementReadinessScore?: number; futureGrowthOpportunities?: string[] }
   ): CareerIntelligenceResult {
-    const byRole = new Map((enhanced.recommendedRoles || []).filter((item) => item.role).map((item) => [item.role as string, item]));
+    const byRole = new Map((enhanced.recommendedRoles || []).flatMap((item) => item.role ? [[item.role as string, item] as const] : []));
 
     const recommendedRoles = base.recommendedRoles.map((role) => {
       const enhancement = byRole.get(role.role);
@@ -377,13 +379,16 @@ export class CareerIntelligenceService {
   }
 
   private collectTokens(values: Array<string | undefined>): string[] {
-    return values
-      .flatMap((value) => String(value || '')
+    return values.flatMap((value) =>
+      String(value || '')
         .split(/[^a-z0-9+]+/i)
-        .map((token) => token.trim())
-        .filter(Boolean))
-      .map(normalize)
-      .filter(Boolean);
+        .flatMap((token) => {
+          const trimmed = token.trim();
+          if (!trimmed) return [];
+          const normalized = normalize(trimmed);
+          return normalized ? [normalized] : [];
+        })
+    );
   }
   
   private personalityKeywords(role: CareerRoleProfile): string[] {

@@ -39,33 +39,42 @@ function getModelChain(taskType: GroqTaskType): string[] {
 }
 
 class GroqService {
-  async generate(taskType: GroqTaskType, prompt: string, options: GroqRequestOptions = {}): Promise<GroqExecutionResult> {
-    const models = getModelChain(taskType);
-    let lastError: unknown = null;
-
-    for (const model of models) {
-      const provider = new GroqProvider(model);
-      const start = Date.now();
-
-      try {
-        const value = options.format === 'json'
-          ? await provider.generateJsonRaw(prompt, { maxTokens: options.maxTokens, temperature: options.temperature })
-          : await provider.generateText(prompt, { maxTokens: options.maxTokens, temperature: options.temperature });
-
-        console.log('[AI ROUTER]', `Task: ${taskType}`, `Model: ${model}`, `Latency: ${Date.now() - start}ms`, '[CACHE] Groq cache N/A');
-        return {
-          value,
-          cacheHit: false,
-          provider: 'groq',
-          model,
-        };
-      } catch (error) {
-        lastError = error;
-        console.warn('[AI ROUTER]', `Task: ${taskType}`, `Model: ${model}`, 'failed, trying fallback model');
-      }
+  private async tryModelChain(
+    taskType: GroqTaskType,
+    models: string[],
+    prompt: string,
+    options: GroqRequestOptions,
+    lastError: unknown = null
+  ): Promise<GroqExecutionResult> {
+    if (models.length === 0) {
+      throw lastError instanceof Error ? lastError : new Error('Groq request failed');
     }
 
-    throw lastError instanceof Error ? lastError : new Error('Groq request failed');
+    const [model, ...remaining] = models;
+    const provider = new GroqProvider(model);
+    const start = Date.now();
+
+    try {
+      const value = options.format === 'json'
+        ? await provider.generateJsonRaw(prompt, { maxTokens: options.maxTokens, temperature: options.temperature })
+        : await provider.generateText(prompt, { maxTokens: options.maxTokens, temperature: options.temperature });
+
+      console.log('[AI ROUTER]', `Task: ${taskType}`, `Model: ${model}`, `Latency: ${Date.now() - start}ms`, '[CACHE] Groq cache N/A');
+      return {
+        value,
+        cacheHit: false,
+        provider: 'groq',
+        model,
+      };
+    } catch (error) {
+      console.warn('[AI ROUTER]', `Task: ${taskType}`, `Model: ${model}`, 'failed, trying fallback model');
+      return this.tryModelChain(taskType, remaining, prompt, options, error);
+    }
+  }
+
+  async generate(taskType: GroqTaskType, prompt: string, options: GroqRequestOptions = {}): Promise<GroqExecutionResult> {
+    const models = getModelChain(taskType);
+    return this.tryModelChain(taskType, models, prompt, options);
   }
 }
 

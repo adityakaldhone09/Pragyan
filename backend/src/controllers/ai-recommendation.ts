@@ -206,14 +206,15 @@ export const generateDailyPlan = asyncHandler(async (req: Request, res: Response
     const result = await routeAI('roadmap', { prompt, format: 'json' });
     const parsed = JSON.parse(result.value) as Partial<typeof fallback>;
     const tasks = Array.isArray(parsed.tasks)
-      ? parsed.tasks
-          .map((task) => ({
+      ? parsed.tasks.flatMap((task) => {
+          const title = String(task?.title || 'Task');
+          return title ? [{
             type: String(task?.type || 'learn'),
-            title: String(task?.title || 'Task'),
+            title,
             minutes: Math.max(5, Number(task?.minutes || 5)),
             details: typeof task?.details === 'string' ? task.details : undefined,
-          }))
-          .filter((task) => task.title)
+          }] : [];
+        })
       : fallback.tasks;
 
     const normalizedAvailableTime = Number(availableTime) || 120;

@@ -1,6 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 
+const METRICS = [
+  { title: 'Learning Velocity', value: '1.2x' },
+  { title: 'Adaptability', value: '78%' },
+  { title: 'Analytical Growth', value: '65%' },
+  { title: 'XP Progression', value: '1,420 XP' },
+  { title: 'Focus Score', value: '83' },
+  { title: 'Consistency', value: '72%' },
+];
+
 const MetricCard: React.FC<{ title: string; value: string; spark?: React.ReactNode }> = ({ title, value, spark }) => (
   <motion.div whileHover={{ y: -6, scale: 1.01 }} className="glass p-3 rounded-xl border border-white/6 shadow-[0_8px_30px_rgba(124,58,237,0.06)]" style={{ backdropFilter: 'blur(8px)' }}>
     <div className="flex items-center justify-between">
@@ -15,15 +24,6 @@ const MetricCard: React.FC<{ title: string; value: string; spark?: React.ReactNo
 );
 
 export default function LiveMetrics() {
-  // simple demo metrics — real wiring uses adaptive provider
-  const metrics = [
-    { title: 'Learning Velocity', value: '1.2x' },
-    { title: 'Adaptability', value: '78%' },
-    { title: 'Analytical Growth', value: '65%' },
-    { title: 'XP Progression', value: '1,420 XP' },
-    { title: 'Focus Score', value: '83' },
-    { title: 'Consistency', value: '72%' },
-  ];
   const [pulseMetric, setPulseMetric] = useState<number | null>(null);
   const [status, setStatus] = useState<string | null>(null);
 
@@ -32,13 +32,12 @@ export default function LiveMetrics() {
       const msg = e?.detail?.message || null;
       setStatus(msg);
       setTimeout(() => setStatus(null), 4200);
-      // pick a metric to pulse
-      const idx = Math.floor(Math.random() * metrics.length);
+      const idx = Math.floor(Math.random() * METRICS.length);
       setPulseMetric(idx);
       setTimeout(() => setPulseMetric(null), 1400);
     }
-    function onInsight(e: any) {
-      const idx = Math.floor(Math.random() * metrics.length);
+    function onInsight() {
+      const idx = Math.floor(Math.random() * METRICS.length);
       setPulseMetric(idx);
       setTimeout(() => setPulseMetric(null), 1800);
     }
@@ -60,8 +59,8 @@ export default function LiveMetrics() {
       )}
 
       <div className="grid grid-cols-6 gap-4">
-        {metrics.map((m, i) => (
-          <div key={i} className="col-span-2 relative">
+        {METRICS.map((m, i) => (
+          <div key={m.title} className="col-span-2 relative">
             <MetricCard
               title={m.title}
               value={m.value}

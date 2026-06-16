@@ -128,7 +128,7 @@ export function Assessment() {
               <div className="flex flex-wrap gap-2 pt-2">
                 {categories.map((cat, i) => (
                   <div
-                    key={i}
+                    key={cat}
                     className={`px-3 py-1 rounded-full text-xs transition-all ${
                       i === currentCategory
                         ? "bg-primary/20 text-primary border border-primary/30"
@@ -197,8 +197,8 @@ export function Assessment() {
                     {question.options.map((option, i) => {
                       const isSelected = selectedAnswers[currentQuestion] === i;
                       return (
-                        <motion.button
-                          key={i}
+                        <motion.button type="button"
+                          key={option}
                           onClick={() => handleAnswer(i)}
                           className={`w-full p-4 rounded-lg border-2 transition-all text-left relative overflow-hidden ${
                             isSelected
@@ -235,7 +235,7 @@ export function Assessment() {
 
                   {/* Navigation */}
                   <div className="flex items-center justify-between pt-4">
-                    <button
+                    <button type="button"
                       onClick={() => setCurrentQuestion(Math.max(0, currentQuestion - 1))}
                       disabled={currentQuestion === 0}
                       className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-colors"

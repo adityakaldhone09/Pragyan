@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Bot, Send, Sparkles, Brain, Rocket, FileText, MessageSquare, RefreshCw } from "lucide-react";
 import { useLocation } from "react-router";
@@ -29,6 +29,7 @@ function renderSimpleMarkdown(text: string) {
 export function Assistant() {
   const { user } = useAuth();
   const location = useLocation();
+  const search = location.search;
   const autoPromptHandled = useRef(false);
   const firstName = user?.fullName?.split(" ")[0] || "there";
   const [messages, setMessages] = useState<AssistantChatMessage[]>([
@@ -77,19 +78,6 @@ export function Assistant() {
     };
   }, []);
 
-  useEffect(() => {
-    const prompt = new URLSearchParams(location.search).get("prompt");
-
-    if (!prompt || autoPromptHandled.current) {
-      return;
-    }
-
-    autoPromptHandled.current = true;
-    setInput(prompt);
-    void sendMessage(prompt);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.search]);
-
   const contextSummary = useMemo(
     () => ({
       career: careerContext,
@@ -99,7 +87,7 @@ export function Assistant() {
     [careerContext, roadmapContext]
   );
 
-  const streamAssistantReply = async (fullReply: string) => {
+  const streamAssistantReply = useCallback(async (fullReply: string) => {
     setMessages((current) => [...current, { role: "assistant", content: "" }]);
 
     const step = Math.max(1, Math.round(fullReply.length / 80));
@@ -125,9 +113,9 @@ export function Assistant() {
         }
       }, 18);
     });
-  };
+  }, []);
 
-  const sendMessage = async (message: string) => {
+  const sendMessage = useCallback(async (message: string) => {
     const normalized = message.trim();
     if (!normalized || typing) {
       return;
@@ -153,7 +141,19 @@ export function Assistant() {
     } finally {
       setTyping(false);
     }
-  };
+  }, [contextSummary, messages, provider, streamAssistantReply, typing]);
+
+  useEffect(() => {
+    const prompt = new URLSearchParams(search).get("prompt");
+
+    if (!prompt || autoPromptHandled.current) {
+      return;
+    }
+
+    autoPromptHandled.current = true;
+    setInput(prompt);
+    void sendMessage(prompt);
+  }, [search, sendMessage]);
 
   return (
     <div className="min-h-screen relative pb-20 pt-20">

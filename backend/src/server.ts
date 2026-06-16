@@ -40,28 +40,28 @@ async function connectPrismaSafely(prisma: PrismaLike): Promise<void> {
   const maxAttempts = 3;
   const baseDelayMs = 2000;
 
+  const attemptConnect = async (attempt: number): Promise<void> => {
+    try {
+      if (attempt > 1) {
+        const wait = baseDelayMs * Math.pow(2, attempt - 2);
+        await new Promise((r) => setTimeout(r, wait + Math.floor(Math.random() * 250)));
+        console.log(`[Prisma Connect] retrying (${attempt}/${maxAttempts})`);
+      }
+      await prisma.$connect();
+    } catch (err) {
+      if (attempt >= maxAttempts) {
+        throw err;
+      }
+      return attemptConnect(attempt + 1);
+    }
+  };
+
   try {
     // Suppress noisy driver logs during retries
     console.error = () => undefined;
     console.warn = () => undefined;
 
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      try {
-        if (attempt > 1) {
-          // small jitter/backoff
-          const wait = baseDelayMs * Math.pow(2, attempt - 2);
-          await new Promise((r) => setTimeout(r, wait + Math.floor(Math.random() * 250)));
-          console.log(`[Prisma Connect] retrying (${attempt}/${maxAttempts})`);
-        }
-        await prisma.$connect();
-        return;
-      } catch (err) {
-        if (attempt === maxAttempts) {
-          throw err;
-        }
-        // otherwise continue to next attempt
-      }
-    }
+    await attemptConnect(1);
   } catch (error) {
     throw new Error(classifyPrismaConnectivityError(error));
   } finally {

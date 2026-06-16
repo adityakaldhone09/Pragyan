@@ -46,26 +46,26 @@ async function ensureIndexes(collection: Collection<RecommendationSnapshotDocume
   if (!indexesReadyPromise) {
     indexesReadyPromise = (async () => {
       try {
-        await collection.createIndex(
-          {
-            userId: 1,
-            assessmentHash: 1,
-            promptVersion: 1,
-            model: 1,
-            kind: 1,
-          },
-          { unique: true, name: 'recommendation_snapshot_unique' }
-        );
-
-        await collection.createIndex(
-          { expiresAt: 1 },
-          { expireAfterSeconds: 0, name: 'recommendation_snapshot_ttl' }
-        );
-
-        await collection.createIndex(
-          { userId: 1, createdAt: -1 },
-          { name: 'recommendation_snapshot_user_created' }
-        );
+        await Promise.all([
+          collection.createIndex(
+            {
+              userId: 1,
+              assessmentHash: 1,
+              promptVersion: 1,
+              model: 1,
+              kind: 1,
+            },
+            { unique: true, name: 'recommendation_snapshot_unique' }
+          ),
+          collection.createIndex(
+            { expiresAt: 1 },
+            { expireAfterSeconds: 0, name: 'recommendation_snapshot_ttl' }
+          ),
+          collection.createIndex(
+            { userId: 1, createdAt: -1 },
+            { name: 'recommendation_snapshot_user_created' }
+          ),
+        ]);
       } catch (error) {
         console.warn('Failed to create RecommendationSnapshot indexes', error);
       }

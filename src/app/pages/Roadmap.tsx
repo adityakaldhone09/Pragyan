@@ -259,9 +259,9 @@ export function Roadmap() {
                           animate={{ opacity: 1, height: "auto" }}
                           exit={{ opacity: 0, height: 0 }}
                         >
-                          {milestone.modules.map((module, i) => (
+                          {milestone.modules.map((module) => (
                             <div
-                              key={i}
+                              key={module.name}
                               className={`flex items-center justify-between p-3 rounded-lg ${
                                 module.completed
                                   ? "bg-secondary/10 border border-secondary/20"
@@ -289,7 +289,7 @@ export function Roadmap() {
                                 </span>
                               </div>
                               {!module.completed && milestone.status === "in-progress" && (
-                                <button className="text-primary hover:text-primary/80 text-sm font-medium flex items-center gap-1">
+                                <button type="button" className="text-primary hover:text-primary/80 text-sm font-medium flex items-center gap-1">
                                   <Play className="w-4 h-4" />
                                   Start
                                 </button>

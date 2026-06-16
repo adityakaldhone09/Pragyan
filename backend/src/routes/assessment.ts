@@ -44,7 +44,7 @@ router.get('/metadata', async (_req, res) => {
       prisma.career.findMany({ take: 10, select: { title: true, category: true } }),
     ]);
 
-    const categories = [...new Set(careers.map((c) => c.category).filter(Boolean))];
+    const categories = [...new Set(careers.flatMap((c) => c.category ? [c.category] : []))];
 
     console.log(`[Assessment Metadata] Retrieved ${careerCount} careers, ${skillCount} skills, ${interestCount} interests`);
 

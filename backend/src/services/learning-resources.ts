@@ -370,8 +370,10 @@ function resolveDifficultyBand(roadmap: RoadmapLike) {
 
 function getSkills(roadmap: RoadmapLike) {
   const skills = [roadmap.category, ...(roadmap.requiredSkills || []), ...(roadmap.tags || [])]
-    .map((item) => String(item || '').trim())
-    .filter(Boolean);
+    .flatMap((item) => {
+      const trimmed = String(item || '').trim();
+      return trimmed ? [trimmed] : [];
+    });
 
   return Array.from(new Set(skills));
 }
@@ -389,11 +391,10 @@ function buildTopicPlan(roadmap: RoadmapLike) {
   const learningStructure = getLearningStructure(roadmap);
   const dayCount = Math.max(learningStructure.length || 1, 1);
 
-  const dayTopics = learningStructure
-    .map((item) => item.focus)
-    .filter(Boolean)
-    .map(String)
-    .map((topic) => titleCase(topic));
+  const dayTopics = learningStructure.flatMap((item) => {
+    if (!item.focus) return [];
+    return [titleCase(String(item.focus))];
+  });
 
   const fallbackTopics = Array.from(
     new Set([
@@ -692,12 +693,15 @@ async function getPersonalizationProfile(userId?: string, roadmapId?: string): P
     }),
   ]);
 
-  const completedTopics = history.filter((entry) => entry.completed).map((entry) => entry.resource.topic);
+  const completedTopics = history.flatMap((entry) => entry.completed && entry.resource?.topic ? [entry.resource.topic] : []);
   const weakSkills = Array.from(new Set([
     ...(user?.preferences || []),
     ...(user?.interests || []),
     ...(latestAssessment?.weaknesses || []),
-  ].map((item) => String(item).trim()).filter(Boolean)));
+  ].flatMap((item) => {
+    const trimmed = String(item).trim();
+    return trimmed ? [trimmed] : [];
+  })));
 
   const assessmentStrengths = Array.isArray(latestAssessment?.strengths) ? latestAssessment.strengths : [];
   const assessmentWeaknesses = Array.isArray(latestAssessment?.weaknesses) ? latestAssessment.weaknesses : [];
@@ -713,7 +717,10 @@ async function getPersonalizationProfile(userId?: string, roadmapId?: string): P
     ...(user?.skills || []),
     ...(user?.interests || []),
     ...(latestAssessment?.suggestedCareers || []),
-  ].map((item) => String(item).trim()).filter(Boolean)));
+  ].flatMap((item) => {
+    const trimmed = String(item).trim();
+    return trimmed ? [trimmed] : [];
+  })));
   const careerGoal = latestAssessment?.suggestedCareers?.[0] || user?.experience || user?.experienceType || user?.education || '';
 
   return {
@@ -855,13 +862,14 @@ async function rankResourcesWithAI(roadmap: RoadmapLike, userSkills: string[], r
     if (Array.isArray(parsed.ranked) && parsed.ranked.length) {
       return {
         summary: typeof parsed.summary === 'string' ? parsed.summary : 'AI personalized the resource order.',
-        ranked: parsed.ranked
-          .map((entry) => ({
-            id: String(entry.id),
+        ranked: parsed.ranked.flatMap((entry) => {
+          const id = String(entry.id);
+          return id ? [{
+            id,
             score: Number(entry.score ?? 0),
             reason: String(entry.reason || 'Recommended by AI'),
-          }))
-          .filter((entry) => entry.id),
+          }] : [];
+        }),
       };
     }
   } catch (error) {
@@ -1093,8 +1101,10 @@ export class LearningResourceService {
 
       const xpDelta = Math.max(5, Math.round((input.progressPercent ?? 100) / 10));
       const { xpService } = await import('@/services/xp');
-      await xpService.awardXp(userId, xpDelta, 'resource-complete', { resourceId: input.resourceId });
-      await prisma.user.update({ where: { id: userId }, data: { streak: nextStreak } });
+      await Promise.all([
+        xpService.awardXp(userId, xpDelta, 'resource-complete', { resourceId: input.resourceId }),
+        prisma.user.update({ where: { id: userId }, data: { streak: nextStreak } }),
+      ]);
     }
 
     return result;

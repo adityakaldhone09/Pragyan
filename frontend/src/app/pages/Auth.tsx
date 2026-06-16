@@ -33,6 +33,7 @@ export function Auth() {
   const [success, setSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
+  const search = location.search;
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -41,13 +42,13 @@ export function Auth() {
   }, [isAuthenticated, navigate]);
 
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
+    const params = new URLSearchParams(search);
     const errorMessage = params.get("error");
 
     if (errorMessage) {
       setError(errorMessage);
     }
-  }, [location.search]);
+  }, [search]);
 
   useEffect(() => {
     if (resendTimer <= 0) {

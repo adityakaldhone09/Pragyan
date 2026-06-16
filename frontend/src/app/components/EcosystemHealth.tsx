@@ -1,32 +1,60 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useReducer } from 'react';
 import { useAdaptiveAI } from '../context/adaptiveAI';
 import { apiClient } from '../../services/apiClient';
 
+const DEMO_SNAPSHOTS = Array.from({ length: 6 }).map((_, i) => {
+  const now = Date.now();
+  return {
+    id: `demo-${i}`,
+    createdAt: new Date(now - (6 - i) * 24 * 60 * 60 * 1000).toISOString(),
+    topItems: ['AI Engineer', 'Data Scientist', 'ML Researcher'].slice(0, 3),
+  };
+});
+
+type EcosystemState = {
+  snapshots: any[];
+  loading: boolean;
+};
+
+type EcosystemAction =
+  | { type: 'loaded'; snapshots: any[] }
+  | { type: 'failed' };
+
+function ecosystemReducer(state: EcosystemState, action: EcosystemAction): EcosystemState {
+  switch (action.type) {
+    case 'loaded':
+      return { snapshots: action.snapshots, loading: false };
+    case 'failed':
+      return { snapshots: DEMO_SNAPSHOTS, loading: false };
+    default:
+      return state;
+  }
+}
+
 export default function EcosystemHealth() {
   const { lastUpdated } = useAdaptiveAI();
-  const [snapshots, setSnapshots] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  // Demo snapshots for local/dev when backend is unreachable or auth blocks requests
-  const DEMO_SNAPSHOTS = React.useMemo(() => {
-    const now = Date.now();
-    return Array.from({ length: 6 }).map((_, i) => ({
-      id: `demo-${i}`,
-      createdAt: new Date(now - (6 - i) * 24 * 60 * 60 * 1000).toISOString(),
-      topItems: ['AI Engineer','Data Scientist','ML Researcher'].slice(0, 3)
-    }));
-  }, []);
+  const [{ snapshots, loading }, dispatch] = useReducer(ecosystemReducer, {
+    snapshots: [],
+    loading: true,
+  });
 
   useEffect(() => {
     let mounted = true;
-    apiClient.get<any>('/ai/decision/snapshots?limit=24').then((res) => {
-      if (!mounted) return;
-      const arr = Array.isArray(res) ? res : (res?.snapshots || []);
-      if (arr && arr.length) setSnapshots(arr);
-      else setSnapshots(DEMO_SNAPSHOTS);
-    }).catch(() => {
-      if (mounted) setSnapshots(DEMO_SNAPSHOTS);
-    }).finally(() => mounted && setLoading(false));
-    return () => { mounted = false; };
+
+    apiClient
+      .get<any>('/ai/decision/snapshots?limit=24')
+      .then((res) => {
+        if (!mounted) return;
+        const arr = Array.isArray(res) ? res : (res?.snapshots || []);
+        dispatch({ type: 'loaded', snapshots: arr.length ? arr : DEMO_SNAPSHOTS });
+      })
+      .catch(() => {
+        if (mounted) dispatch({ type: 'failed' });
+      });
+
+    return () => {
+      mounted = false;
+    };
   }, [lastUpdated]);
 
   const metrics = useMemo(() => {
@@ -46,8 +74,8 @@ export default function EcosystemHealth() {
       <h4 className="text-lg font-semibold">Ecosystem Health</h4>
       <div className="mt-2 grid grid-cols-1 gap-2">
         <div className="flex justify-between"><div className="text-sm">Snapshots</div><div className="font-medium">{metrics.snapshotCount}</div></div>
-        <div className="flex justify-between"><div className="text-sm">Avg snapshot interval</div><div className="font-medium">{metrics.avgIntervalMs ? `${Math.round(metrics.avgIntervalMs/1000)}s` : '—'}</div></div>
-        <div className="flex justify-between"><div className="text-sm">Last snapshot age</div><div className="font-medium">{metrics.lastSnapshotAgeMs != null ? `${Math.round(metrics.lastSnapshotAgeMs/1000)}s` : '—'}</div></div>
+        <div className="flex justify-between"><div className="text-sm">Avg snapshot interval</div><div className="font-medium">{metrics.avgIntervalMs ? `${Math.round(metrics.avgIntervalMs / 1000)}s` : '—'}</div></div>
+        <div className="flex justify-between"><div className="text-sm">Last snapshot age</div><div className="font-medium">{metrics.lastSnapshotAgeMs != null ? `${Math.round(metrics.lastSnapshotAgeMs / 1000)}s` : '—'}</div></div>
         <div className="text-xs text-muted-foreground">These metrics help tune snapshot frequency, animation pacing and synchronization.</div>
       </div>
     </div>

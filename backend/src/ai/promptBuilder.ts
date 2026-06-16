@@ -10,10 +10,10 @@ function cleanList(values: unknown): string[] {
   if (!Array.isArray(values)) return [];
   return Array.from(
     new Set(
-      values
-        .map((value) => normalizeText(value))
-        .map((value) => value.trim())
-        .filter(Boolean)
+      values.flatMap((value) => {
+        const normalized = normalizeText(value).trim();
+        return normalized ? [normalized] : [];
+      })
     )
   ).sort((left, right) => left.localeCompare(right));
 }

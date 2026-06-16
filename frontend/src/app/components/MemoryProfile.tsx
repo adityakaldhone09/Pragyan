@@ -5,7 +5,10 @@ import '../../styles/results-premium.css';
 function averageScoreFrom(entry: any) {
   try {
     const scores = entry?.analysis?.scores || entry?.summary?.scores || entry?.scores || {};
-    const vals = Object.values(scores).map((v: any) => Number(v || 0)).filter((n) => !Number.isNaN(n));
+    const vals = Object.values(scores).flatMap((v: any) => {
+      const n = Number(v || 0);
+      return !Number.isNaN(n) ? [n] : [];
+    });
     if (!vals.length) return 0;
     return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
   } catch {
@@ -74,7 +77,7 @@ export const MemoryProfile: React.FC = () => {
 
         <div>
           <div className="text-xs text-muted-foreground">Unlocked careers</div>
-          <div className="flex gap-2 flex-wrap mt-2">{unlockedCareers.map((c: string, i: number) => <div key={i} className="pill muted">{c}</div>)}</div>
+          <div className="flex gap-2 flex-wrap mt-2">{unlockedCareers.map((c: string) => <div key={c} className="pill muted">{c}</div>)}</div>
         </div>
       </div>
 

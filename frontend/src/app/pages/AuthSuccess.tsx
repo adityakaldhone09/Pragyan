@@ -23,6 +23,7 @@ export function AuthSuccess() {
   const { setSession } = useAuth();
   const [status, setStatus] = useState("Completing secure sign-in...");
   const [error, setError] = useState<string | null>(null);
+  const search = location.search;
 
   useEffect(() => {
     let active = true;
@@ -30,9 +31,9 @@ export function AuthSuccess() {
     async function completeOAuthLogin() {
       try {
         const { accessToken, refreshToken } = readOAuthTokens();
-        const search = new URLSearchParams(location.search);
-        const mode = search.get("mode");
-        const provider = search.get("provider");
+        const searchParams = new URLSearchParams(search);
+        const mode = searchParams.get("mode");
+        const provider = searchParams.get("provider");
         if (!accessToken || !refreshToken) {
           throw new Error("OAuth tokens were not returned by the server. Please try signing in again.");
         }
@@ -83,7 +84,7 @@ export function AuthSuccess() {
     return () => {
       active = false;
     };
-  }, [location.search, navigate, setSession]);
+  }, [search, navigate, setSession]);
 
   return (
     <div className="min-h-screen relative flex items-center justify-center px-6 py-12 overflow-hidden bg-background">

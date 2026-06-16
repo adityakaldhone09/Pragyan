@@ -52,7 +52,7 @@ export default function DecisionPanel() {
       <h4 className="text-lg font-semibold">Adaptive Decision Engine</h4>
       <div className="mt-3 space-y-3">
         {tops.map((t: any, i: number) => (
-          <div key={i} className={`flex items-center justify-between rank-item rank-${i}`}>
+          <div key={t.career} className={`flex items-center justify-between rank-item rank-${i}`}>
             <div>
               <div className="font-medium">{t.career}</div>
               <div className="text-xs text-muted-foreground">{t.reasons?.slice(0,2).join(' • ')}</div>
@@ -60,9 +60,9 @@ export default function DecisionPanel() {
             <div style={{ minWidth: 160 }} className="flex items-center gap-2">
               <div className="text-sm font-semibold score-value">{Math.round((t.adaptiveScore || 0))}</div>
               <div className="flex gap-2">
-                <button className="pill" onClick={() => void sendFeedback({ career: t.career }, 'helpful')}>Helpful</button>
-                <button className="pill muted" onClick={() => void sendFeedback({ career: t.career }, 'not_interested')}>Not interested</button>
-                <button className="pill muted" onClick={() => void sendFeedback({ career: t.career }, 'too_difficult')}>Too difficult</button>
+                <button type="button" className="pill" onClick={() => void sendFeedback({ career: t.career }, 'helpful')}>Helpful</button>
+                <button type="button" className="pill muted" onClick={() => void sendFeedback({ career: t.career }, 'not_interested')}>Not interested</button>
+                <button type="button" className="pill muted" onClick={() => void sendFeedback({ career: t.career }, 'too_difficult')}>Too difficult</button>
               </div>
             </div>
           </div>

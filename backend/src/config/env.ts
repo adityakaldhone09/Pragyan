@@ -64,8 +64,10 @@ export const config = {
     allowedOrigins: (() => {
       const configuredOrigins = (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || 'http://localhost:5173,http://127.0.0.1:5173')
         .split(',')
-        .map((origin) => origin.trim())
-        .filter(Boolean);
+        .flatMap((origin) => {
+          const trimmed = origin.trim();
+          return trimmed ? [trimmed] : [];
+        });
 
       const expandedOrigins = configuredOrigins.flatMap((origin) => {
         try {

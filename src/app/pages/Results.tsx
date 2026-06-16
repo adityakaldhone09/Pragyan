@@ -191,7 +191,7 @@ export function Results() {
                   <ul className="space-y-2">
                     {strengths.map((strength, i) => (
                       <motion.li
-                        key={i}
+                        key={strength}
                         className="flex items-start gap-2 text-muted-foreground"
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
@@ -212,7 +212,7 @@ export function Results() {
                   <ul className="space-y-2">
                     {gaps.map((gap, i) => (
                       <motion.li
-                        key={i}
+                        key={gap}
                         className="flex items-start gap-2 text-muted-foreground"
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
@@ -244,7 +244,7 @@ export function Results() {
           <div className="grid md:grid-cols-2 gap-6">
             {careerMatches.slice(1).map((career, i) => (
               <motion.div
-                key={i}
+                key={career.title}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.8 + i * 0.1 }}
@@ -275,7 +275,7 @@ export function Results() {
                       </div>
                     </div>
 
-                    <button className="w-full py-2 text-sm text-primary hover:text-primary/80 font-medium text-left">
+                    <button type="button" className="w-full py-2 text-sm text-primary hover:text-primary/80 font-medium text-left">
                       View Roadmap →
                     </button>
                   </div>

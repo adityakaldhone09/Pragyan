@@ -165,9 +165,7 @@ export abstract class AIProviderBase implements AIProviderAdapter {
     validateFn: (raw: unknown) => T,
     opts?: AIProviderOptions
   ): Promise<T> {
-    let attempt = 0;
-
-    while (attempt <= this.maxRetries) {
+    const attemptValidation = async (attempt: number): Promise<T> => {
       try {
         const raw = await this.generateJsonRaw(prompt, opts);
 
@@ -184,27 +182,26 @@ export abstract class AIProviderBase implements AIProviderAdapter {
 
         return validateFn(parsed);
       } catch (err: any) {
-        attempt += 1;
-
         if (this.isQuotaOrAuthError(err)) {
           this.markCooldown();
           recordFailure(this.getProviderName(), err?.message || String(err), this.getModel());
           throw err;
         }
 
-        if (!this.shouldRetryValidationError(err) || attempt > this.maxRetries) {
+        if (!this.shouldRetryValidationError(err) || attempt >= this.maxRetries) {
           recordFallback(this.getProviderName(), this.getModel());
           throw err;
         }
 
         recordFailure(this.getProviderName(), '', this.getModel());
 
-        const delayMs = this.baseDelay * Math.pow(2, attempt - 1) + Math.random() * 100;
+        const delayMs = this.baseDelay * Math.pow(2, attempt) + Math.random() * 100;
         await sleep(Math.round(delayMs));
+        return attemptValidation(attempt + 1);
       }
-    }
+    };
 
-    throw new Error('generateJsonValidated: exceeded retries');
+    return attemptValidation(0);
   }
 
   getRuntime(): AIProviderRuntime {

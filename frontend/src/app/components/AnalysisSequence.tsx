@@ -57,7 +57,7 @@ export const AnalysisSequence: React.FC<Props> = ({ onComplete, duration = 3500 
         </div>
 
         <motion.div
-          key={index}
+          key={messages[index]}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0 }}

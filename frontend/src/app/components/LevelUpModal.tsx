@@ -10,7 +10,7 @@ export default function LevelUpModal({ open, onClose, previousLevel, newLevel, n
         <p className="mt-3 text-sm text-muted-foreground">{previousLevel} → {newLevel}</p>
         <p className="mt-2 text-lg font-semibold">New Title: {newTitle || 'Learner'}</p>
         <p className="mt-2 text-sm text-muted-foreground">+{xpGained || 0} XP Earned</p>
-        <div className="mt-6 flex justify-center"><button onClick={onClose} className="rounded-md bg-primary px-4 py-2 text-white">Continue</button></div>
+        <div className="mt-6 flex justify-center"><button type="button" onClick={onClose} className="rounded-md bg-primary px-4 py-2 text-white">Continue</button></div>
       </div>
     </div>
   );

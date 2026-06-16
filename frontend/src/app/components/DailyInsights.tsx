@@ -37,8 +37,8 @@ export default function DailyInsights() {
     <div className="glass p-4 rounded-xl daily-insights">
       <h4 className="text-lg font-semibold">Daily AI Insights</h4>
       <div className="mt-3 space-y-2">
-        {insights.map((s, i) => (
-          <div key={i} className="p-2 rounded-md" style={{ background: 'linear-gradient(90deg, rgba(124,58,237,0.06), rgba(6,182,212,0.03))' }}>{s}</div>
+        {insights.map((s) => (
+          <div key={s} className="p-2 rounded-md" style={{ background: 'linear-gradient(90deg, rgba(124,58,237,0.06), rgba(6,182,212,0.03))' }}>{s}</div>
         ))}
       </div>
     </div>

@@ -13,28 +13,29 @@ function sparklinePath(values: number[], w = 120, h = 36) {
   }).join(' ');
 }
 
+const DEMO_SNAPSHOTS = Array.from({ length: 8 }).map((_, i) => {
+  const now = Date.now();
+  return {
+    id: `demo-${i}`,
+    topItems: [
+      'AI Engineer',
+      'Data Scientist',
+      'ML Researcher',
+      'Product Manager',
+      'UX Designer',
+    ].slice(0, 3 + (i % 3)),
+    snapshot: { skills: { problemSolving: 80 + i, technical: 70 + i } },
+    createdAt: new Date(now - (7 - i) * 24 * 60 * 60 * 1000).toISOString(),
+  };
+});
+
 export default function DecisionHistory() {
   const [list, setList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  // Local demo snapshots to show when backend is unavailable or auth blocked (development only)
-  const DEMO_SNAPSHOTS = useMemo(() => {
-    const now = Date.now();
-    return Array.from({ length: 8 }).map((_, i) => ({
-      id: `demo-${i}`,
-      topItems: [
-        'AI Engineer',
-        'Data Scientist',
-        'ML Researcher',
-        'Product Manager',
-        'UX Designer'
-      ].slice(0, 3 + (i % 3)),
-      snapshot: { skills: { problemSolving: 80 + i, technical: 70 + i } },
-      createdAt: new Date(now - (7 - i) * 24 * 60 * 60 * 1000).toISOString()
-    }));
-  }, []);
 
   useEffect(() => {
     let mounted = true;
+
     (async () => {
       try {
         const res = await apiClient.get<any>('/ai/decision/snapshots?limit=12').catch(() => null);
@@ -42,27 +43,32 @@ export default function DecisionHistory() {
           if (res && Array.isArray(res)) setList(res);
           else setList(DEMO_SNAPSHOTS);
         }
-      } catch (e) {
+      } catch {
         // ignore
       } finally {
         if (mounted) setLoading(false);
       }
     })();
-    return () => { mounted = false; };
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const topCandidates = useMemo(() => {
     const freq: Record<string, number> = {};
     for (const s of list) {
       const tops: string[] = s.topItems || [];
-      tops.slice(0, 5).forEach((t) => (freq[t] = (freq[t] || 0) + 1));
+      tops.slice(0, 5).forEach((t) => {
+        freq[t] = (freq[t] || 0) + 1;
+      });
     }
     return Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 6).map((x) => x[0]);
   }, [list]);
 
   const drift = useMemo(() => {
     if (!list.length) return {} as Record<string, number[]>;
-    const snapshots = list.slice().reverse(); // oldest -> newest
+    const snapshots = list.slice().reverse();
     const maxRank = 8;
     const map: Record<string, number[]> = {};
     const allKeys = new Set<string>(topCandidates);
@@ -98,7 +104,7 @@ export default function DecisionHistory() {
                   <div className="text-xs text-muted-foreground">Rank {latest ?? '—'}</div>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <svg width={150} height={40} viewBox={`0 0 150 40`}>
+                  <svg width={150} height={40} viewBox="0 0 150 40">
                     <path d={path} fill="none" stroke="#7c3aed" strokeWidth={2} strokeOpacity={0.9} strokeLinecap="round" strokeLinejoin="round" />
                     {values.length ? (
                       <circle cx={(values.length - 1) / Math.max(1, values.length - 1) * 140} cy={20} r={4} fill="#fff" stroke="#7c3aed" strokeWidth={1.25} />

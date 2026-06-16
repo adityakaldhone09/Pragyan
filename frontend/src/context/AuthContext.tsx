@@ -87,7 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [persistSession]);
 
   const value = useMemo<AuthContextValue>(() => ({
     user: session?.user || null,
@@ -135,7 +135,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     },
     setSession: persistSession,
-  }), [session, status]);
+  }), [session, status, persistSession]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

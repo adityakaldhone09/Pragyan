@@ -6,7 +6,10 @@ import type { CertificationInput, GithubImportInput, PortfolioProjectInput } fro
 import { Collection, MongoClient, ObjectId } from 'mongodb';
 
 function normalizeTextArray(items?: string[] | null) {
-  return (items || []).map((item) => String(item).trim()).filter(Boolean);
+  return (items || []).flatMap((item) => {
+    const trimmed = String(item).trim();
+    return trimmed ? [trimmed] : [];
+  });
 }
 
 function computeCompletionScore(profile: {
@@ -40,7 +43,7 @@ function computeCompletionScore(profile: {
   return {
     score,
     sections,
-    missing: sections.filter((section) => section.score === 0).map((section) => section.label),
+    missing: sections.flatMap((section) => section.score === 0 ? [section.label] : []),
   };
 }
 

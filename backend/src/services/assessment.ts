@@ -18,20 +18,28 @@ export class AssessmentService {
       
       // Get all careers with their skills and interests via Prisma
       const careers = await prisma.career.findMany({});
-      const skillMappings = await prisma.careerSkillMapping.findMany({});
-      const interestMappings = await prisma.careerInterestMapping.findMany({});
+      const [skillMappings, interestMappings] = await Promise.all([
+        prisma.careerSkillMapping.findMany({}),
+        prisma.careerInterestMapping.findMany({}),
+      ]);
 
       console.log(`[AssessmentService] generateDynamicQuestions: Found ${careers.length} careers, ${skillMappings.length} skill mappings, ${interestMappings.length} interest mappings`);
 
       // Extract unique skills, interests, and categories
       const uniqueSkills = [...new Set(
-        skillMappings.map((sm: any) => sm.skill).filter((s: string) => s && s.trim())
+        skillMappings.flatMap((sm: any) => {
+          const skill = sm.skill?.trim();
+          return skill ? [skill] : [];
+        })
       )];
       const uniqueInterests = [...new Set(
-        interestMappings.map((im: any) => im.interest).filter((i: string) => i && i.trim())
+        interestMappings.flatMap((im: any) => {
+          const interest = im.interest?.trim();
+          return interest ? [interest] : [];
+        })
       )];
       const uniqueCategories = [...new Set(
-        careers.map((c: any) => c.category).filter(Boolean)
+        careers.flatMap((c: any) => c.category ? [c.category] : [])
       )];
 
       console.log(`[AssessmentService] generateDynamicQuestions: Found ${uniqueSkills.length} unique skills, ${uniqueInterests.length} unique interests, ${uniqueCategories.length} categories`);
@@ -398,18 +406,23 @@ export class AssessmentService {
     // Return both persisted record (if available) and deterministic combinedMatches/summary
     // Persist AI memory profile and recommendation history (best-effort, non-blocking)
     try {
-      const scoresValues = Object.values(result.scores || {}).map((v: any) => Number(v || 0)).filter((n) => !Number.isNaN(n));
+      const scoresValues = Object.values(result.scores || {}).flatMap((v: any) => {
+        const n = Number(v || 0);
+        return !Number.isNaN(n) ? [n] : [];
+      });
       const composite = scoresValues.length ? scoresValues.reduce((a: number, b: number) => a + b, 0) / scoresValues.length : 0;
       const profileData = { summary: result, updatedAt: new Date().toISOString() };
 
       await aiMemoryService.saveProfile(userId, profileData, composite, 0).catch(() => null);
 
       // record recommended careers
-      (result.suggestedCareers || []).forEach(async (career: string) => {
-        const raw = (result.scores && result.scores[career]) || undefined;
-        const score = typeof raw === 'number' ? raw : raw ? Number(raw) : undefined;
-        await aiMemoryService.recordRecommendation(userId, { career }, 'assessment', score, 'assessment').catch(() => null);
-      });
+      await Promise.all(
+        (result.suggestedCareers || []).map(async (career: string) => {
+          const raw = (result.scores && result.scores[career]) || undefined;
+          const score = typeof raw === 'number' ? raw : raw ? Number(raw) : undefined;
+          await aiMemoryService.recordRecommendation(userId, { career }, 'assessment', score, 'assessment').catch(() => null);
+        })
+      );
     } catch (e) {
       // swallow errors to avoid blocking assessment flow
       console.warn('[AssessmentService] Non-blocking AI memory persistence failed:', (e as any)?.message || e);
@@ -549,16 +562,18 @@ export class AssessmentService {
     });
 
     // create questions linked to assessment
-    for (const q of questions) {
-      await prisma.assessmentQuestion.create({
-        data: {
-          assessmentId: assessment.id,
-          questionText: q.questionText,
-          options: q.options,
-          category: q.category ?? '',
-        },
-      });
-    }
+    await Promise.all(
+      questions.map((q) =>
+        prisma.assessmentQuestion.create({
+          data: {
+            assessmentId: assessment.id,
+            questionText: q.questionText,
+            options: q.options,
+            category: q.category ?? '',
+          },
+        })
+      )
+    );
 
     // return assessment with its questions
     const created = await prisma.assessment.findUnique({

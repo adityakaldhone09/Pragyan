@@ -331,17 +331,15 @@ export function Roadmap() {
       ? progress.completedTasks.filter((item) => item !== taskKey)
       : Array.from(new Set([...progress.completedTasks, taskKey]));
 
-    const nextCompletedDays = selectedLearningDays
-      .filter((roadmapDay) => {
-        const dayTasks = roadmapDay.tasks || [];
-        if (!dayTasks.length) {
-          return false;
-        }
+    const nextCompletedDays = selectedLearningDays.flatMap((roadmapDay) => {
+      const dayTasks = roadmapDay.tasks || [];
+      if (!dayTasks.length) {
+        return [];
+      }
 
-        const dayKeys = dayTasks.map((_, index) => getTaskKey(roadmapId, roadmapDay.day, index));
-        return dayKeys.every((item) => nextCompletedTasks.includes(item));
-      })
-      .map((roadmapDay) => `day-${roadmapDay.day}`);
+      const dayKeys = dayTasks.map((_, index) => getTaskKey(roadmapId, roadmapDay.day, index));
+      return dayKeys.every((item) => nextCompletedTasks.includes(item)) ? [`day-${roadmapDay.day}`] : [];
+    });
 
     const nextProgress: RoadmapProgressState = {
       completedTasks: nextCompletedTasks,
@@ -422,8 +420,11 @@ export function Roadmap() {
           roadmapCategory: selectedRoadmap.category,
           currentDay: roadmapProgress?.currentDay || currentDay?.day || 1,
           completedTopics: selectedLearningDays
-            .filter((day) => roadmapProgress?.completedDays?.includes(`day-${day.day}`))
-            .flatMap((day) => day.dailyTopics || [])
+            .flatMap((day) =>
+              roadmapProgress?.completedDays?.includes(`day-${day.day}`)
+                ? (day.dailyTopics || [])
+                : []
+            )
             .slice(0, 20),
           weakSkills: selectedRoadmap.requiredSkills?.slice(0, 8) || [],
           level: mentorLevel,
@@ -689,8 +690,8 @@ export function Roadmap() {
                   <div key={type} className="rounded-2xl border border-white/10 bg-background/60 p-4">
                     <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">{type}</p>
                     <div className="mt-3 space-y-3">
-                      {(planTaskGroups[type] || []).map((task, index) => (
-                        <div key={`${type}-${index}`} className="rounded-xl border border-white/10 bg-white/5 p-3">
+                      {(planTaskGroups[type] || []).map((task) => (
+                        <div key={`${type}-${task.title}`} className="rounded-xl border border-white/10 bg-white/5 p-3">
                           <p className="text-sm font-medium text-foreground">{task.title}</p>
                           <p className="mt-1 text-xs text-muted-foreground">{task.minutes} min</p>
                           {task.details ? <p className="mt-2 text-xs text-muted-foreground/80">{task.details}</p> : null}
@@ -966,14 +967,14 @@ export function Roadmap() {
             ) : null}
 
             <div className="flex flex-wrap gap-2 mb-6">
-              <button
+              <button type="button"
                 onClick={() => setSelectedCategory(null)}
                 className={`px-3 py-2 rounded-full text-sm border transition-all ${selectedCategory === null ? "bg-primary/20 text-primary border-primary/40" : "bg-card/40 text-muted-foreground border-border"}`}
               >
                 All
               </button>
               {categories.map((category) => (
-                <button
+                <button type="button"
                   key={category}
                   onClick={() => setSelectedCategory(category)}
                   className={`px-3 py-2 rounded-full text-sm border transition-all ${selectedCategory === category ? "bg-primary/20 text-primary border-primary/40" : "bg-card/40 text-muted-foreground border-border"}`}
@@ -1052,7 +1053,7 @@ export function Roadmap() {
                                       <span className={module.completed || status === "in-progress" ? "text-foreground" : "text-muted-foreground"}>{module.name || module.title || module.id || "Module"}</span>
                                     </div>
                                     {!module.completed && status === "in-progress" && (
-                                      <button className="text-primary hover:text-primary/80 text-sm font-medium flex items-center gap-1">
+                                      <button type="button" className="text-primary hover:text-primary/80 text-sm font-medium flex items-center gap-1">
                                         <Play className="w-4 h-4" />
                                         Start
                                       </button>
@@ -1247,7 +1248,7 @@ export function Roadmap() {
             <SectionHeader title="Available Roadmaps" subtitle="Switch between domains without leaving the platform" />
             <div className="space-y-3 max-h-[560px] overflow-auto pr-1">
               {roadmapList.map((roadmap) => (
-                <button
+                <button type="button"
                   key={roadmap.id}
                   onClick={() => setSelectedRoadmap(roadmap)}
                   className={`w-full text-left p-4 rounded-xl border transition-all ${selectedRoadmap?.id === roadmap.id ? "bg-primary/10 border-primary/30" : "bg-card/40 border-border hover:border-primary/20"}`}

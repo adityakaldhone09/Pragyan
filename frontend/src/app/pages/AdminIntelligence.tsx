@@ -1,36 +1,72 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useReducer } from 'react';
 import { RequireAuth } from '@/app/components/RequireAuth';
 import { useAuth } from '@/context/useAuth';
 import { intelligenceService } from '@/services/intelligenceService';
 
 type AIHealthSnapshot = Awaited<ReturnType<typeof intelligenceService.getAiHealth>>;
 
+type AdminState = {
+  payload: any | null;
+  aiHealth: AIHealthSnapshot | null;
+  loading: boolean;
+  healthLoading: boolean;
+  error: string | null;
+  healthError: string | null;
+};
+
+type AdminAction =
+  | { type: 'debug_start' }
+  | { type: 'health_start' }
+  | { type: 'debug_success'; payload: any }
+  | { type: 'debug_error'; error: string }
+  | { type: 'health_success'; aiHealth: AIHealthSnapshot }
+  | { type: 'health_error'; error: string };
+
+function adminReducer(state: AdminState, action: AdminAction): AdminState {
+  switch (action.type) {
+    case 'debug_start':
+      return { ...state, loading: true, error: null };
+    case 'health_start':
+      return { ...state, healthLoading: true, healthError: null };
+    case 'debug_success':
+      return { ...state, payload: action.payload, loading: false };
+    case 'debug_error':
+      return { ...state, error: action.error, loading: false };
+    case 'health_success':
+      return { ...state, aiHealth: action.aiHealth, healthLoading: false };
+    case 'health_error':
+      return { ...state, healthError: action.error, healthLoading: false };
+    default:
+      return state;
+  }
+}
+
 export default function AdminIntelligence() {
   const { user } = useAuth();
-  const [payload, setPayload] = useState<any | null>(null);
-  const [aiHealth, setAiHealth] = useState<AIHealthSnapshot | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [healthLoading, setHealthLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [healthError, setHealthError] = useState<string | null>(null);
+  const [state, dispatch] = useReducer(adminReducer, {
+    payload: null,
+    aiHealth: null,
+    loading: false,
+    healthLoading: false,
+    error: null,
+    healthError: null,
+  });
 
   useEffect(() => {
-    if (!user) return;
-    if (user.role !== 'ADMIN') return;
+    if (!user || user.role !== 'ADMIN') return;
 
-    setLoading(true);
-    setHealthLoading(true);
+    dispatch({ type: 'debug_start' });
+    dispatch({ type: 'health_start' });
+
     intelligenceService
       .getDebugPayload()
-      .then((res) => setPayload(res.data ?? res))
-      .catch((err) => setError(err?.message || 'Failed to fetch debug payload'))
-      .finally(() => setLoading(false));
+      .then((res) => dispatch({ type: 'debug_success', payload: res.data ?? res }))
+      .catch((err) => dispatch({ type: 'debug_error', error: err?.message || 'Failed to fetch debug payload' }));
 
     intelligenceService
       .getAiHealth()
-      .then((res) => setAiHealth(res.data ?? res))
-      .catch((err) => setHealthError(err?.message || 'Failed to fetch AI health'))
-      .finally(() => setHealthLoading(false));
+      .then((res) => dispatch({ type: 'health_success', aiHealth: res.data ?? res }))
+      .catch((err) => dispatch({ type: 'health_error', error: err?.message || 'Failed to fetch AI health' }));
   }, [user]);
 
   if (!user) {
@@ -44,6 +80,8 @@ export default function AdminIntelligence() {
       <div className="p-8">Insufficient permissions — admin only.</div>
     );
   }
+
+  const { payload, aiHealth, loading, healthLoading, error, healthError } = state;
 
   return (
     <RequireAuth>
@@ -115,7 +153,7 @@ export default function AdminIntelligence() {
             <h2 className="text-lg font-medium mb-2">Explainability / Top Factors</h2>
             <ul className="list-disc pl-5 text-sm">
               {payload?.explanations?.length ? (
-                payload.explanations.map((e: string, i: number) => <li key={i}>{e}</li>)
+                payload.explanations.map((e: string) => <li key={e}>{e}</li>)
               ) : (
                 <li>No explanations provided</li>
               )}

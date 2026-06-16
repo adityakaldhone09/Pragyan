@@ -136,7 +136,7 @@ export const CinematicRadar: React.FC<Props> = ({ scores = {}, size = 320 }) => 
 
         {/* background rings with depth */}
         {[0.25, 0.5, 0.75, 1].map((rFrac, i) => (
-          <circle key={i} cx={cx} cy={cy} r={maxR * rFrac} fill="none" strokeOpacity={0.04 - i*0.005} stroke="#8b5cf6" strokeWidth={1} />
+          <circle key={`radar-ring-${rFrac}`} cx={cx} cy={cy} r={maxR * rFrac} fill="none" strokeOpacity={0.04 - i*0.005} stroke="#8b5cf6" strokeWidth={1} />
         ))}
 
         {/* confidence arc */}
@@ -157,7 +157,7 @@ export const CinematicRadar: React.FC<Props> = ({ scores = {}, size = 320 }) => 
 
         {/* node dots */}
         {points.map((p, i) => (
-          <motion.g key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }}>
+          <motion.g key={p.subject} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }}>
             <motion.circle cx={p.x} cy={p.y} r={4 + (p.r / maxR) * 3} fill="#fff" fillOpacity={0.98} stroke="#7c3aed" strokeWidth={1.25} />
             <motion.circle cx={p.x} cy={p.y} r={8 + (p.r / maxR) * 8} fill="url(#glow)" opacity={0.45} filter="url(#softblur)" />
           </motion.g>

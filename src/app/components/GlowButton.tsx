@@ -14,6 +14,7 @@ export function GlowButton({
   glow = true,
   className,
   children,
+  type = "button",
   ...props
 }: GlowButtonProps) {
   const variantClasses = {
@@ -41,6 +42,7 @@ export function GlowButton({
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       transition={{ duration: 0.2 }}
+      type={type}
       {...props}
     >
       {children}

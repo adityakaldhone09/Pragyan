@@ -16,13 +16,18 @@ export default function EvolutionTimeline() {
   const { decision } = useAdaptiveAI();
 
   useEffect(() => {
-    // when adaptive decision updates, add a timeline event reflecting the mutation
-    if (decision) {
-      const note = `AI adapted recommendations — top: ${((decision.evaluated || [])[0] || {}).career || '—'}`;
-      setEvents((prev) => [{ id: `snap-${Date.now()}`, title: 'AI Adapted', description: note, date: new Date().toISOString(), type: 'adaptive' }, ...prev].slice(0, 8));
-    }
+    if (!decision) return;
 
+    const note = `AI adapted recommendations — top: ${((decision.evaluated || [])[0] || {}).career || '—'}`;
+    setEvents((prev) => [
+      { id: `snap-${Date.now()}`, title: 'AI Adapted', description: note, date: new Date().toISOString(), type: 'adaptive' },
+      ...prev,
+    ].slice(0, 8));
+  }, [decision]);
+
+  useEffect(() => {
     let mounted = true;
+
     (async () => {
       try {
         const [history, memory] = await Promise.allSettled([
@@ -48,20 +53,21 @@ export default function EvolutionTimeline() {
           }
         }
 
-        // fallback / synthetic events if none
         if (!collected.length) {
           collected.push({ id: 's-1', title: 'Welcome', description: 'AI companion activated', date: new Date().toISOString(), type: 'system' });
         }
 
         if (mounted) setEvents(collected.sort((a, b) => (b.date || '').localeCompare(a.date || '')));
-      } catch (e) {
-        setEvents([{ id: 'err', title: 'Data unavailable', description: 'Unable to fetch evolution timeline' }]);
+      } catch {
+        if (mounted) setEvents([{ id: 'err', title: 'Data unavailable', description: 'Unable to fetch evolution timeline' }]);
       } finally {
         if (mounted) setLoading(false);
       }
     })();
 
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   if (loading) return <div className="glass p-4">Loading evolution timeline...</div>;

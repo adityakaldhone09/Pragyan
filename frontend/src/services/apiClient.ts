@@ -120,7 +120,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     }
 
     const fetchPromise = (async () => {
-    for (let attempt = 0; attempt <= retryCount; attempt += 1) {
+    const fetchAttempt = async (attempt: number): Promise<T> => {
       try {
         const response = await fetch(resolveUrl(path), {
           ...rest,
@@ -146,25 +146,22 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
         lastError = error;
 
         if (isAbortError(error)) {
-          break;
+          throw new Error("Request timed out. Please try again.");
         }
 
         if (attempt < retryCount && (rest.method === undefined || String(rest.method).toUpperCase() === "GET")) {
-          continue;
+          return fetchAttempt(attempt + 1);
         }
-        break;
+
+        if (lastError instanceof Error) {
+          throw lastError;
+        }
+
+        throw new Error("Request failed");
       }
-    }
+    };
 
-    if (isAbortError(lastError)) {
-      throw new Error("Request timed out. Please try again.");
-    }
-
-    if (lastError instanceof Error) {
-      throw lastError;
-    }
-
-    throw new Error("Request failed");
+    return fetchAttempt(0);
     })();
 
     if (shouldCache && resolvedCacheKey) {

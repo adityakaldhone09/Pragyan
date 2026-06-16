@@ -130,7 +130,7 @@ export function Dashboard() {
             }
           ].map((stat, i) => (
             <motion.div
-              key={i}
+              key={stat.label}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 + i * 0.1 }}
@@ -185,7 +185,7 @@ export function Dashboard() {
                   }
                 ].map((roadmap, i) => (
                   <div
-                    key={i}
+                    key={roadmap.title}
                     className="p-4 rounded-lg bg-gradient-to-r from-primary/5 to-transparent border border-primary/20"
                   >
                     <div className="flex items-center justify-between mb-2">
@@ -251,9 +251,9 @@ export function Dashboard() {
                     { label: "Interest Fit", value: "89%" },
                     { label: "Salary Range", value: "$120K+" },
                     { label: "Job Growth", value: "High" }
-                  ].map((item, i) => (
+                  ].map((item) => (
                     <div
-                      key={i}
+                      key={item.label}
                       className="p-3 rounded-lg bg-gradient-to-br from-secondary/10 to-transparent border border-secondary/20 text-center"
                     >
                       <p className="text-sm text-muted-foreground mb-1">{item.label}</p>
@@ -308,8 +308,8 @@ export function Dashboard() {
                 priority: "Medium",
                 time: "1 month"
               }
-            ].map((rec, i) => (
-              <GlassCard key={i} hover>
+            ].map((rec) => (
+              <GlassCard key={rec.title} hover>
                 <div className="space-y-4">
                   <div className="flex items-start justify-between">
                     <GradientIconWrapper size="sm" gradient="purple">
@@ -331,7 +331,7 @@ export function Dashboard() {
                   </div>
                   <div className="flex items-center justify-between pt-4 border-t border-border">
                     <span className="text-xs text-muted-foreground">{rec.time}</span>
-                    <button className="text-sm text-primary hover:text-primary/80 font-medium">
+                    <button type="button" className="text-sm text-primary hover:text-primary/80 font-medium">
                       Start Now →
                     </button>
                   </div>

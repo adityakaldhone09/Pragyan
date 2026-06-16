@@ -59,7 +59,7 @@ export function NeuralBackground() {
             if (distance < 20) {
               return (
                 <motion.line
-                  key={`${i}-${j}`}
+                  key={`${node.id}-${otherNode.id}`}
                   x1={`${node.x}%`}
                   y1={`${node.y}%`}
                   x2={`${otherNode.x}%`}

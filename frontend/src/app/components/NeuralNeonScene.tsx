@@ -28,9 +28,8 @@ export default function NeuralNeonScene({ confidence = 0.7 }: Props) {
   const rafRef = useRef<number | null>(null);
   const runningRef = useRef(true);
 
-  const { decision, lastUpdated } = (() => {
-    try { return useAdaptiveAI(); } catch { return { decision: undefined, lastUpdated: undefined, refresh: async () => {} }; }
-  })();
+  const adaptiveAI = useAdaptiveAI();
+  const lastUpdated = adaptiveAI?.lastUpdated ?? null;
 
   useEffect(() => {
     let THREE: any;

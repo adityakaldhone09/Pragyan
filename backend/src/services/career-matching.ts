@@ -57,16 +57,13 @@ class CareerMatchingEngine {
         return [];
       }
 
+      const matchResults = await Promise.all(
+        careers.map((career) => this.scoreCareerMatch(career, answers, db, userId))
+      );
+
       const matches: CareerMatchResult[] = [];
 
-      for (const career of careers) {
-        const match = await this.scoreCareerMatch(
-          career,
-          answers,
-          db,
-          userId
-        );
-
+      for (const match of matchResults) {
         if (match.matchScore > 0.3) {
           matches.push(match);
         } else if (match.matchScore > 0) {
@@ -105,8 +102,7 @@ class CareerMatchingEngine {
       ...(answers.workStyle || []),
       ...(answers.careerGoals || []),
     ]
-      .map((item) => item.toLowerCase())
-      .flatMap((item) => item.split(/[^a-z0-9+]+/).filter(Boolean));
+      .flatMap((item) => item.toLowerCase().split(/[^a-z0-9+]+/).flatMap((token) => token ? [token] : []));
 
     // Get career skills and interests
     const skillMappings = await db
@@ -386,28 +382,30 @@ class CareerMatchingEngine {
       const db = client.db('Pragyan');
       const collection = db.collection('CareerMatch');
 
-      for (const match of matches) {
-        await collection.updateOne(
-          { userId, careerId: match.careerId },
-          {
-            $set: {
-              userId,
-              careerId: match.careerId,
-              matchScore: match.matchScore,
-              confidenceLevel: match.confidenceLevel,
-              careerTitle: match.careerTitle,
-              requiredSkills: match.requiredSkills,
-              recommendedSkills: match.recommendedSkills,
-              skillGaps: match.skillGaps,
-              educationMatch: match.educationMatch,
-              experienceMatch: match.experienceMatch,
-              reasons: match.reasons,
-              updatedAt: new Date(),
+      await Promise.all(
+        matches.map((match) =>
+          collection.updateOne(
+            { userId, careerId: match.careerId },
+            {
+              $set: {
+                userId,
+                careerId: match.careerId,
+                matchScore: match.matchScore,
+                confidenceLevel: match.confidenceLevel,
+                careerTitle: match.careerTitle,
+                requiredSkills: match.requiredSkills,
+                recommendedSkills: match.recommendedSkills,
+                skillGaps: match.skillGaps,
+                educationMatch: match.educationMatch,
+                experienceMatch: match.experienceMatch,
+                reasons: match.reasons,
+                updatedAt: new Date(),
+              },
             },
-          },
-          { upsert: true }
-        );
-      }
+            { upsert: true }
+          )
+        )
+      );
     } finally {
       await client.close();
     }

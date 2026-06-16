@@ -47,9 +47,10 @@ function canonicalize(value: unknown): unknown {
   }
 
   if (Array.isArray(value)) {
-    const normalized = value
-      .map((item) => canonicalize(item))
-      .filter((item) => !isEmptyValue(item));
+    const normalized = value.flatMap((item) => {
+      const canonical = canonicalize(item);
+      return !isEmptyValue(canonical) ? [canonical] : [];
+    });
 
     return Array.from(new Set(normalized.map((item) => JSON.stringify(item))))
       .sort()
@@ -58,8 +59,10 @@ function canonicalize(value: unknown): unknown {
 
   if (typeof value === 'object') {
     return Object.entries(value as Record<string, unknown>)
-      .map(([key, item]) => [key, canonicalize(item)] as const)
-      .filter(([, item]) => !isEmptyValue(item))
+      .flatMap(([key, item]) => {
+        const canonical = canonicalize(item);
+        return !isEmptyValue(canonical) ? [[key, canonical] as const] : [];
+      })
       .sort(([left], [right]) => left.localeCompare(right))
       .reduce<Record<string, unknown>>((accumulator, [key, item]) => {
         accumulator[key] = item;

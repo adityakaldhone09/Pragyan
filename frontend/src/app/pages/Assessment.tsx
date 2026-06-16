@@ -251,7 +251,7 @@ export function Assessment() {
                     {currentQuestion.options.map((option) => {
                       const isSelected = selectedAnswer === option;
                       return (
-                        <motion.button
+                        <motion.button type="button"
                           key={option}
                           onClick={() => setSelectedAnswer(option)}
                           className={`w-full p-4 rounded-lg border-2 transition-all text-left relative overflow-hidden ${
@@ -289,7 +289,7 @@ export function Assessment() {
                   )}
 
                   <div className="flex items-center justify-between pt-4 gap-4">
-                    <button
+                    <button type="button"
                       onClick={() => handlePrevious()}
                       disabled={questionHistory.length <= 1}
                       className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center gap-2"

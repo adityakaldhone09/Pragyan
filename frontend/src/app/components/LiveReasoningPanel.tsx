@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useReducer } from 'react';
 import { motion } from 'motion/react';
 import '../../styles/results-premium.css';
 
@@ -13,13 +13,40 @@ const streaming = [
   'Generating adaptive intelligence...',
 ];
 
+type ReasoningState = {
+  lineIndex: number;
+  text: string;
+  cursorOn: boolean;
+};
+
+type ReasoningAction =
+  | { type: 'set_text'; text: string }
+  | { type: 'next_line' }
+  | { type: 'toggle_cursor' };
+
+function reasoningReducer(state: ReasoningState, action: ReasoningAction): ReasoningState {
+  switch (action.type) {
+    case 'set_text':
+      return { ...state, text: action.text };
+    case 'next_line':
+      return { lineIndex: (state.lineIndex + 1) % streaming.length, text: '' };
+    case 'toggle_cursor':
+      return { ...state, cursorOn: !state.cursorOn };
+    default:
+      return state;
+  }
+}
+
 export const LiveReasoningPanel: React.FC<Props> = ({ visible = true, speed = 36 }) => {
-  const [lineIndex, setLineIndex] = useState(0);
-  const [text, setText] = useState('');
-  const [cursorOn, setCursorOn] = useState(true);
+  const [{ lineIndex, text, cursorOn }, dispatch] = useReducer(reasoningReducer, {
+    lineIndex: 0,
+    text: '',
+    cursorOn: true,
+  });
 
   useEffect(() => {
     if (!visible) return;
+
     let mounted = true;
     let charTimer: number | undefined;
     let switchTimer: number | undefined;
@@ -27,24 +54,25 @@ export const LiveReasoningPanel: React.FC<Props> = ({ visible = true, speed = 36
     const typeLine = (idx: number) => {
       const line = streaming[idx];
       let i = 0;
-      setText('');
+      dispatch({ type: 'set_text', text: '' });
+
       const tick = () => {
         if (!mounted) return;
         if (i <= line.length) {
-          setText(line.slice(0, i));
+          dispatch({ type: 'set_text', text: line.slice(0, i) });
           i += 1;
           charTimer = window.setTimeout(tick, speed);
         } else {
-          // pause then move to next
-          switchTimer = window.setTimeout(() => setLineIndex((p) => (p + 1) % streaming.length), 700 + Math.random() * 700);
+          switchTimer = window.setTimeout(() => dispatch({ type: 'next_line' }), 700 + Math.random() * 700);
         }
       };
+
       tick();
     };
 
     typeLine(lineIndex);
 
-    const blink = window.setInterval(() => setCursorOn((s) => !s), 450);
+    const blink = window.setInterval(() => dispatch({ type: 'toggle_cursor' }), 450);
 
     return () => {
       mounted = false;
@@ -52,8 +80,7 @@ export const LiveReasoningPanel: React.FC<Props> = ({ visible = true, speed = 36
       if (switchTimer) clearTimeout(switchTimer);
       clearInterval(blink);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lineIndex, visible]);
+  }, [lineIndex, visible, speed]);
 
   return (
     <motion.div

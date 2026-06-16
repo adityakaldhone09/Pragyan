@@ -17,7 +17,7 @@ export default function AdaptiveCore({ size = 220, confidence = 0.78 }: Props) {
       controls.start({ '--pulse': [0.9, 1.06, 0.96], transition: { duration: 6, repeat: Infinity, ease: 'easeInOut' } } as any);
     };
     seq();
-  }, []);
+  }, [controls]);
 
   useEffect(() => {
     const el = containerRef.current;

@@ -1,30 +1,54 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useReducer, useState } from 'react';
 import { RequireAuth } from '@/app/components/RequireAuth';
 import { useAuth } from '@/context/useAuth';
 import { intelligenceService } from '@/services/intelligenceService';
 
+type AuditState = {
+  rows: any[];
+  loading: boolean;
+  total: number;
+};
+
+type AuditAction =
+  | { type: 'fetch_start' }
+  | { type: 'fetch_success'; rows: any[]; total: number }
+  | { type: 'fetch_done' };
+
+function auditReducer(state: AuditState, action: AuditAction): AuditState {
+  switch (action.type) {
+    case 'fetch_start':
+      return { ...state, loading: true };
+    case 'fetch_success':
+      return { rows: action.rows, total: action.total, loading: false };
+    case 'fetch_done':
+      return { ...state, loading: false };
+    default:
+      return state;
+  }
+}
+
 export default function AdminIntelligenceAudits() {
   const { user } = useAuth();
-  const [rows, setRows] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [{ rows, loading, total }, dispatch] = useReducer(auditReducer, {
+    rows: [],
+    loading: false,
+    total: 0,
+  });
   const [page, setPage] = useState(1);
   const [pageSize] = useState(20);
-  const [total, setTotal] = useState(0);
   const [endpointFilter, setEndpointFilter] = useState('');
 
   useEffect(() => {
     if (!user || user.role !== 'ADMIN') return;
 
-    setLoading(true);
+    dispatch({ type: 'fetch_start' });
     intelligenceService
       .getAuditLogs({ page, pageSize, endpoint: endpointFilter || undefined })
       .then((res) => {
         const data = res.data ?? res;
-        setRows(data.rows || []);
-        setTotal(data.total || 0);
+        dispatch({ type: 'fetch_success', rows: data.rows || [], total: data.total || 0 });
       })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+      .catch(() => dispatch({ type: 'fetch_done' }));
   }, [user, page, pageSize, endpointFilter]);
 
   if (!user) return <div className="p-6">Please sign in.</div>;
@@ -37,7 +61,7 @@ export default function AdminIntelligenceAudits() {
 
         <div className="flex items-center gap-2">
           <input value={endpointFilter} onChange={(e) => setEndpointFilter(e.target.value)} placeholder="Filter endpoint" className="input" />
-          <button className="btn" onClick={() => setPage(1)}>Apply</button>
+          <button type="button" className="btn" onClick={() => setPage(1)}>Apply</button>
         </div>
 
         <div className="bg-card p-2 rounded">
@@ -75,8 +99,8 @@ export default function AdminIntelligenceAudits() {
         <div className="flex items-center justify-between">
           <div>Showing {rows.length} of {total}</div>
           <div className="flex gap-2">
-            <button className="btn" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>Prev</button>
-            <button className="btn" onClick={() => setPage((p) => p + 1)} disabled={page * pageSize >= total}>Next</button>
+            <button type="button" className="btn" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>Prev</button>
+            <button type="button" className="btn" onClick={() => setPage((p) => p + 1)} disabled={page * pageSize >= total}>Next</button>
           </div>
         </div>
       </div>

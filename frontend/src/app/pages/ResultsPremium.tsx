@@ -10,7 +10,8 @@ import EvolutionTimeline from '../components/EvolutionTimeline';
 import DriftVisualization from '../components/DriftVisualization';
 
 const ResultsCanvas: React.FC = () => {
-  const { decision } = (() => { try { return useAdaptiveAI(); } catch { return { decision: undefined }; } })();
+  const adaptiveAI = useAdaptiveAI();
+  const decision = adaptiveAI?.decision ?? null;
   const confidence = Math.max(0, Math.min(1, Number(decision?.confidence ?? 0.72)));
 
   return (

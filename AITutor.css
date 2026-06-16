@@ -1,0 +1,46 @@
+.ai-tutor-container {
+  max-width: 800px;
+  margin: 40px auto;
+  background-color: var(--surface-color);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  height: 700px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--border-color);
+  transition: all 0.3s ease;
+}
+
+.ai-tutor-message-bubble {
+  display: inline-block;
+  padding: 12px 18px;
+  max-width: 80%;
+  line-height: 1.5;
+  font-size: 15px;
+  transition: all 0.3s ease;
+}
+
+.ai-tutor-message-bubble--user {
+  border-radius: 18px 18px 2px 18px;
+  background: var(--accent-color);
+  color: white;
+  box-shadow: 0 4px 12px rgba(74, 144, 226, 0.2);
+}
+
+.ai-tutor-message-bubble--model {
+  border-radius: 18px 18px 18px 2px;
+  background: var(--ai-bubble-bg);
+  color: var(--ai-bubble-text);
+  box-shadow: none;
+}
+
+.ai-tutor-send-button {
+  padding: 10px 24px;
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}

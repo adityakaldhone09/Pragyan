@@ -213,7 +213,11 @@ export function buildJourneyDays(
 
   return sourceDays.map((day, index) => {
     const dayNumber = Number(day.day || index + 1);
-    const topics = Array.from(new Set([...(day.dailyTopics || []), ...(day.tasks || []), day.focus || day.deliverable || roadmap.title].filter(Boolean).map(String)));
+    const topics = Array.from(new Set([
+      ...(day.dailyTopics || []),
+      ...(day.tasks || []),
+      day.focus || day.deliverable || roadmap.title,
+    ].flatMap((item) => item ? [String(item)] : [])));
     const resources = (day.resources || []).map((resource) => ({
       title: resource.title || 'Learning resource',
       provider: resource.provider,
@@ -279,22 +283,29 @@ export function buildSkillProgress(
   userSkills: string[],
   weakSkills: string[]
 ): JourneySkillProgress[] {
-  const normalizedUserSkills = new Set(userSkills.map((skill) => skill.toLowerCase().trim()).filter(Boolean));
-  const normalizedWeakSkills = new Set(weakSkills.map((skill) => skill.toLowerCase().trim()).filter(Boolean));
+  const normalizedUserSkills = new Set(userSkills.flatMap((skill) => {
+    const normalized = skill.toLowerCase().trim();
+    return normalized ? [normalized] : [];
+  }));
+  const normalizedWeakSkills = new Set(weakSkills.flatMap((skill) => {
+    const normalized = skill.toLowerCase().trim();
+    return normalized ? [normalized] : [];
+  }));
   const combinedSkills = Array.from(new Set([...requiredSkills, ...weakSkills, ...userSkills]));
 
-  return combinedSkills.filter(Boolean).map((skill) => {
+  return combinedSkills.flatMap((skill) => {
+    if (!skill) return [];
     const normalized = skill.toLowerCase().trim();
     const completed = normalizedUserSkills.has(normalized);
     const weak = normalizedWeakSkills.has(normalized) || (!completed && requiredSkills.some((required) => required.toLowerCase().trim() === normalized));
     const mastery = completed ? (weak ? 76 : 92) : weak ? 42 : 64;
 
-    return {
+    return [{
       skill,
       mastery,
       completed,
       weak,
-    };
+    }];
   });
 }
 

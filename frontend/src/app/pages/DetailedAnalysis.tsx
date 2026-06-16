@@ -172,7 +172,7 @@ export function DetailedAnalysis() {
       overview: enhancements?.summary || "This analysis blends deterministic assessment scoring with AI-assisted explanation layers so the next move is clear and actionable.",
       confidenceBars: scoreToBars(Math.max(deterministicScore, topCareer?.confidenceLevel === "high" ? 92 : topCareer?.confidenceLevel === "medium" ? 78 : 66)),
     };
-  }, [deterministicScore, enhancements?.nextActions, enhancements?.summary, roadmaps, summary?.strengths, summary?.suggestedCareers, summary?.weaknesses, topCareer?.confidenceLevel]);
+  }, [deterministicScore, enhancements?.nextActions, enhancements?.summary, roadmaps, summary?.strengths, summary?.weaknesses, topCareer?.confidenceLevel]);
 
   if (loading && !topCareer) {
     return (
@@ -213,7 +213,7 @@ export function DetailedAnalysis() {
 
       <div className="max-w-7xl mx-auto px-6 py-12 space-y-10 relative z-10">
         <Link to="/results">
-          <motion.button className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors" whileHover={{ x: -5 }}>
+          <motion.button type="button" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors" whileHover={{ x: -5 }}>
             <ArrowLeft className="w-4 h-4" />
             Back to Results
           </motion.button>
@@ -271,9 +271,9 @@ export function DetailedAnalysis() {
                       <span className="font-medium capitalize">{topCareer?.confidenceLevel || "high"}</span>
                     </div>
                     <div className="space-y-2">
-                      {analysis.confidenceBars.map((value, index) => (
-                        <div key={index} className="h-2 rounded-full bg-muted overflow-hidden">
-                          <motion.div className="h-full rounded-full bg-gradient-to-r from-secondary via-primary to-accent" initial={{ width: 0 }} animate={{ width: `${value}%` }} transition={{ duration: 0.8, delay: 0.15 * index }} />
+                      {analysis.confidenceBars.map((value, barIndex) => (
+                        <div key={`confidence-bar-${value}`} className="h-2 rounded-full bg-muted overflow-hidden">
+                          <motion.div className="h-full rounded-full bg-gradient-to-r from-secondary via-primary to-accent" initial={{ width: 0 }} animate={{ width: `${value}%` }} transition={{ duration: 0.8, delay: 0.15 * barIndex }} />
                         </div>
                       ))}
                     </div>

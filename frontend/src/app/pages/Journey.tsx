@@ -205,10 +205,10 @@ export function Journey() {
             <SectionHeader title="Career Journey unavailable" subtitle="Complete an assessment or refresh your recommendations to generate a journey." />
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <Link to="/assessment">
-                <button className="rounded-lg bg-primary px-5 py-3 font-medium text-primary-foreground">Start Assessment</button>
+                <button type="button" className="rounded-lg bg-primary px-5 py-3 font-medium text-primary-foreground">Start Assessment</button>
               </Link>
               <Link to="/dashboard">
-                <button className="rounded-lg border border-white/10 px-5 py-3 font-medium text-foreground">Go to Dashboard</button>
+                <button type="button" className="rounded-lg border border-white/10 px-5 py-3 font-medium text-foreground">Go to Dashboard</button>
               </Link>
             </div>
           </GlassCard>

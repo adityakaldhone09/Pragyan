@@ -112,8 +112,8 @@ export default function HeroAI() {
           </div>
 
           <div className="mt-4 flex items-center gap-3">
-            <button className="px-4 py-2 rounded-lg bg-gradient-to-r from-secondary to-primary text-white font-semibold">Explore Roadmap</button>
-            <button className="px-4 py-2 rounded-lg border border-primary/20 text-primary">Open Adaptive Log</button>
+            <button type="button" className="px-4 py-2 rounded-lg bg-gradient-to-r from-secondary to-primary text-white font-semibold">Explore Roadmap</button>
+            <button type="button" className="px-4 py-2 rounded-lg border border-primary/20 text-primary">Open Adaptive Log</button>
           </div>
         </div>
       </div>

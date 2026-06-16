@@ -37,7 +37,7 @@ export default function IntelligenceCenter() {
             <div className="mt-2 text-2xl font-semibold">Calm — Encouraging</div>
             <div className="mt-3 text-sm">"You're making strong progress — focus on systems thinking to accelerate placements."</div>
             <div className="mt-4">
-              <button className="px-3 py-2 rounded-lg bg-gradient-to-r from-secondary to-primary text-white">Chat with Mentor</button>
+              <button type="button" className="px-3 py-2 rounded-lg bg-gradient-to-r from-secondary to-primary text-white">Chat with Mentor</button>
             </div>
           </div>
         </div>

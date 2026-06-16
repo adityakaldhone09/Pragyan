@@ -854,26 +854,29 @@ export class AuthService {
       throw new NotFoundError('User not found');
     }
 
-    const existing = await prisma.socialAccount.findFirst({
-      where: { userId, provider },
-    });
+    const [existing, linkedCount, linkedAccounts] = await Promise.all([
+      prisma.socialAccount.findFirst({
+        where: { userId, provider },
+      }),
+      prisma.socialAccount.count({ where: { userId } }),
+      prisma.socialAccount.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'asc' },
+        select: { id: true, provider: true, providerId: true },
+      }),
+    ]);
 
     if (!existing) {
       throw new NotFoundError('Linked account not found');
     }
 
-    const linkedCount = await prisma.socialAccount.count({ where: { userId } });
     if (linkedCount <= 1 && user.provider !== 'local') {
       throw new BadRequestError('You must keep at least one login method linked');
     }
 
     await prisma.socialAccount.delete({ where: { id: existing.id } });
 
-    const remaining = await prisma.socialAccount.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'asc' },
-      select: { provider: true, providerId: true },
-    });
+    const remaining = linkedAccounts.filter((account) => account.id !== existing.id);
 
     await prisma.user.update({
       where: { id: userId },
@@ -1166,23 +1169,25 @@ export class AuthService {
       throw new BadRequestError('Password reset verification is required or has expired');
     }
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const [user, hashedPassword] = await Promise.all([
+      prisma.user.findUnique({ where: { email } }),
+      hashPassword(input.newPassword),
+    ]);
 
     if (!user) {
       throw new NotFoundError('User not found');
     }
 
-    const hashedPassword = await hashPassword(input.newPassword);
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        password: hashedPassword,
-        updatedAt: new Date(),
-      },
-    });
-
-    await prisma.passwordResetOTP.deleteMany({ where: { email } });
+    await Promise.all([
+      prisma.user.update({
+        where: { id: user.id },
+        data: {
+          password: hashedPassword,
+          updatedAt: new Date(),
+        },
+      }),
+      prisma.passwordResetOTP.deleteMany({ where: { email } }),
+    ]);
 
     return { message: 'Password reset successfully. You can now sign in with your new password.' };
   }

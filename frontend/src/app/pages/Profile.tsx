@@ -69,8 +69,10 @@ function joinList(items?: string[] | null) {
 function splitList(value: string) {
   return value
     .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
+    .flatMap((item) => {
+      const trimmed = item.trim();
+      return trimmed ? [trimmed] : [];
+    });
 }
 
 function toDateInput(value?: string | null) {

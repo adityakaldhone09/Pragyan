@@ -1,5 +1,38 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useReducer } from 'react';
 import { getTodayQuiz, submitQuiz } from '../../services/quizService';
+
+type QuizState = {
+  loading: boolean;
+  quiz: any | null;
+  answers: number[];
+};
+
+type QuizAction =
+  | { type: 'load_start' }
+  | { type: 'load_success'; quiz: any; answers: number[] }
+  | { type: 'select_answer'; index: number; value: number }
+  | { type: 'load_empty' }
+  | { type: 'load_done' };
+
+function quizReducer(state: QuizState, action: QuizAction): QuizState {
+  switch (action.type) {
+    case 'load_start':
+      return { ...state, loading: true };
+    case 'load_success':
+      return { loading: false, quiz: action.quiz, answers: action.answers };
+    case 'select_answer':
+      return {
+        ...state,
+        answers: state.answers.map((value, index) => (index === action.index ? action.value : value)),
+      };
+    case 'load_empty':
+      return { loading: false, quiz: null, answers: [] };
+    case 'load_done':
+      return { ...state, loading: false };
+    default:
+      return state;
+  }
+}
 
 export default function DailyQuizModal({
   open,
@@ -14,26 +47,35 @@ export default function DailyQuizModal({
   dayNumber?: number;
   onResult?: (res: any) => void;
 }) {
-  const [loading, setLoading] = useState(false);
-  const [quiz, setQuiz] = useState<any | null>(null);
-  const [answers, setAnswers] = useState<number[]>([]);
-  const [submitting, setSubmitting] = useState(false);
+  const [{ loading, quiz, answers }, dispatch] = useReducer(quizReducer, {
+    loading: false,
+    quiz: null,
+    answers: [],
+  });
+  const [submitting, setSubmitting] = React.useState(false);
 
   useEffect(() => {
     if (!open) return;
+
     let mounted = true;
-    setLoading(true);
+    dispatch({ type: 'load_start' });
+
     void getTodayQuiz(roadmapId)
       .then((data) => {
         if (!mounted) return;
-        setQuiz(data || null);
-        setAnswers((data?.questions || []).map(() => -1));
+        if (data) {
+          dispatch({
+            type: 'load_success',
+            quiz: data,
+            answers: (data?.questions || []).map(() => -1),
+          });
+        } else {
+          dispatch({ type: 'load_empty' });
+        }
       })
       .catch(() => {
-        if (!mounted) return;
-        setQuiz(null);
-      })
-      .finally(() => mounted && setLoading(false));
+        if (mounted) dispatch({ type: 'load_empty' });
+      });
 
     return () => {
       mounted = false;
@@ -43,11 +85,7 @@ export default function DailyQuizModal({
   if (!open) return null;
 
   const handleChoose = (qIdx: number, optionIdx: number) => {
-    setAnswers((prev) => {
-      const copy = [...prev];
-      copy[qIdx] = optionIdx;
-      return copy;
-    });
+    dispatch({ type: 'select_answer', index: qIdx, value: optionIdx });
   };
 
   const handleSubmit = async () => {
@@ -62,7 +100,7 @@ export default function DailyQuizModal({
       };
       const res = await submitQuiz(payload);
       await onResult?.(res);
-    } catch (err) {
+    } catch {
       // ignore, just close
     } finally {
       setSubmitting(false);
@@ -75,7 +113,7 @@ export default function DailyQuizModal({
       <div className="w-full max-w-3xl overflow-auto rounded-2xl bg-card/90 p-6">
         <div className="flex items-start justify-between">
           <h3 className="text-lg font-bold">Today's Quiz</h3>
-          <button onClick={onClose} className="text-sm text-muted-foreground">Close</button>
+          <button type="button" onClick={onClose} className="text-sm text-muted-foreground">Close</button>
         </div>
 
         <div className="mt-4">
@@ -101,8 +139,8 @@ export default function DailyQuizModal({
         </div>
 
         <div className="mt-4 flex justify-end gap-2">
-          <button disabled={submitting} onClick={onClose} className="rounded-md border px-3 py-2">Cancel</button>
-          <button disabled={submitting || !quiz} onClick={handleSubmit} className="rounded-md bg-primary px-4 py-2 text-white">Submit</button>
+          <button type="button" disabled={submitting} onClick={onClose} className="rounded-md border px-3 py-2">Cancel</button>
+          <button type="button" disabled={submitting || !quiz} onClick={handleSubmit} className="rounded-md bg-primary px-4 py-2 text-white">Submit</button>
         </div>
       </div>
     </div>

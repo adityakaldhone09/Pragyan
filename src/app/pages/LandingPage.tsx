@@ -84,7 +84,7 @@ export function LandingPage() {
               { value: "98%", label: "Accuracy Rate" },
               { value: "200+", label: "Career Paths" }
             ].map((stat, i) => (
-              <div key={i} className="text-center">
+              <div key={stat.label} className="text-center">
                 <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                   {stat.value}
                 </div>
@@ -125,7 +125,7 @@ export function LandingPage() {
               }
             ].map((feature, i) => (
               <motion.div
-                key={i}
+                key={feature.title}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: i * 0.1 }}
@@ -209,9 +209,9 @@ export function LandingPage() {
                       { career: "AI Engineer", match: 95 },
                       { career: "Data Scientist", match: 88 },
                       { career: "ML Researcher", match: 82 }
-                    ].map((item, i) => (
+                    ].map((item) => (
                       <div
-                        key={i}
+                        key={item.career}
                         className="flex items-center justify-between p-2 rounded-lg bg-gradient-to-r from-secondary/10 to-transparent border border-secondary/20"
                       >
                         <span className="text-sm">{item.career}</span>
@@ -253,7 +253,7 @@ export function LandingPage() {
               }
             ].map((testimonial, i) => (
               <motion.div
-                key={i}
+                key={testimonial.name}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: i * 0.1 }}

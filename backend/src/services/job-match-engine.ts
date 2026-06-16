@@ -25,11 +25,17 @@ export type JobFeed = {
 
 export function calculateJobMatch(userSkills: string[], jobSkills: string[]): number {
   const normalizedUserSkills = new Set(
-    userSkills.map((skill) => skill.toLowerCase().trim()).filter(Boolean)
+    userSkills.flatMap((skill) => {
+      const normalized = skill.toLowerCase().trim();
+      return normalized ? [normalized] : [];
+    })
   );
 
   const normalizedJobSkills = Array.from(
-    new Set(jobSkills.map((skill) => skill.toLowerCase().trim()).filter(Boolean))
+    new Set(jobSkills.flatMap((skill) => {
+      const normalized = skill.toLowerCase().trim();
+      return normalized ? [normalized] : [];
+    }))
   );
 
   if (!normalizedJobSkills.length) {

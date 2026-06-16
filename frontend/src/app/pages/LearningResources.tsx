@@ -115,7 +115,7 @@ export function LearningResources() {
   const roadmapMap = useMemo(() => new Map(roadmaps.map((roadmap) => [roadmap.id || '', roadmap])), [roadmaps]);
   const selectedRoadmap = selectedRoadmapId ? roadmapMap.get(selectedRoadmapId) : undefined;
 
-  const completedResourceIds = useMemo(() => new Set(history.filter((entry) => entry.completed).map((entry) => entry.resourceId)), [history]);
+  const completedResourceIds = useMemo(() => new Set(history.flatMap((entry) => entry.completed ? [entry.resourceId] : [])), [history]);
 
   const nextResource = useMemo(
     () => recommendation?.resources.find((resource) => !completedResourceIds.has(resource.id)) || null,
@@ -126,19 +126,18 @@ export function LearningResources() {
     const days = recommendation?.days || [];
     const normalizedQuery = query.trim().toLowerCase();
 
-    return days
-      .map((day) => ({
-        ...day,
-        resources: day.resources.filter((resource) => {
-          const matchesType = filterType === 'all' || resource.resourceType === filterType;
-          const matchesQuery = !normalizedQuery || [resource.title, resource.description, resource.topic, resource.skill, resource.provider, ...(resource.tags || [])]
-            .filter(Boolean)
-            .some((value) => String(value).toLowerCase().includes(normalizedQuery));
+    return days.flatMap((day) => {
+      const resources = day.resources.filter((resource) => {
+        const matchesType = filterType === 'all' || resource.resourceType === filterType;
+        const matchesQuery = !normalizedQuery || [resource.title, resource.description, resource.topic, resource.skill, resource.provider, ...(resource.tags || [])]
+          .flatMap((value) => value ? [String(value)] : [])
+          .some((value) => value.toLowerCase().includes(normalizedQuery));
 
-          return matchesType && matchesQuery;
-        }),
-      }))
-      .filter((day) => day.resources.length > 0);
+        return matchesType && matchesQuery;
+      });
+
+      return resources.length > 0 ? [{ ...day, resources }] : [];
+    });
   }, [filterType, query, recommendation?.days]);
 
   const totals = useMemo(() => {

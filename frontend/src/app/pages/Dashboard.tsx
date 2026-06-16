@@ -304,7 +304,10 @@ export function Dashboard() {
   const todaysMissionTasks = currentJourney?.currentPlan?.tasks || currentDayData?.tasks || [];
   const todaysMissionFocus = currentJourney?.currentPlan?.todayGoal || currentDayData?.focus || "Complete today's roadmap step";
   const todaysMissionTime = currentJourney?.currentPlan?.estimatedMinutes || currentDayData?.estimatedMinutes || 0;
-  const skillProgress = currentJourney?.skillProgress || [];
+  const skillProgress = useMemo(
+    () => currentJourney?.skillProgress ?? [],
+    [currentJourney?.skillProgress]
+  );
   const weakSkills = normalizeTextList(journeySnapshot?.weakSkills || currentJourney?.weakSkills || placementReadiness?.weakAreas);
   const progressHint = placementReadiness?.recommendedNextStep || currentJourney?.nextAction || "Keep following the active roadmap to improve placement readiness.";
   const missionTheory = currentDayData?.resources?.find((resource) => /w3schools/i.test(`${resource.provider || ""} ${resource.title} ${resource.type || ""}`)) || currentDayData?.resources?.[0] || null;

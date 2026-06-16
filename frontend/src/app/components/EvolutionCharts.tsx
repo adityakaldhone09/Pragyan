@@ -8,8 +8,8 @@ export default function EvolutionCharts({ series }: { series?: number[] }) {
     <div className="glass p-4 rounded-xl evolution-charts">
       <h4 className="text-lg font-semibold">Evolution Charts</h4>
       <div className="mt-3 flex items-end gap-2" style={{ height: 80 }}>
-        {data.map((d, i) => (
-          <div key={i} style={{ flex: 1 }}>
+        {data.map((d) => (
+          <div key={`evolution-${d}`} style={{ flex: 1 }}>
             <div style={{ height: `${(d / max) * 100}%` }} className="chart-bar bg-gradient-to-t from-purple-600 to-cyan-400 rounded-md" />
             <div className="text-xs text-center mt-2">{d}</div>
           </div>

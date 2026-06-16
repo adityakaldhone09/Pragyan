@@ -51,8 +51,7 @@ export class AIRecommendationService {
       orderBy: { updatedAt: 'desc' },
     });
 
-    const scored = roadmaps
-      .map((roadmap) => {
+    const scored = roadmaps.flatMap((roadmap) => {
         const haystack = [roadmap.title, roadmap.category, roadmap.description, ...(roadmap.tags || [])]
           .join(' ')
           .toLowerCase();
@@ -62,9 +61,8 @@ export class AIRecommendationService {
           if (haystack.includes(token)) score += 10;
         });
 
-        return { roadmap, score };
+        return score > 0 ? [{ roadmap, score }] : [];
       })
-      .filter((item) => item.score > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, 10)
       .map((item) => item.roadmap);

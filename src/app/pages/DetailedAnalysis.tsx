@@ -118,7 +118,7 @@ export function DetailedAnalysis() {
       <div className="max-w-7xl mx-auto px-6 py-12 space-y-12 relative z-10">
         {/* Back Button */}
         <Link to="/results">
-          <motion.button
+          <motion.button type="button"
             className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
             whileHover={{ x: -5 }}
           >
@@ -164,7 +164,7 @@ export function DetailedAnalysis() {
                   { icon: Award, label: "Career Level", value: "Mid-Senior", color: "purple" as const }
                 ].map((stat, i) => (
                   <motion.div
-                    key={i}
+                    key={stat.label}
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.2 + i * 0.1 }}
@@ -215,7 +215,7 @@ export function DetailedAnalysis() {
             <div className="space-y-6">
               {careerData.skillBreakdown.map((skill, i) => (
                 <motion.div
-                  key={i}
+                  key={skill.skill}
                   className="space-y-2"
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -350,7 +350,7 @@ export function DetailedAnalysis() {
               <div className="space-y-3">
                 {careerData.dailyResponsibilities.map((task, i) => (
                   <motion.div
-                    key={i}
+                    key={task}
                     className="flex items-start gap-3 p-3 rounded-lg bg-gradient-to-r from-primary/5 to-transparent border border-primary/10"
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -374,7 +374,7 @@ export function DetailedAnalysis() {
               <div className="space-y-3">
                 {careerData.requiredQualifications.map((qual, i) => (
                   <motion.div
-                    key={i}
+                    key={qual}
                     className="flex items-start gap-3 p-3 rounded-lg bg-gradient-to-r from-secondary/5 to-transparent border border-secondary/10"
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -404,7 +404,7 @@ export function DetailedAnalysis() {
             <div className="space-y-4">
               {careerData.careerPath.map((level, i) => (
                 <motion.div
-                  key={i}
+                  key={level.level}
                   className="relative"
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -458,7 +458,7 @@ export function DetailedAnalysis() {
                 { label: "Growth Opportunities", value: careerData.cultureFit.growth, icon: TrendingUp },
                 { label: "Impact & Influence", value: careerData.cultureFit.impact, icon: Star }
               ].map((item, i) => (
-                <div key={i} className="space-y-3">
+                <div key={item.label} className="space-y-3">
                   <div className="flex items-center gap-2">
                     <item.icon className="w-5 h-5 text-pink" />
                     <span className="font-medium">{item.label}</span>
@@ -497,7 +497,7 @@ export function DetailedAnalysis() {
           <div className="grid md:grid-cols-3 gap-6">
             {careerData.topCompanies.map((company, i) => (
               <motion.div
-                key={i}
+                key={company.name}
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 1.2 + i * 0.1 }}
@@ -524,7 +524,7 @@ export function DetailedAnalysis() {
                         {company.hiring}
                       </span>
                     </div>
-                    <button className="w-full py-2 text-sm text-secondary hover:text-secondary/80 font-medium">
+                    <button type="button" className="w-full py-2 text-sm text-secondary hover:text-secondary/80 font-medium">
                       View Open Positions →
                     </button>
                   </div>

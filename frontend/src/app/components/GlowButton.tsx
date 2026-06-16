@@ -17,6 +17,7 @@ export function GlowButton({
   className,
   children,
   loading = false,
+  type = "button",
   ...props
 }: GlowButtonProps) {
   const variantClasses = {
@@ -46,6 +47,7 @@ export function GlowButton({
       whileTap={!loading ? "whileTap" : undefined}
       initial="initial"
       disabled={loading}
+      type={type}
       {...props}
     >
       <motion.div
