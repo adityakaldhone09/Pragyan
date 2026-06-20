@@ -43,6 +43,12 @@ const userProfileSelect = {
   skillLevel: true,
   currentTitle: true,
   careerTrack: true,
+  tenthBoard: true,
+  tenthScore: true,
+  twelfthBoard: true,
+  twelfthScore: true,
+  currentCourse: true,
+  cgpa: true,
   xp: true,
   createdAt: true,
   updatedAt: true,
@@ -105,6 +111,12 @@ function buildUserSession(user: {
   skillLevel?: string | null;
   currentTitle?: string | null;
   careerTrack?: string | null;
+  tenthBoard?: string | null;
+  tenthScore?: string | null;
+  twelfthBoard?: string | null;
+  twelfthScore?: string | null;
+  currentCourse?: string | null;
+  cgpa?: string | null;
   xp?: number;
   createdAt?: Date;
   updatedAt?: Date;
@@ -131,6 +143,12 @@ function buildUserSession(user: {
     skillLevel: user.skillLevel,
     currentTitle: user.currentTitle,
     careerTrack: user.careerTrack,
+    tenthBoard: user.tenthBoard,
+    tenthScore: user.tenthScore,
+    twelfthBoard: user.twelfthBoard,
+    twelfthScore: user.twelfthScore,
+    currentCourse: user.currentCourse,
+    cgpa: user.cgpa,
     xp: user.xp ?? 0,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
@@ -927,8 +945,14 @@ export class AuthService {
       ...(input.experienceType !== undefined ? { experienceType: input.experienceType } : {}),
       ...(input.education !== undefined ? { education: input.education } : {}),
       ...(input.skillLevel !== undefined ? { skillLevel: input.skillLevel } : {}),
-          ...(input.currentTitle !== undefined ? { currentTitle: input.currentTitle } : {}),
-          ...(input.careerTrack !== undefined ? { careerTrack: input.careerTrack } : {}),
+      ...(input.currentTitle !== undefined ? { currentTitle: input.currentTitle } : {}),
+      ...(input.careerTrack !== undefined ? { careerTrack: input.careerTrack } : {}),
+      ...(input.tenthBoard !== undefined ? { tenthBoard: input.tenthBoard } : {}),
+      ...(input.tenthScore !== undefined ? { tenthScore: input.tenthScore } : {}),
+      ...(input.twelfthBoard !== undefined ? { twelfthBoard: input.twelfthBoard } : {}),
+      ...(input.twelfthScore !== undefined ? { twelfthScore: input.twelfthScore } : {}),
+      ...(input.currentCourse !== undefined ? { currentCourse: input.currentCourse } : {}),
+      ...(input.cgpa !== undefined ? { cgpa: input.cgpa } : {}),
     };
 
     if (Object.keys(data).length === 0) {
@@ -961,6 +985,12 @@ export class AuthService {
           skillLevel: true,
           currentTitle: true,
           careerTrack: true,
+          tenthBoard: true,
+          tenthScore: true,
+          twelfthBoard: true,
+          twelfthScore: true,
+          currentCourse: true,
+          cgpa: true,
           xp: true,
           createdAt: true,
           updatedAt: true,
@@ -1020,6 +1050,12 @@ export class AuthService {
         skillLevel: updated.skillLevel,
         currentTitle: updated.currentTitle,
         careerTrack: updated.careerTrack,
+        tenthBoard: updated.tenthBoard,
+        tenthScore: updated.tenthScore,
+        twelfthBoard: updated.twelfthBoard,
+        twelfthScore: updated.twelfthScore,
+        currentCourse: updated.currentCourse,
+        cgpa: updated.cgpa,
         xp: updated.xp,
         createdAt: updated.createdAt,
         updatedAt: updated.updatedAt,

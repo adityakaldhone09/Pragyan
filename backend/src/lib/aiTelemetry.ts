@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { createClient, type RedisClientType } from 'redis';
 
 interface TelemetryStats {
   calls: number;
@@ -14,6 +15,53 @@ interface TelemetryStats {
   providerServiceUnavailable: Record<string, number>;
   lastError?: { provider: string; reason: string; at: string } | null;
   errorHistory: Array<{ provider: string; reason: string; at: string }>;
+}
+
+export const TELEMETRY_STREAM = 'pragyan:telemetry';
+
+const STREAM_MAX_LEN = 10_000;
+const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
+
+let streamClient: RedisClientType | null = null;
+let streamConnectPromise: Promise<void> | null = null;
+
+export const TelemetryEvent = {
+  ASSESSMENT_STARTED: 'ASSESSMENT_STARTED',
+  ASSESSMENT_QUESTION_GENERATED: 'ASSESSMENT_QUESTION_GENERATED',
+  ASSESSMENT_ANSWER_SUBMITTED: 'ASSESSMENT_ANSWER_SUBMITTED',
+  ASSESSMENT_COMPLETED: 'ASSESSMENT_COMPLETED',
+  LLM_LATENCY_LOG: 'LLM_LATENCY_LOG',
+  LLM_PARSE_ERROR: 'LLM_PARSE_ERROR',
+  DOWNSTREAM_ENGINE_TRIGGERED: 'DOWNSTREAM_ENGINE_TRIGGERED',
+  RECOMMENDATION_GENERATED: 'RECOMMENDATION_GENERATED',
+  ROADMAP_GENERATED: 'ROADMAP_GENERATED',
+} as const;
+
+async function getStreamClient(): Promise<RedisClientType | null> {
+  if (streamClient?.isReady) return streamClient;
+
+  if (!streamConnectPromise) {
+    streamConnectPromise = (async () => {
+      try {
+        const client = createClient({ url: REDIS_URL }) as RedisClientType;
+        client.on('error', (error) => {
+          console.error('[aiTelemetry] Redis stream client error:', error.message);
+        });
+        await client.connect();
+        streamClient = client;
+      } catch (error) {
+        console.error(
+          '[aiTelemetry] Redis stream unavailable:',
+          error instanceof Error ? error.message : String(error)
+        );
+        streamClient = null;
+        streamConnectPromise = null;
+      }
+    })();
+  }
+
+  await streamConnectPromise;
+  return streamClient;
 }
 
 const stats: TelemetryStats = {
@@ -168,4 +216,54 @@ export function getTelemetry() {
   };
 }
 
-export default { recordCall, recordCacheHit, recordFailure, recordFallback, recordServiceUnavailable, getTelemetry };
+export function publishTelemetryEvent(eventName: string, payload: Record<string, unknown>): void {
+  void publishToStream(eventName, {
+    ...payload,
+    eventName,
+    timestamp: new Date().toISOString(),
+  }).catch((error) => {
+    console.error(
+      `[aiTelemetry] Failed to publish "${eventName}":`,
+      error instanceof Error ? error.message : String(error)
+    );
+  });
+}
+
+async function publishToStream(eventName: string, payload: Record<string, unknown>): Promise<void> {
+  const client = await getStreamClient();
+  if (!client) return;
+
+  await client.xAdd(
+    TELEMETRY_STREAM,
+    '*',
+    {
+      event: eventName,
+      data: JSON.stringify(payload),
+    },
+    {
+      TRIM: {
+        strategy: 'MAXLEN',
+        strategyModifier: '~',
+        threshold: STREAM_MAX_LEN,
+      },
+    }
+  );
+}
+
+export async function disconnectTelemetry(): Promise<void> {
+  if (!streamClient?.isReady) return;
+  await streamClient.quit();
+  streamClient = null;
+  streamConnectPromise = null;
+}
+
+export default {
+  recordCall,
+  recordCacheHit,
+  recordFailure,
+  recordFallback,
+  recordServiceUnavailable,
+  getTelemetry,
+  publishTelemetryEvent,
+  disconnectTelemetry,
+};

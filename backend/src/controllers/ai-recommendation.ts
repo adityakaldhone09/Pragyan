@@ -10,6 +10,10 @@ import { deriveAdaptiveLearningProfile, getRecommendedTaskMix, shouldTriggerRevi
 import { sendSuccess, sendError } from '@/utils/response';
 import { asyncHandler } from '@/middleware/errorHandler';
 import aiTelemetry from '@/lib/aiTelemetry';
+import {
+  getLLMCareerRecommendation as runCareerAgent,
+  LLMCareerRecommendationInput,
+} from '@/ai/careerAgent';
 
 export const getRecommendations = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
@@ -74,6 +78,45 @@ export const getStatus = asyncHandler(async (_req: Request, res: Response) => {
 export const getTelemetry = asyncHandler(async (_req: Request, res: Response) => {
   const data = aiTelemetry.getTelemetry();
   return sendSuccess(res, data, 200, 'AI telemetry');
+});
+
+export const getPythonCareerRecommendation = asyncHandler(async (req: Request, res: Response) => {
+  const { skills } = req.body;
+
+  if (!skills || !Array.isArray(skills)) {
+    return sendError(res, 400, 'Skills array required');
+  }
+
+  const recommendations = await aiRecommendationService.getPythonCareerRecommendation(skills);
+
+  return sendSuccess(res, recommendations, 200, 'Career recommendation fetched');
+});
+
+export const getLLMCareerRecommendation = asyncHandler(async (req: Request, res: Response) => {
+  const {
+    interests = [],
+    strengths = [],
+    weaknesses = [],
+    skills = [],
+    quizScore = 0,
+    learningHours = 2,
+  } = req.body || {};
+
+  const payload: LLMCareerRecommendationInput = {
+    interests: Array.isArray(interests) ? interests.map(String).filter(Boolean) : [],
+    strengths: Array.isArray(strengths) ? strengths.map(String).filter(Boolean) : [],
+    weaknesses: Array.isArray(weaknesses) ? weaknesses.map(String).filter(Boolean) : [],
+    skills: Array.isArray(skills) ? skills.map(String).filter(Boolean) : [],
+    quizScore: Number(quizScore) || 0,
+    learningHours: Number(learningHours) || 2,
+  };
+
+  if (!payload.interests.length && !payload.strengths.length && !payload.skills.length) {
+    return sendError(res, 400, 'At least one of interests, strengths, or skills is required');
+  }
+
+  const recommendation = await runCareerAgent(payload);
+  return sendSuccess(res, recommendation, 200, 'LLM career recommendation generated');
 });
 
 export const chatAssistant = asyncHandler(async (req: Request, res: Response) => {

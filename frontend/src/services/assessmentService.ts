@@ -7,6 +7,7 @@ import type {
   AdaptiveAnswerResponse,
   AdaptiveStartResponse,
   AdaptiveSubmitResponse,
+  LLMCareerRecommendation,
 } from "@/types/api";
 
 export interface SaveAssessmentInput {
@@ -39,6 +40,105 @@ export interface SubmitAssessmentResponse extends AssessmentSubmissionResult {
   persisted: PersistedAssessmentRecord | null;
 }
 
+export type HybridExperienceLevel = "beginner" | "intermediate" | "advanced";
+export type HybridFunnelLevel = "General" | "Specific" | "Specialization" | "Depth";
+export type HybridCareerTrack = "Government Job" | "Private Job";
+
+export interface HybridUserProfile {
+  userId: string;
+  role: string;
+  domain: string;
+  experience: HybridExperienceLevel;
+  age?: number;
+  education?: string;
+  careerTrack?: HybridCareerTrack;
+  hobbies: string[];
+  interests: string[];
+  contactInfo?: string;
+  tenthGrade?: string;
+  twelfthGrade?: string;
+  highestQualification?: string;
+  targetRole: string;
+  domainExperience?: string;
+  currentSkills: string[];
+  careerPath?: string;
+  careerSubPath?: string;
+}
+
+export interface HybridParsedProfile {
+  Education: string;
+  Experience: string;
+  Skills: string[];
+  ContactInfo: string;
+  confidence?: number;
+}
+
+export interface HybridDomainQuestion {
+  id: string;
+  domain: string;
+  skill: string;
+  question: string;
+  type: "rating";
+}
+
+export interface HybridDomainAnswer {
+  skill: string;
+  rating: number;
+}
+
+export interface HybridAssessmentQuestion {
+  questionId: string;
+  questionText: string;
+  options?: string[] | null;
+  topic: string;
+  funnelLevel: HybridFunnelLevel;
+}
+
+export type HybridQuestionType = "SINGLE_CHOICE" | "MULTIPLE_CHOICE";
+
+export interface HybridUserAssessmentAnswerInput {
+  userId: string;
+  sessionId?: string;
+  phase: 1 | 2 | 3;
+  questionId?: string;
+  questionText: string;
+  questionType: HybridQuestionType;
+  topic?: string;
+  funnelLevel?: HybridFunnelLevel;
+  options: string[];
+  selectedAnswer: string[];
+}
+
+export interface HybridStateMachineResponse {
+  currentFunnelLevel: HybridFunnelLevel;
+  reasoningToast: string;
+  isCompleted: boolean;
+  nextQuestion?: HybridAssessmentQuestion | null;
+  finalSummary?: {
+    strengths: string[];
+    weakTopics: string[];
+    recommendedMode: "Recovery" | "Growth" | "Stretch";
+    recommendedRole?: string;
+    requiredJobSkills?: string[];
+    skillGaps?: string[];
+    jobAvailabilityInsight?: string;
+    realizedStrengths?: string[];
+    unrealizedStrengths?: string[];
+    learnedSkills?: string[];
+    weaknesses?: string[];
+  } | null;
+}
+
+export interface HybridStartResponse {
+  sessionId: string;
+  response: HybridStateMachineResponse;
+}
+
+export interface HybridAnswerResponse {
+  response: HybridStateMachineResponse;
+  downstream?: unknown;
+}
+
 export const assessmentService = {
   startAssessment() {
     return apiClient.post<AdaptiveStartResponse>("/assessment/start", {});
@@ -54,6 +154,21 @@ export const assessmentService = {
 
   submitAdaptiveAssessment(sessionId: string) {
     return apiClient.post<AdaptiveSubmitResponse>("/assessment/submit", { sessionId });
+  },
+
+  getLLMCareerRecommendation(payload: {
+    interests: string[];
+    strengths: string[];
+    weaknesses: string[];
+    skills: string[];
+    quizScore: number;
+    learningHours: number;
+  }) {
+    return apiClient.post<LLMCareerRecommendation>(
+      "/ai/llm-career-recommendation",
+      payload,
+      { timeoutMs: 30_000 }
+    );
   },
 
   getAdaptiveResult(resultId: string) {
@@ -105,5 +220,33 @@ export const assessmentService = {
 
   getMetadata() {
     return apiClient.get<unknown>("/assessment/metadata");
+  },
+
+  parseHybridResume(resumeText: string) {
+    return apiClient.post<HybridParsedProfile>("/assessment/hybrid/parse-resume", { resumeText }, { timeoutMs: 30_000 });
+  },
+
+  getHybridDomainQuestions(domain: string) {
+    return apiClient.get<{ questions: HybridDomainQuestion[] }>(`/assessment/hybrid/domain-questions/${encodeURIComponent(domain)}`);
+  },
+
+  saveHybridAnswers(answers: HybridUserAssessmentAnswerInput[]) {
+    return apiClient.post<{ count: number }>("/assessment/hybrid/answers", { answers });
+  },
+
+  startHybridAssessment(input: {
+    userId: string;
+    profile: HybridUserProfile;
+    domainAnswers: HybridDomainAnswer[];
+  }) {
+    return apiClient.post<HybridStartResponse>("/assessment/hybrid/start", input, { timeoutMs: 45_000 });
+  },
+
+  submitHybridAnswer(sessionId: string, answer: string) {
+    return apiClient.post<HybridAnswerResponse>(
+      `/assessment/hybrid/${encodeURIComponent(sessionId)}/answer`,
+      { answer },
+      { timeoutMs: 45_000 }
+    );
   },
 };

@@ -46,4 +46,13 @@ router.get('/learning-velocity', authenticate, aiMemoryController.getLearningVel
 router.post('/memory/feedback', authenticate, aiMemoryController.recordFeedback);
 router.get('/memory/recommendations', authenticate, aiMemoryController.getRecommendationHistory);
 
+router.post(
+  '/recommend-career',
+  aiController.getPythonCareerRecommendation
+);
+router.post(
+  '/llm-career-recommendation',
+  aiController.getLLMCareerRecommendation
+);
+
 export default router;

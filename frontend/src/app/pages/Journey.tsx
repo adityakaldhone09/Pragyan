@@ -8,6 +8,7 @@ import { AnimatedProgress } from "../components/AnimatedProgress";
 import { GlowButton } from "../components/GlowButton";
 import { JourneyHeader, SkillRadar, AIInsightsCard, EligibleJobsCard, PlacementReadinessWidget } from "../components/journey/JourneySections";
 import { SectionHeader } from "../components/SectionHeader";
+import { AssessmentRoadmapFallback } from "../components/journey/AssessmentRoadmapFallback";
 import { journeyService } from "../../services/journeyService";
 import { mentorService } from "../../services/mentorService";
 import type { JourneyDashboardSnapshot, JourneyPayload, MentorMessage } from "@/types/api";

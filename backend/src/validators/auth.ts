@@ -54,6 +54,12 @@ export const profileUpdateSchema = z.object({
   experienceType: z.enum(['experienced', 'fresher']).optional(),
   education: z.string().trim().max(1000).optional(),
   skillLevel: z.string().trim().max(50).optional(),
+  tenthBoard: z.string().trim().max(80).optional(),
+  tenthScore: z.string().trim().max(30).optional(),
+  twelfthBoard: z.string().trim().max(80).optional(),
+  twelfthScore: z.string().trim().max(30).optional(),
+  currentCourse: z.string().trim().max(160).optional(),
+  cgpa: z.string().trim().max(30).optional(),
 }).refine((data) => Object.keys(data).length > 0, {
   message: 'At least one profile field is required',
 });

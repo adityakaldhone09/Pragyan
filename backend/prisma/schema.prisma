@@ -31,6 +31,12 @@ model User {
   education        String?
   educationEntries Json?
   skillLevel       String?
+  tenthBoard       String?
+  tenthScore       String?
+  twelfthBoard     String?
+  twelfthScore     String?
+  currentCourse    String?
+  cgpa             String?
   xp               Float    @default(0)
   streak           Int      @default(0)
   level            Int      @default(1)
@@ -44,6 +50,7 @@ model User {
   portfolioProjects       UserPortfolioProject[]
   certifications          UserCertification[]
   assessmentAnswers       AssessmentAnswer[]
+  userAssessmentAnswers   UserAssessmentAnswer[]
   assessmentResults       AssessmentResult[]
   assessmentSessions      AssessmentSession[]
   progress                UserProgress[]
@@ -54,6 +61,7 @@ model User {
   dailyQuizAttempts       DailyQuizAttempt[]
   dailyLearning           UserDailyLearning[]
   userRoadmaps            UserRoadmap[]
+  assessmentRoadmap       AssessmentRoadmap?
   taskProgress            TaskProgress[]
   resourceLearningHistory  ResourceLearningHistory[]
   careerMatches           CareerMatch[]
@@ -473,6 +481,23 @@ model UserRoadmap {
   @@index([roadmapId])
 }
 
+model AssessmentRoadmap {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String   @unique @db.ObjectId
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId       String?  @db.ObjectId
+  domain          String
+  recommendedRole String
+  skillGaps       String[] @default([])
+  track           Json
+  dailyPlan       Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sessionId])
+}
+
 // ============ ASSESSMENT MODELS ============
 
 model Assessment {
@@ -514,6 +539,28 @@ model AssessmentAnswer {
   @@index([userId])
 }
 
+model UserAssessmentAnswer {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String   @db.ObjectId
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId      String?  @db.ObjectId
+  phase          Int
+  questionId     String?
+  questionText   String
+  questionType   String
+  topic          String?
+  funnelLevel    String?
+  options        String[] @default([])
+  selectedAnswer String[] @default([])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, phase])
+  @@index([sessionId])
+}
+
 model AssessmentResult {
   id               String   @id @default(auto()) @map("_id") @db.ObjectId
   userId           String   @db.ObjectId
@@ -537,6 +584,12 @@ model AssessmentSession {
   answers         String
   selectedOptions String[]
   analysis        String
+  tenthBoard      String?
+  tenthScore      String?
+  twelfthBoard    String?
+  twelfthScore    String?
+  currentCourse   String?
+  cgpa            String?
   completedAt     DateTime @default(now())
 
   createdAt DateTime @default(now())

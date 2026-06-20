@@ -9,6 +9,7 @@ import { assessmentAnswersSchema } from '@/validators/assessment';
 import { assessmentCreateSchema } from '@/validators/assessment';
 import { prisma } from '@/lib/prisma';
 import * as decisionController from '@/controllers/assessmentDecisionTree';
+import * as hybridAssessmentController from '@/controllers/hybridAssessment';
 
 const router = Router();
 
@@ -28,6 +29,13 @@ router.get('/result/:resultId', authenticate, assessmentController.getAssessment
 router.post('/save', authenticate, validate(assessmentAnswersSchema), assessmentController.saveAssessment);
 router.get('/history', authenticate, assessmentController.getAssessmentHistory);
 router.get('/latest', authenticate, assessmentController.getLatestAssessment);
+
+// Hybrid 3-phase assessment engine imported from backend (1).zip.
+router.post('/hybrid/parse-resume', hybridAssessmentController.parseResume);
+router.post('/hybrid/answers', authenticate, hybridAssessmentController.saveHybridAnswers);
+router.get('/hybrid/domain-questions/:domain', hybridAssessmentController.getDomainQuestions);
+router.post('/hybrid/start', hybridAssessmentController.startHybridAssessment);
+router.post('/hybrid/:sessionId/answer', hybridAssessmentController.submitHybridAnswer);
 
 /**
  * GET /api/assessment/metadata
