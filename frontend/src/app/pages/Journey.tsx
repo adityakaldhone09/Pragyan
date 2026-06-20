@@ -8,6 +8,7 @@ import { AnimatedProgress } from "../components/AnimatedProgress";
 import { GlowButton } from "../components/GlowButton";
 import { JourneyHeader, SkillRadar, AIInsightsCard, EligibleJobsCard, PlacementReadinessWidget } from "../components/journey/JourneySections";
 import { SectionHeader } from "../components/SectionHeader";
+import { AssessmentRoadmapFallback } from "../components/journey/AssessmentRoadmapFallback";
 import { journeyService } from "../../services/journeyService";
 import { mentorService } from "../../services/mentorService";
 import type { JourneyDashboardSnapshot, JourneyPayload, MentorMessage } from "@/types/api";
@@ -196,25 +197,7 @@ export function Journey() {
   }
 
   if (!journey) {
-    return (
-      <div className="min-h-screen relative pt-24 pb-16">
-        <NeuralBackground />
-        <FloatingParticles count={18} />
-        <div className="relative z-10 max-w-3xl mx-auto px-6 text-center">
-          <GlassCard glow glowColor="primary">
-            <SectionHeader title="Career Journey unavailable" subtitle="Complete an assessment or refresh your recommendations to generate a journey." />
-            <div className="mt-6 flex flex-wrap justify-center gap-3">
-              <Link to="/assessment">
-                <button type="button" className="rounded-lg bg-primary px-5 py-3 font-medium text-primary-foreground">Start Assessment</button>
-              </Link>
-              <Link to="/dashboard">
-                <button type="button" className="rounded-lg border border-white/10 px-5 py-3 font-medium text-foreground">Go to Dashboard</button>
-              </Link>
-            </div>
-          </GlassCard>
-        </div>
-      </div>
-    );
+    return <AssessmentRoadmapFallback />;
   }
 
   return (

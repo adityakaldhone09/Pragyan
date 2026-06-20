@@ -20,10 +20,9 @@ export class AIDecisionEngine {
     ]);
 
     // compute velocity metric (simple average of provided metrics.windowScore if present)
-    const velocityVals = (vels || []).flatMap((v: any) => {
-      const score = (v.metrics && v.metrics.score) ? Number(v.metrics.score) : 0;
-      return !Number.isNaN(score) ? [score] : [];
-    });
+    const velocityVals = (vels || [])
+      .map((v: any) => (v.metrics && v.metrics.score) ? Number(v.metrics.score) : 0)
+      .filter((n: number) => !Number.isNaN(n));
     const avgVelocity = velocityVals.length ? velocityVals.reduce((a: number, b: number) => a + b, 0) / velocityVals.length : 0;
 
     // personality traits

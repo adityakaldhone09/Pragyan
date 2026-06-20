@@ -31,6 +31,7 @@
     "express-session": "^1.19.0",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.3",
+    "mammoth": "^1.12.0",
     "module-alias": "^2.3.4",
     "mongodb": "^7.2.0",
     "morgan": "^1.10.0",
@@ -39,9 +40,10 @@
     "passport": "^0.7.0",
     "passport-github2": "^0.1.12",
     "passport-google-oauth20": "^2.0.0",
+    "pdf-parse": "^2.4.5",
     "pragyan": "file:..",
     "prisma": "^6.19.0",
-    "redis": "^4.6.7",
+    "redis": "^4.7.1",
     "xlsx": "^0.18.5",
     "zod": "^3.22.4"
   },
@@ -63,7 +65,7 @@
     "supertest": "^6.3.3",
     "ts-jest": "^29.1.0",
     "ts-node": "^10.9.2",
-    "tsx": "^4.7.0",
+    "tsx": "^4.22.4",
     "typescript": "^5.3.3"
   },
   "_moduleAliases": {

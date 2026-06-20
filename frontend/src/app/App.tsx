@@ -10,7 +10,7 @@ const Auth = lazy(() => import("./pages/Auth").then((module) => ({ default: modu
 const AuthSuccess = lazy(() => import("./pages/AuthSuccess").then((module) => ({ default: module.AuthSuccess })));
 
 const Dashboard = lazy(() => import("./pages/Dashboard").then((module) => ({ default: module.Dashboard })));
-const Assessment = lazy(() => import("./pages/Assessment").then((module) => ({ default: module.Assessment })));
+const AssessmentFlow = lazy(() => import("./components/assessment/AssessmentFlow"));
 const Results = lazy(() => import("./pages/Results").then((module) => ({ default: module.Results })));
 const Journey = lazy(() => import("./pages/Journey").then((module) => ({ default: module.Journey })));
 const Roadmap = lazy(() => import("./pages/Roadmap").then((module) => ({ default: module.Roadmap })));
@@ -48,7 +48,12 @@ export default function App() {
                 }
               >
                 <Route path="dashboard" element={<Dashboard />} />
-                <Route path="assessment" element={<Assessment />} />
+                <Route path="assessment" element={<AssessmentFlow />} />
+                <Route path="assessment/hybrid" element={<AssessmentFlow />} />
+                <Route path="assessment/start" element={<AssessmentFlow />} />
+                <Route path="assessment/form" element={<AssessmentFlow />} />
+                <Route path="assessment/discover" element={<AssessmentFlow />} />
+                <Route path="assessment/flow" element={<AssessmentFlow />} />
                 <Route path="results" element={<Results />} />
                 <Route path="journey" element={<Journey />} />
                 <Route path="journey/:careerSlug" element={<Journey />} />

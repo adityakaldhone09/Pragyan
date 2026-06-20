@@ -29,6 +29,14 @@ export interface AuthUser {
   interests?: string[];
   education?: string | null;
   experience?: string | null;
+  currentTitle?: string | null;
+  careerTrack?: string | null;
+  tenthBoard?: string | null;
+  tenthScore?: string | null;
+  twelfthBoard?: string | null;
+  twelfthScore?: string | null;
+  currentCourse?: string | null;
+  cgpa?: string | null;
   linkedAccounts?: Array<{
     provider: string;
     providerId: string;
@@ -352,4 +360,18 @@ export interface TelemetrySnapshot {
   providerCalls: Record<string, number>;
   providerFailures: Record<string, number>;
   providerServiceUnavailable: Record<string, number>;
+}
+
+export interface LLMCareerRecommendation {
+  topCareers: Array<{
+    career: string;
+    confidence: number;
+    reason: string;
+    requiredSkills: string[];
+    missingSkills: string[];
+    roadmap: string[];
+  }>;
+  summary: string;
+  provider?: string;
+  fallbackUsed?: boolean;
 }

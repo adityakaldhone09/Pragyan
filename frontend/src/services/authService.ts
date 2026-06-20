@@ -42,6 +42,14 @@ export interface UpdateProfileInput {
   experience?: string;
   experienceType?: 'fresher' | 'experienced';
   skillLevel?: string;
+  currentTitle?: string;
+  careerTrack?: string;
+  tenthBoard?: string;
+  tenthScore?: string;
+  twelfthBoard?: string;
+  twelfthScore?: string;
+  currentCourse?: string;
+  cgpa?: string;
 }
 
 export interface PortfolioProjectInput {
