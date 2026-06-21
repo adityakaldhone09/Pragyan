@@ -1,72 +1,48 @@
-import { defineConfig } from 'vite'
-import path from 'path'
-import tailwindcss from '@tailwindcss/vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+import path from "path";
 
+const rawPort = process.env.PORT ?? "5173";
 
-function figmaAssetResolver() {
-  return {
-    name: 'figma-asset-resolver',
-    resolveId(id) {
-      if (id.startsWith('figma:asset/')) {
-        const filename = id.replace('figma:asset/', '')
-        return path.resolve(__dirname, 'src/assets', filename)
-      }
-    },
-  }
+const port = Number(rawPort);
+
+if (Number.isNaN(port) || port <= 0) {
+  throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-function spaFallback() {
-  return {
-    name: 'spa-fallback',
-    configureServer(server) {
-      server.middlewares.use((req, res, next) => {
-        const url = req.url || ''
-
-        if (
-          req.method === 'GET' &&
-          !url.startsWith('/api') &&
-          !url.startsWith('/@') &&
-          !url.startsWith('/src') &&
-          !url.startsWith('/node_modules') &&
-          !url.includes('.')
-        ) {
-          req.url = '/index.html'
-        }
-
-        next()
-      })
-    },
-  }
-}
+const basePath = process.env.BASE_PATH ?? "/";
 
 export default defineConfig({
+  base: basePath,
   plugins: [
-    figmaAssetResolver(),
-    spaFallback(),
-    // The React and Tailwind plugins are both required for Make, even if
-    // Tailwind is not being actively used – do not remove them
     react(),
     tailwindcss(),
   ],
-  server: {
-    proxy: {
-      '/api': {
-        target: 'http://localhost:5000',
-        changeOrigin: true,
-      },
-    },
-    port: 5173,
-    strictPort: true,
-    host: '127.0.0.1',
-  },
   resolve: {
     alias: {
-      // Alias @ to the src directory
-      '@': path.resolve(__dirname, './src'),
+      "@": path.resolve(import.meta.dirname, "src"),
+      "@assets": path.resolve(import.meta.dirname, "..", "..", "attached_assets"),
+    },
+    dedupe: ["react", "react-dom"],
+  },
+  root: path.resolve(import.meta.dirname),
+  build: {
+    outDir: path.resolve(import.meta.dirname, "dist/public"),
+    emptyOutDir: true,
+  },
+  server: {
+    port,
+    strictPort: true,
+    host: "0.0.0.0",
+    allowedHosts: true,
+    fs: {
+      strict: true,
     },
   },
-
-  // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
-  assetsInclude: ['**/*.svg', '**/*.csv'],
-})
+  preview: {
+    port,
+    host: "0.0.0.0",
+    allowedHosts: true,
+  },
+});
