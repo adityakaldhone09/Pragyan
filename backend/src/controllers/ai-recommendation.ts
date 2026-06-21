@@ -103,10 +103,22 @@ export const getLLMCareerRecommendation = asyncHandler(async (req: Request, res:
   } = req.body || {};
 
   const payload: LLMCareerRecommendationInput = {
-    interests: Array.isArray(interests) ? interests.map(String).filter(Boolean) : [],
-    strengths: Array.isArray(strengths) ? strengths.map(String).filter(Boolean) : [],
-    weaknesses: Array.isArray(weaknesses) ? weaknesses.map(String).filter(Boolean) : [],
-    skills: Array.isArray(skills) ? skills.map(String).filter(Boolean) : [],
+    interests: Array.isArray(interests) ? interests.flatMap((item) => {
+      const value = String(item);
+      return value ? [value] : [];
+    }) : [],
+    strengths: Array.isArray(strengths) ? strengths.flatMap((item) => {
+      const value = String(item);
+      return value ? [value] : [];
+    }) : [],
+    weaknesses: Array.isArray(weaknesses) ? weaknesses.flatMap((item) => {
+      const value = String(item);
+      return value ? [value] : [];
+    }) : [],
+    skills: Array.isArray(skills) ? skills.flatMap((item) => {
+      const value = String(item);
+      return value ? [value] : [];
+    }) : [],
     quizScore: Number(quizScore) || 0,
     learningHours: Number(learningHours) || 2,
   };

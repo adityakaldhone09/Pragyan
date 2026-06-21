@@ -8,6 +8,8 @@ import { validate } from '@/middleware/validator';
 
 const router = Router();
 
+router.get('/', authenticate, profileBuilderController.getBuilderProfile);
+router.put('/', authenticate, validate(profileUpdateSchema), profileBuilderController.updateCoreProfile);
 router.get('/builder', authenticate, profileBuilderController.getBuilderProfile);
 router.get('/builder/coach', authenticate, profileBuilderController.generateCoach);
 router.patch('/builder', authenticate, validate(profileUpdateSchema), profileBuilderController.updateCoreProfile);

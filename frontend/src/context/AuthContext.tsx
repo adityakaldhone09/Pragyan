@@ -1,10 +1,23 @@
-import { useEffect, useMemo, useCallback, useState } from "react";
-import { authService } from "@/services/authService";
-import { clearStoredAuthSession, AUTH_SESSION_KEY } from "@/services/apiClient";
-import type { AuthSession } from "@/types/api";
-import { AuthContext, type AuthStatus, type AuthContextValue } from "@/context/auth-context";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useLocation } from "wouter";
+import { authService, type LoginInput, type RegisterInput } from "@/services/authService";
+import { AUTH_SESSION_KEY, clearStoredAuthSession, setStoredAuthSession } from "@/services/apiClient";
+import type { AuthSession, AuthUser } from "@/types/api";
 
-function readStoredSession() {
+interface AuthContextValue {
+  user: AuthUser | null;
+  loading: boolean;
+  isAuthenticated: boolean;
+  login(input: LoginInput): Promise<AuthSession>;
+  register(input: RegisterInput): Promise<AuthSession>;
+  logout(): Promise<void>;
+  reloadUser(): Promise<void>;
+  setSession(session: AuthSession | null): void;
+}
+
+const AuthContext = createContext<AuthContextValue | null>(null);
+
+function readStoredSession(): AuthSession | null {
   try {
     const raw = localStorage.getItem(AUTH_SESSION_KEY);
     return raw ? (JSON.parse(raw) as AuthSession) : null;
@@ -14,76 +27,38 @@ function readStoredSession() {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<AuthSession | null>(() => readStoredSession());
-  const [status, setStatus] = useState<AuthStatus>("initializing");
+  const [session, setSessionState] = useState<AuthSession | null>(() => readStoredSession());
+  const [loading, setLoading] = useState(true);
 
   const persistSession = useCallback((nextSession: AuthSession | null) => {
-    setSession(nextSession);
-    if (nextSession) {
-      localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(nextSession));
-    } else {
-      clearStoredAuthSession();
-    }
+    setSessionState(nextSession);
+    setStoredAuthSession(nextSession);
   }, []);
 
   useEffect(() => {
     let active = true;
 
-    async function initialize() {
-      const stored = readStoredSession();
-      if (!stored?.accessToken) {
-        if (active) {
-          setSession(null);
-          setStatus("anonymous");
-        }
-        return;
-      }
-
-      if (stored.user) {
-        if (active) {
-          persistSession(stored);
-          setStatus("authenticated");
-        }
-
-        void authService.me()
-          .then((user) => {
-            if (!active) {
-              return;
-            }
-
-            persistSession({ ...stored, user });
-          })
-          .catch(() => {
-            if (!active) {
-              return;
-            }
-
-            clearStoredAuthSession();
-            setSession(null);
-            setStatus("anonymous");
-          });
-
-        return;
-      }
-
+    async function restore() {
       try {
         const user = await authService.me();
-        if (active) {
-          const nextSession = { ...stored, user };
-          persistSession(nextSession);
-          setStatus("authenticated");
-        }
+        if (!active) return;
+        const stored = readStoredSession();
+        persistSession({
+          user,
+          accessToken: stored?.accessToken || "",
+          refreshToken: stored?.refreshToken || "",
+        });
       } catch {
-        clearStoredAuthSession();
         if (active) {
-          setSession(null);
-          setStatus("anonymous");
+          clearStoredAuthSession();
+          setSessionState(null);
         }
+      } finally {
+        if (active) setLoading(false);
       }
     }
 
-    initialize();
-
+    void restore();
     return () => {
       active = false;
     };
@@ -91,51 +66,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<AuthContextValue>(() => ({
     user: session?.user || null,
-    session,
-    status,
-    isAuthenticated: Boolean(session?.accessToken),
-    login: async (input) => {
+    loading,
+    isAuthenticated: Boolean(session?.user),
+    async login(input) {
       const next = await authService.login(input);
       persistSession(next);
-      setStatus("authenticated");
       return next;
     },
-    register: async (input) => {
+    async register(input) {
       const next = await authService.register(input);
       persistSession(next);
-      setStatus("authenticated");
       return next;
     },
-    refreshToken: async (input) => {
-      const next = await authService.refreshToken(input);
-      persistSession(next);
-      setStatus("authenticated");
-      return next;
-    },
-    updateProfile: authService.updateProfile,
-    logout: async () => {
+    async logout() {
       const refreshToken = session?.refreshToken;
-      if (refreshToken) {
-        await authService.logout(refreshToken);
-      } else {
-        clearStoredAuthSession();
-      }
-
-      sessionStorage.clear();
+      await authService.logout(refreshToken || undefined).catch(() => undefined);
       persistSession(null);
-      setStatus("anonymous");
     },
-    reloadUser: async () => {
+    async reloadUser() {
       const user = await authService.me();
-      if (session?.accessToken && session?.refreshToken) {
-        const nextSession = { ...session, user };
-        persistSession(nextSession);
-      } else {
-        setSession((current) => (current ? { ...current, user } : current));
-      }
+      setSessionState((current) => {
+        const next = current
+          ? { ...current, user }
+          : { user, accessToken: "", refreshToken: "" };
+        setStoredAuthSession(next);
+        return next;
+      });
     },
     setSession: persistSession,
-  }), [session, status, persistSession]);
+  }), [loading, persistSession, session]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within AuthProvider");
+  }
+  return context;
+}
+
+export function RequireAuth({ children }: { children: React.ReactNode }) {
+  const { loading, isAuthenticated } = useAuth();
+  const [, navigate] = useLocation();
+
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      navigate("/auth");
+    }
+  }, [isAuthenticated, loading, navigate]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background text-sm font-medium text-muted-foreground">
+        Restoring session...
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) return null;
+  return <>{children}</>;
 }

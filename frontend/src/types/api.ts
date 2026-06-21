@@ -2,6 +2,7 @@ export interface ApiResponse<T> {
   success: boolean;
   data?: T;
   message?: string;
+  error?: string;
   errors?: Record<string, string[]>;
 }
 
@@ -24,11 +25,18 @@ export interface AuthUser {
   avatar?: string | null;
   provider?: string;
   emailVerified?: boolean;
-  bio?: string | null;
+  age?: number | null;
+  location?: string | null;
+  phone?: string | null;
+  linkedin?: string | null;
   skills?: string[];
   interests?: string[];
-  education?: string | null;
+  preferences?: string[];
   experience?: string | null;
+  experienceType?: string | null;
+  education?: string | null;
+  educationEntries?: unknown;
+  skillLevel?: string | null;
   currentTitle?: string | null;
   careerTrack?: string | null;
   tenthBoard?: string | null;
@@ -37,12 +45,10 @@ export interface AuthUser {
   twelfthScore?: string | null;
   currentCourse?: string | null;
   cgpa?: string | null;
-  linkedAccounts?: Array<{
-    provider: string;
-    providerId: string;
-    avatar?: string | null;
-    emailVerified?: boolean;
-  }>;
+  xp?: number;
+  streak?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface AuthSession {
@@ -51,164 +57,101 @@ export interface AuthSession {
   refreshToken: string;
 }
 
-export interface StoredAuthSession extends AuthSession {
-  expiresAt?: number;
+export interface DashboardData {
+  user: {
+    id: string;
+    fullName: string;
+    xp?: number;
+    streak?: number;
+  };
+  progress: UserProgress[];
+  completedRoadmaps: Array<{ id: string; roadmapId: string; roadmap?: RoadmapSummary }>;
+  stats: {
+    totalRoadmapsStarted: number;
+    totalRoadmapsCompleted: number;
+    totalXp: number;
+    currentStreak: number;
+  };
 }
 
-export interface ProviderConnectionStatus {
-  linked: boolean;
-  email?: string;
-  username?: string;
-  verified?: boolean;
-  avatar?: string | null;
-}
-
-export interface ConnectedProvidersResponse {
-  google: ProviderConnectionStatus;
-  github: ProviderConnectionStatus;
+export interface UserProgress {
+  id: string;
+  roadmapId: string;
+  completedTasks: string[];
+  completedDays: string[];
+  progressPercentage: number;
+  currentDay: number;
+  xp?: number;
+  streak?: number;
+  roadmap?: RoadmapSummary;
 }
 
 export interface AssessmentQuestion {
-  id: string;
-  question: string;
+  id?: string;
+  question?: string;
+  questionText?: string;
   options: string[];
   category?: string;
-  type?: string;
-  dataSourced?: boolean;
+  tab?: string;
 }
 
-export interface AdaptiveProgress {
-  answered: number;
-  totalRelevant: number;
+export interface AssessmentSaveResponse {
+  id: string;
+  completedAt?: string;
+  analysis?: unknown;
 }
 
-export interface AdaptiveStartResponse {
-  sessionId: string;
-  question: AssessmentQuestion;
-  confidence: number;
-  progress: AdaptiveProgress;
-}
-
-export interface AdaptiveAnswerResponse {
-  sessionId: string;
-  confidence: number;
-  nextQuestion: AssessmentQuestion | null;
-  shouldSubmit: boolean;
-  progress?: AdaptiveProgress;
-}
-
-export interface AdaptiveCareerMatch {
-  careerId: string;
-  career: string;
-  category: string;
-  match: number;
-  reasons: string[];
-  salaryRange: string;
-  demandForecast: number;
-  growthRate: number;
-  skillGaps: string[];
-}
-
-export interface AdaptiveSubmitResponse {
-  resultId: string;
-  sessionId: string;
-  confidence: number;
-  topMatches: AdaptiveCareerMatch[];
-  allMatches: AdaptiveCareerMatch[];
-  summary: {
-    topMatch: AdaptiveCareerMatch | null;
-    secondaryMatches: AdaptiveCareerMatch[];
-    confidence: number;
-    suggestedCareers: string[];
-    scores: Record<string, number>;
-    strengths: string[];
-    weaknesses: string[];
-    learningRoadmap: Record<string, string[]>;
+export interface AssessmentResult {
+  id?: string;
+  suggestedCareers?: string[];
+  strengths?: string[];
+  weaknesses?: string[];
+  scores?: Record<string, number> | string;
+  summary?: {
+    suggestedCareers?: string[];
+    scores?: Record<string, number>;
+    strengths?: string[];
+    weaknesses?: string[];
+    learningRoadmap?: Record<string, string[]>;
   };
-  ai?: {
-    summary?: string;
-    skillGaps?: string[];
-    roadmap?: Array<{ week: number; items: string[] }>;
-    nextActions?: string[];
-    targetLevel?: string;
-  };
-}
-
-export interface AssessmentMatch {
-  careerId: string;
-  career: string;
-  match: number;
-  confidenceLevel: 'high' | 'medium' | 'low';
-  salaryEstimate?: string;
-  category?: string;
-  reasons: string[];
-  requiredSkills: string[];
-  missingSkills: string[];
-}
-
-export interface AssessmentSummary {
-  suggestedCareers: string[];
-  scores: Record<string, number>;
-  strengths: string[];
-  weaknesses: string[];
-}
-
-export interface AssessmentSubmissionResult {
-  persisted: {
+  combinedMatches?: Array<{
+    career?: string;
+    match?: number;
+    requiredSkills?: string[];
+    missingSkills?: string[];
+    reasons?: string[];
+  }> | null;
+  persisted?: {
     id: string;
-    answers: string;
-    suggestedCareers: string[];
-    scores: string;
-    strengths: string[];
-    weaknesses: string[];
+    suggestedCareers?: string[];
+    strengths?: string[];
+    weaknesses?: string[];
+    scores?: string;
   } | null;
-  combinedMatches: AssessmentMatch[] | null;
-  summary: AssessmentSummary;
-  enhancements?: {
-    summary?: string;
-    skillGaps?: string[];
-    roadmap?: Array<{ week: number; items: string[] }>;
-    nextActions?: string[];
-    targetLevel?: string;
-  };
 }
 
-export interface RoadmapWeekTask {
+export interface RoadmapTask {
+  id?: string;
+  title: string;
+  description?: string;
+  duration?: string;
+  completed?: boolean;
+  xp?: number;
+}
+
+export interface RoadmapDay {
   id?: string;
   title?: string;
-  name?: string;
-  completed?: boolean;
-}
-
-export interface RoadmapMilestone {
-  id: string | number;
-  title: string;
-  status?: 'completed' | 'in-progress' | 'locked' | string;
-  duration?: string;
-  modules?: RoadmapWeekTask[];
+  dayNumber?: number;
   description?: string;
-  progress?: number;
-  category?: string;
-  level?: string;
-  tags?: string[];
+  tasks?: RoadmapTask[];
 }
 
-export interface RoadmapLearningResource {
-  title: string;
-  provider: string;
-  type: string;
-  url: string;
-  estimatedMinutes?: number;
-}
-
-export interface RoadmapLearningDay {
-  day: number;
-  focus: string;
-  dailyTopics?: string[];
-  tasks: string[];
-  resources?: RoadmapLearningResource[];
-  deliverable: string;
-  xp: number;
+export interface RoadmapWeek {
+  id?: string;
+  title?: string;
+  weekNumber?: number;
+  days?: RoadmapDay[];
 }
 
 export interface RoadmapSummary {
@@ -217,161 +160,71 @@ export interface RoadmapSummary {
   description?: string;
   category?: string;
   careerPath?: string;
-  level?: string;
   difficulty?: string;
+  level?: string;
   duration?: string;
-  estimatedHours?: number;
   icon?: string;
-  tags?: string[];
-  progress?: number;
-  milestones?: RoadmapMilestone[];
+  estimatedHours?: number;
   requiredSkills?: string[];
-  learningStructure?: RoadmapLearningDay[];
-  progression?: Array<{
-    stage: string;
-    title: string;
-    description: string;
+  learningStructure?: Array<{
+    day?: number;
+    focus?: string;
+    dailyTopics?: string[];
+    tasks?: string[];
+    resources?: Array<{ title: string; type?: string; url?: string; difficulty?: string }>;
+    deliverable?: string;
+    xp?: number;
   }>;
+  milestones?: unknown;
+  progression?: unknown;
+  tags?: string[];
+  weeks?: RoadmapWeek[];
 }
-
-export type LearningResourceType = 'youtube' | 'documentation' | 'practice' | 'article' | 'mini-project' | 'certification';
 
 export interface LearningResourceItem {
-  id: string;
-  resourceKey?: string;
-  roadmapId?: string | null;
-  roadmapCategory: string;
-  roadmapTitle?: string | null;
-  skill: string;
-  topic: string;
-  topicSlug?: string;
-  dayNumber?: number | null;
-  resourceType: LearningResourceType | string;
-  difficulty: string;
+  id?: string;
   title: string;
+  type?: string;
+  resourceType?: string;
   url: string;
-  description: string;
-  provider: string;
-  estimatedMinutes?: number | null;
-  isOfficial?: boolean;
-  aiScore?: number;
-  aiReason?: string;
-  tags?: string[];
-  metadata?: Record<string, unknown> | null;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export interface LearningResourceHistoryItem {
-  id: string;
-  userId: string;
-  resourceId: string;
-  roadmapId?: string | null;
-  completed: boolean;
-  progressPercent: number;
-  notes?: string | null;
-  source?: string | null;
-  completedAt?: string | null;
-  createdAt?: string;
-  updatedAt?: string;
-  resource?: LearningResourceItem;
-}
-
-export interface LearningResourceDayGroup {
-  dayNumber: number;
-  focus: string;
-  resources: LearningResourceItem[];
-  completedCount: number;
-  totalCount: number;
-  progress: number;
-}
-
-export interface LearningResourceRecommendation {
-  roadmap: RoadmapSummary;
-  resources: LearningResourceItem[];
-  days: LearningResourceDayGroup[];
-  history: LearningResourceHistoryItem[];
-  profile?: {
-    careerGoal: string;
-    completedTopics: string[];
-    weakSkills: string[];
-    assessmentWeaknesses: string[];
-    assessmentStrengths: string[];
-    skillSignal: string[];
-  };
-  ai: {
-    enabled: boolean;
-    provider: string;
-    used: boolean;
-    summary?: string;
-  };
-  totalTopics: number;
-  topics: string[];
-}
-
-export interface RoadmapDomainSection {
-  id: string;
-  title: string;
-  summary: string;
-  priority: number;
-  focusPoints: string[];
-  category?: string;
-  roadmaps: RoadmapSummary[];
-}
-
-export interface JobFeedItem {
-  id: string;
-  title: string;
-  company: string;
-  location: string;
-  description: string;
-  salary: string | null;
-  skills: string[];
-  applyLink: string;
-  source: string;
-  createdAt: string;
-  matchScore: number;
-  applied: boolean;
-  appliedAt?: string | null;
-}
-
-export interface JobFeed {
-  recentJobs: JobFeedItem[];
-  recommendedJobs: JobFeedItem[];
-  appliedJobs: JobFeedItem[];
-}
-
-export interface AIStatus {
-  enabled: boolean;
-  provider: string;
-  model: string;
-  fallbackAvailable: {
-    gemini: boolean;
-    groq: boolean;
-  };
-}
-
-export interface TelemetrySnapshot {
-  calls: number;
-  cacheHits: number;
-  failures: number;
-  fallbacks: number;
-  serviceUnavailable: number;
-  providerCalls: Record<string, number>;
-  providerFailures: Record<string, number>;
-  providerServiceUnavailable: Record<string, number>;
-}
-
-export interface LLMCareerRecommendation {
-  topCareers: Array<{
-    career: string;
-    confidence: number;
-    reason: string;
-    requiredSkills: string[];
-    missingSkills: string[];
-    roadmap: string[];
-  }>;
-  summary: string;
+  difficulty?: string;
+  description?: string;
   provider?: string;
-  fallbackUsed?: boolean;
+  estimatedMinutes?: number | null;
+  skill?: string;
+  topic?: string;
+}
+
+export interface ProfileBuilderData {
+  user: AuthUser;
+  completion: {
+    score: number;
+    missing: string[];
+    sections?: Array<{ key: string; label: string; score: number }>;
+  };
+  projects: PortfolioProject[];
+  certifications: Certification[];
+  githubRepositories: unknown[];
+}
+
+export interface PortfolioProject {
+  id: string;
+  title: string;
+  description?: string | null;
+  techStack?: string[];
+  highlights?: string[];
+  liveUrl?: string | null;
+  repoUrl?: string | null;
+  featured?: boolean;
+}
+
+export interface Certification {
+  id: string;
+  title: string;
+  issuer: string;
+  credentialId?: string | null;
+  credentialUrl?: string | null;
+  issuedAt?: string | null;
+  expiresAt?: string | null;
+  description?: string | null;
 }

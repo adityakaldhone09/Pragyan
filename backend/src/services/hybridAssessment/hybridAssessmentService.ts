@@ -95,7 +95,7 @@ async function persistSession(session: HybridAssessmentSession, downstream?: Dow
     where: { id: session.id },
     data: {
       answers: JSON.stringify(Object.fromEntries(session.history.map((item) => [item.question.questionId, item.userAnswer]))),
-      selectedOptions: session.history.map((item) => item.userAnswer).filter(Boolean),
+      selectedOptions: session.history.flatMap((item) => item.userAnswer ? [item.userAnswer] : []),
       analysis: JSON.stringify(analysis),
       completedAt: session.isCompleted ? new Date() : undefined,
     },

@@ -1,290 +1,190 @@
-import type { ApiResponse, PaginatedResponse } from "@/types/api";
+import axios, { AxiosError, type AxiosRequestConfig } from "axios";
+import type { ApiResponse, AuthSession, PaginatedResponse } from "@/types/api";
 
-const DEFAULT_TIMEOUT = 15_000;
-const BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) || "/api";
+const API_BASE_URL = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") || "/api";
 const AUTH_SESSION_KEY = "pragyan_auth_session";
 
-type RequestOptions = Omit<RequestInit, "body"> & {
-  body?: unknown;
-  timeoutMs?: number;
-  retryCount?: number;
-  skipAuth?: boolean;
-  cacheTtlMs?: number;
-  cacheKey?: string;
+type RequestConfig = AxiosRequestConfig & {
+  skipRefresh?: boolean;
 };
 
-type CachedResponse = {
-  expiresAt: number;
-  value: unknown;
-};
+let refreshPromise: Promise<AuthSession | null> | null = null;
+const loadingListeners = new Set<(loading: boolean) => void>();
+let pendingRequests = 0;
 
-const GET_RESPONSE_CACHE = new Map<string, CachedResponse>();
-const GET_IN_FLIGHT = new Map<string, Promise<unknown>>();
-
-function resolveUrl(path: string) {
-  if (/^https?:\/\//i.test(path)) {
-    return path;
-  }
-
-  if (path.startsWith("/")) {
-    return `${BASE_URL}${path}`;
-  }
-
-  return `${BASE_URL}/${path}`;
+function notifyLoading() {
+  const loading = pendingRequests > 0;
+  loadingListeners.forEach((listener) => listener(loading));
 }
 
-function readStoredAuth() {
+function readSession(): AuthSession | null {
   try {
     const raw = localStorage.getItem(AUTH_SESSION_KEY);
-    if (!raw) {
-      return null;
-    }
-
-    return JSON.parse(raw) as { accessToken?: string; refreshToken?: string };
+    return raw ? (JSON.parse(raw) as AuthSession) : null;
   } catch {
     return null;
   }
 }
 
-function getAccessToken() {
-  return readStoredAuth()?.accessToken || null;
-}
-
-function buildCacheKey(path: string, options: RequestOptions, token: string | null) {
-  return [
-    path,
-    options.cacheKey || '',
-    token || 'anonymous',
-  ].join('|');
-}
-
-export function setStoredAuthSession(session: unknown) {
-  localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
+export function setStoredAuthSession(session: AuthSession | null) {
+  if (session) {
+    localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
+  } else {
+    localStorage.removeItem(AUTH_SESSION_KEY);
+  }
 }
 
 export function clearStoredAuthSession() {
-  localStorage.removeItem(AUTH_SESSION_KEY);
+  setStoredAuthSession(null);
 }
 
-function normalizeErrorMessage(payload: unknown, fallback = "Request failed") {
+function normalizeMessage(payload: unknown, fallback = "Request failed") {
   if (payload && typeof payload === "object") {
-    const candidate = payload as { message?: string; error?: string; errors?: Record<string, string[]> };
-    if (candidate.message) return candidate.message;
-    if (candidate.error) return candidate.error;
-    if (candidate.errors) {
-      const firstKey = Object.keys(candidate.errors)[0];
-      const firstMessage = firstKey ? candidate.errors[firstKey]?.[0] : undefined;
-      if (firstMessage) return firstMessage;
+    const body = payload as ApiResponse<unknown>;
+    if (body.message) return body.message;
+    if (body.error) return body.error;
+    if (body.errors) {
+      const firstKey = Object.keys(body.errors)[0];
+      const first = firstKey ? body.errors[firstKey]?.[0] : undefined;
+      if (first) return first;
     }
   }
-
   return fallback;
 }
 
-function isAbortError(error: unknown) {
-  return error instanceof Error && (error.name === "AbortError" || error.message.includes("aborted"));
-}
+export class ApiError extends Error {
+  status?: number;
+  details?: unknown;
 
-export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { timeoutMs = DEFAULT_TIMEOUT, retryCount = 1, skipAuth = false, headers, body, signal, cacheTtlMs = 0, cacheKey, ...rest } = options;
-  const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
-  const mergedHeaders = new Headers(headers);
-  const token = skipAuth ? null : getAccessToken();
-  const shouldCache = (rest.method === undefined || String(rest.method).toUpperCase() === "GET") && cacheTtlMs > 0;
-  const resolvedCacheKey = shouldCache ? buildCacheKey(path, { ...options, cacheKey }, token) : null;
-
-  if (!skipAuth) {
-    if (token) {
-      mergedHeaders.set("Authorization", `Bearer ${token}`);
-    }
-  }
-
-  if (body !== undefined && !mergedHeaders.has("Content-Type")) {
-    mergedHeaders.set("Content-Type", "application/json");
-  }
-
-  let lastError: unknown = null;
-
-  try {
-    if (shouldCache && resolvedCacheKey) {
-      const cached = GET_RESPONSE_CACHE.get(resolvedCacheKey);
-      if (cached && cached.expiresAt > Date.now()) {
-        return cached.value as T;
-      }
-
-      const inFlight = GET_IN_FLIGHT.get(resolvedCacheKey);
-      if (inFlight) {
-        return (await inFlight) as T;
-      }
-    }
-
-    const fetchPromise = (async () => {
-    const fetchAttempt = async (attempt: number): Promise<T> => {
-      try {
-        const response = await fetch(resolveUrl(path), {
-          ...rest,
-          signal: signal ?? controller.signal,
-          credentials: "include",
-          headers: mergedHeaders,
-          body: body === undefined ? undefined : typeof body === "string" ? body : JSON.stringify(body),
-        });
-
-        const text = await response.text();
-        const parsed = text ? JSON.parse(text) : null;
-
-        if (!response.ok || (parsed && typeof parsed === "object" && "success" in parsed && parsed.success === false)) {
-          throw new Error(normalizeErrorMessage(parsed, response.statusText || "Request failed"));
-        }
-
-        if (parsed && typeof parsed === "object" && "data" in parsed) {
-          return (parsed as ApiResponse<T>).data as T;
-        }
-
-        return parsed as T;
-      } catch (error) {
-        lastError = error;
-
-        if (isAbortError(error)) {
-          throw new Error("Request timed out. Please try again.");
-        }
-
-        if (attempt < retryCount && (rest.method === undefined || String(rest.method).toUpperCase() === "GET")) {
-          return fetchAttempt(attempt + 1);
-        }
-
-        if (lastError instanceof Error) {
-          throw lastError;
-        }
-
-        throw new Error("Request failed");
-      }
-    };
-
-    return fetchAttempt(0);
-    })();
-
-    if (shouldCache && resolvedCacheKey) {
-      GET_IN_FLIGHT.set(resolvedCacheKey, fetchPromise);
-    }
-
-    const result = await fetchPromise;
-
-    if (shouldCache && resolvedCacheKey) {
-      GET_RESPONSE_CACHE.set(resolvedCacheKey, {
-        expiresAt: Date.now() + cacheTtlMs,
-        value: result,
-      });
-    }
-
-    return result;
-  } finally {
-    if (shouldCache && resolvedCacheKey) {
-      GET_IN_FLIGHT.delete(resolvedCacheKey);
-    }
-    window.clearTimeout(timeout);
+  constructor(message: string, status?: number, details?: unknown) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.details = details;
   }
 }
 
-export async function apiPaginatedRequest<T>(path: string, options: RequestOptions = {}) {
-  const { timeoutMs = DEFAULT_TIMEOUT, retryCount = 1, skipAuth = false, headers, body, signal, cacheTtlMs = 0, cacheKey, ...rest } = options;
-  const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
-  const mergedHeaders = new Headers(headers);
-  const token = skipAuth ? null : getAccessToken();
-  const shouldCache = (rest.method === undefined || String(rest.method).toUpperCase() === "GET") && cacheTtlMs > 0;
-  const resolvedCacheKey = shouldCache ? buildCacheKey(path, { ...options, cacheKey }, token) : null;
+const axiosInstance = axios.create({
+  baseURL: API_BASE_URL,
+  withCredentials: true,
+  timeout: 30_000,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
 
-  if (!skipAuth) {
-    if (token) mergedHeaders.set('Authorization', `Bearer ${token}`);
+axiosInstance.interceptors.request.use((config) => {
+  pendingRequests += 1;
+  notifyLoading();
+
+  const session = readSession();
+  if (session?.accessToken) {
+    config.headers.Authorization = `Bearer ${session.accessToken}`;
   }
 
-  try {
-    if (shouldCache && resolvedCacheKey) {
-      const cached = GET_RESPONSE_CACHE.get(resolvedCacheKey);
-      if (cached && cached.expiresAt > Date.now()) {
-        return cached.value as PaginatedResponse<T>;
-      }
+  return config;
+});
 
-      const inFlight = GET_IN_FLIGHT.get(resolvedCacheKey);
-      if (inFlight) {
-        return (await inFlight) as PaginatedResponse<T>;
+axiosInstance.interceptors.response.use(
+  (response) => {
+    pendingRequests = Math.max(0, pendingRequests - 1);
+    notifyLoading();
+    return response;
+  },
+  async (error: AxiosError<ApiResponse<unknown>>) => {
+    pendingRequests = Math.max(0, pendingRequests - 1);
+    notifyLoading();
+
+    const original = (error.config || {}) as RequestConfig & { _retry?: boolean };
+    const status = error.response?.status;
+
+    if (status === 401 && !original._retry && !original.skipRefresh) {
+      original._retry = true;
+      const session = readSession();
+
+      if (session?.refreshToken || axiosInstance.defaults.withCredentials) {
+        refreshPromise ??= axiosInstance
+          .post<ApiResponse<AuthSession>>(
+            "/auth/refresh-token",
+            session?.refreshToken ? { refreshToken: session.refreshToken } : {},
+            { skipRefresh: true } as RequestConfig
+          )
+          .then((response) => {
+            const refreshed = response.data.data;
+            if (!refreshed) return null;
+            const nextSession: AuthSession = {
+              ...(session || {}),
+              ...refreshed,
+              user: refreshed.user || session?.user,
+            };
+            if (!nextSession.user) return null;
+            setStoredAuthSession(nextSession);
+            return nextSession;
+          })
+          .catch(() => {
+            clearStoredAuthSession();
+            return null;
+          })
+          .finally(() => {
+            refreshPromise = null;
+          });
+
+        const refreshed = await refreshPromise;
+        if (refreshed) {
+          original.headers = {
+            ...original.headers,
+            ...(refreshed.accessToken ? { Authorization: `Bearer ${refreshed.accessToken}` } : {}),
+          };
+          return axiosInstance(original);
+        }
       }
     }
 
-    const fetchPromise = (async () => {
-    try {
-      const response = await fetch(resolveUrl(path), {
-        ...rest,
-        signal: signal ?? controller.signal,
-        credentials: 'include',
-        headers: mergedHeaders,
-        body: body === undefined ? undefined : typeof body === 'string' ? body : JSON.stringify(body),
-      });
-
-      const text = await response.text();
-      const parsed = text ? JSON.parse(text) : null;
-
-      if (!response.ok || (parsed && typeof parsed === 'object' && 'success' in parsed && parsed.success === false)) {
-        throw new Error(normalizeErrorMessage(parsed, response.statusText || 'Request failed'));
-      }
-
-      // If server wraps with { success, data, pagination }, return the full parsed object
-      if (parsed && typeof parsed === 'object' && 'data' in parsed && 'pagination' in parsed) {
-        return parsed as PaginatedResponse<T>;
-      }
-
-      // Fallback: server may have returned just data array (legacy); wrap into pagination-less shape
-      return {
-        success: true,
-        data: (parsed as any) || [],
-        pagination: {
-          page: 1,
-          limit: Array.isArray(parsed) ? (parsed as any).length : 0,
-          total: Array.isArray(parsed) ? (parsed as any).length : 0,
-          totalPages: 1,
-        },
-      } as PaginatedResponse<T>;
-    } catch (error) {
-      if (isAbortError(error)) {
-        throw new Error("Request timed out. Please try again.");
-      }
-
-      throw error;
-    }
-    })();
-
-    if (shouldCache && resolvedCacheKey) {
-      GET_IN_FLIGHT.set(resolvedCacheKey, fetchPromise);
-    }
-
-    const result = await fetchPromise;
-
-    if (shouldCache && resolvedCacheKey) {
-      GET_RESPONSE_CACHE.set(resolvedCacheKey, {
-        expiresAt: Date.now() + cacheTtlMs,
-        value: result,
-      });
-    }
-
-    return result;
-  } finally {
-    if (shouldCache && resolvedCacheKey) {
-      GET_IN_FLIGHT.delete(resolvedCacheKey);
-    }
-    window.clearTimeout(timeout);
+    throw new ApiError(
+      normalizeMessage(error.response?.data, error.message || "Request failed"),
+      status,
+      error.response?.data
+    );
   }
+);
+
+function unwrap<T>(payload: ApiResponse<T> | T): T {
+  if (payload && typeof payload === "object" && "success" in payload && "data" in payload) {
+    return (payload as ApiResponse<T>).data as T;
+  }
+  return payload as T;
 }
 
-export const apiClient = {
-  get: <T>(path: string, options?: RequestOptions) => apiRequest<T>(path, { ...options, method: "GET" }),
-  post: <T>(path: string, body?: unknown, options?: RequestOptions) =>
-    apiRequest<T>(path, { ...options, method: "POST", body }),
-  patch: <T>(path: string, body?: unknown, options?: RequestOptions) =>
-    apiRequest<T>(path, { ...options, method: "PATCH", body }),
-  put: <T>(path: string, body?: unknown, options?: RequestOptions) =>
-    apiRequest<T>(path, { ...options, method: "PUT", body }),
-  delete: <T>(path: string, options?: RequestOptions) => apiRequest<T>(path, { ...options, method: "DELETE" }),
+export const api = {
+  async get<T>(url: string, config?: RequestConfig) {
+    const response = await axiosInstance.get<ApiResponse<T> | T>(url, config);
+    return unwrap<T>(response.data);
+  },
+  async post<T>(url: string, data?: unknown, config?: RequestConfig) {
+    const response = await axiosInstance.post<ApiResponse<T> | T>(url, data, config);
+    return unwrap<T>(response.data);
+  },
+  async put<T>(url: string, data?: unknown, config?: RequestConfig) {
+    const response = await axiosInstance.put<ApiResponse<T> | T>(url, data, config);
+    return unwrap<T>(response.data);
+  },
+  async patch<T>(url: string, data?: unknown, config?: RequestConfig) {
+    const response = await axiosInstance.patch<ApiResponse<T> | T>(url, data, config);
+    return unwrap<T>(response.data);
+  },
+  async delete<T>(url: string, config?: RequestConfig) {
+    const response = await axiosInstance.delete<ApiResponse<T> | T>(url, config);
+    return unwrap<T>(response.data);
+  },
+  async paginated<T>(url: string, config?: RequestConfig) {
+    const response = await axiosInstance.get<PaginatedResponse<T>>(url, config);
+    return response.data;
+  },
+  onLoadingChange(listener: (loading: boolean) => void) {
+    loadingListeners.add(listener);
+    listener(pendingRequests > 0);
+    return () => loadingListeners.delete(listener);
+  },
 };
 
-export { AUTH_SESSION_KEY };
+export { AUTH_SESSION_KEY, API_BASE_URL };
