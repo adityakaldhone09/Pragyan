@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "motion/react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   ArrowRight,
   BookOpen,
@@ -21,6 +21,7 @@ import { GlassCard } from "../components/GlassCard";
 import { GlowButton } from "../components/GlowButton";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
+import { AnimatedProgress } from "../components/AnimatedProgress";
 
 type Phase = "onboarding" | "discovery" | 1 | 2 | 3 | "done";
 type FunnelLevel = "General" | "Specific" | "Specialization" | "Depth";
@@ -189,17 +190,26 @@ export function Assessment() {
   const [discoveryStep, setDiscoveryStep] = useState(0);
   const [discoveryAnswers, setDiscoveryAnswers] = useState<Record<string, string | string[]>>({});
   const [phase2Answers, setPhase2Answers] = useState<Record<string, string>>({});
-  const [phase3LevelIndex, setPhase3LevelIndex] = useState(0);
+  
+  // FIX: Added activeLevel state for Phase 3 UI badge tracking
+  const [activeLevel, setActiveLevel] = useState<FunnelLevel>("General");
   const [phase3QuestionCount, setPhase3QuestionCount] = useState(0);
 
   const domain = formData.domain || formData.careerPath || "Still Exploring";
   const domainQuestions = DOMAIN_QUESTIONS[domain] || DOMAIN_QUESTIONS["MERN Stack"];
   const currentDiscoveryQuestion = DISCOVERY_QUESTIONS[discoveryStep];
+  
   const discoveryCanContinue = useMemo(() => {
     const answer = discoveryAnswers[currentDiscoveryQuestion.id];
     return currentDiscoveryQuestion.type === "single" ? Boolean(answer) : Array.isArray(answer) && answer.length > 0;
   }, [currentDiscoveryQuestion, discoveryAnswers]);
-  const currentFunnelLevel = FUNNEL_LEVELS[phase3LevelIndex];
+
+  // Derived progress variables for the UI
+  const currentQuestion = phase === 2 ? Object.keys(phase2Answers).length : phase === 3 ? phase3QuestionCount : 0;
+  const totalQuestions = phase === 2 ? domainQuestions.length : phase === 3 ? 20 : 0;
+  const progress = totalQuestions > 0 ? (currentQuestion / totalQuestions) * 100 : 0;
+  const categories = ["Onboarding", "Baseline", "Adaptive Depth"];
+  const currentCategory = phase === "onboarding" || phase === "discovery" || phase === 1 ? 0 : phase === 2 ? 1 : 2;
 
   function handleInputChange(event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value } = event.target;
@@ -266,20 +276,29 @@ export function Assessment() {
     setPhase(3);
   }
 
-  function handlePhase3Submit() {
+  // FIX: Mocking the API response handling to demonstrate activeLevel update
+  function handlePhase3Submit(answer: string) {
+    // In a real app, this would be an API call:
+    // const response = await api.post('/hybrid/answer', { answer });
+    // setActiveLevel(response.currentFunnelLevel);
+    
     const nextCount = phase3QuestionCount + 1;
-    if (phase3LevelIndex === FUNNEL_LEVELS.length - 1 && nextCount >= 2) {
-      setPhase("done");
-      return;
-    }
-
-    if (nextCount >= 2) {
-      setPhase3LevelIndex((current) => Math.min(current + 1, FUNNEL_LEVELS.length - 1));
+    
+    // Simulate dynamic transitions for demo purposes
+    if (nextCount === 2 && activeLevel === "General") {
+      setActiveLevel("Specific");
       setPhase3QuestionCount(0);
-      return;
+    } else if (nextCount === 2 && activeLevel === "Specific") {
+      setActiveLevel("Specialization");
+      setPhase3QuestionCount(0);
+    } else if (nextCount === 2 && activeLevel === "Specialization") {
+      setActiveLevel("Depth");
+      setPhase3QuestionCount(0);
+    } else if (nextCount === 2 && activeLevel === "Depth") {
+      setPhase("done");
+    } else {
+      setPhase3QuestionCount(nextCount);
     }
-
-    setPhase3QuestionCount(nextCount);
   }
 
   return (
@@ -299,7 +318,7 @@ export function Assessment() {
           <p className="text-muted-foreground max-w-2xl mx-auto">
             Answer thoughtfully - our AI adapts questions based on your responses
           </p>
-        </motion.div>
+        </header>
 
         {/* Progress */}
         <motion.div
@@ -312,10 +331,10 @@ export function Assessment() {
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Overall Progress</span>
                 <span className="font-medium">
-                  Question {currentQuestion + 1} of {totalQuestions}
+                  {phase === "done" ? "Completed" : `Step ${currentCategory + 1} of 3`}
                 </span>
               </div>
-              <AnimatedProgress value={progress} max={100} showLabel={false} />
+              <AnimatedProgress value={((currentCategory + (phase === "done" ? 1 : 0)) / 3) * 100} max={100} showLabel={false} />
 
               {/* Category Pills */}
               <div className="flex flex-wrap gap-2 pt-2">
@@ -388,7 +407,7 @@ export function Assessment() {
           {phase === 3 && (
             <MotionStep key="phase3">
               <Phase3
-                level={currentFunnelLevel}
+                level={activeLevel}
                 questionCount={phase3QuestionCount}
                 domain={domain}
                 onSubmit={handlePhase3Submit}
@@ -448,40 +467,27 @@ function PreAssessmentForm({
           </div>
           <div className="grid grid-cols-2 gap-4">
             <PlainInput id="twelfthScore" name="twelfthScore" label="12th score" placeholder="85%" value={formData.twelfthScore} onChange={onInputChange} />
-            <PlainInput id="twelfthBoard" name="twelfthBoard" label="12th board" placeholder="ISC" value={formData.twelfthBoard} onChange={onInputChange} />
+            <PlainInput id="twelfthBoard" name="twelfthBoard" label="12th board" placeholder="ICSE" value={formData.twelfthBoard} onChange={onInputChange} />
           </div>
-          <IconInput icon={BookOpen} id="currentCourse" name="currentCourse" label="Current course" placeholder="B.Tech Computer Science" value={formData.currentCourse} onChange={onInputChange} />
-          <PlainInput id="cgpa" name="cgpa" label="CGPA / percentage" placeholder="8.5" value={formData.cgpa} onChange={onInputChange} />
+          <PlainInput id="currentCourse" name="currentCourse" label="Current course" placeholder="B.Tech CSE" value={formData.currentCourse} onChange={onInputChange} />
+          <PlainInput id="cgpa" name="cgpa" label="CGPA / Percentage" placeholder="8.5 or 85%" value={formData.cgpa} onChange={onInputChange} />
           <PlainInput id="targetJobRole" name="targetJobRole" label="Target job role" placeholder="Frontend Engineer" value={formData.targetJobRole} onChange={onInputChange} />
-          <PlainInput id="experience" name="experience" label="Experience" placeholder="Fresher, 2 years" value={formData.experience} onChange={onInputChange} />
         </div>
       </div>
 
-      <div className="mt-8 grid gap-4 border-t border-border/60 pt-6 md:grid-cols-2">
-        <div className="rounded-lg border border-dashed border-primary/35 bg-primary/5 p-5 text-center">
-          <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <Upload className="h-5 w-5" />
-          </div>
-          <h3 className="font-semibold text-foreground">Path A: Prepared User</h3>
-          <p className="mt-1 text-xs text-muted-foreground">Use resume parsing or continue after filling your baseline.</p>
-          <GlowButton variant="primary" onClick={onResumeUpload} disabled={isParsingResume} className="mt-4 w-full">
-            {isParsingResume ? "Parsing..." : "Simulate Resume Parse"}
+      <div className="mt-8 flex flex-col gap-4 sm:flex-row">
+        <GlowButton onClick={onPreparedContinue} disabled={!canContinue} className="flex-1">
+          Continue to Assessment
+          <ArrowRight className="ml-2 inline h-4 w-4" />
+        </GlowButton>
+        <div className="flex flex-1 gap-3">
+          <GlowButton variant="secondary" onClick={onResumeUpload} disabled={isParsingResume} className="flex-1">
+            {isParsingResume ? "Parsing..." : "Upload Resume"}
+            <Upload className="ml-2 inline h-4 w-4" />
           </GlowButton>
-          <GlowButton variant="secondary" onClick={onPreparedContinue} disabled={!canContinue} className="mt-3 w-full">
-            Continue to Phase 2
-            <ArrowRight className="ml-2 inline h-4 w-4" />
-          </GlowButton>
-        </div>
-
-        <div className="rounded-lg border border-accent/25 bg-accent/5 p-5 text-center">
-          <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-accent/10 text-accent">
-            <Search className="h-5 w-5" />
-          </div>
-          <h3 className="font-semibold text-foreground">Path B: Still Exploring</h3>
-          <p className="mt-1 text-xs text-muted-foreground">Answer a short bridge to choose a starting pathway.</p>
-          <GlowButton variant="accent" onClick={onExplore} className="mt-4 w-full">
-            I am exploring
-            <ArrowRight className="ml-2 inline h-4 w-4" />
+          <GlowButton variant="secondary" onClick={onExplore} className="flex-1">
+            Not sure? Explore
+            <Search className="ml-2 inline h-4 w-4" />
           </GlowButton>
         </div>
       </div>
@@ -638,17 +644,28 @@ function Phase2({
   );
 }
 
-function Phase3({ level, questionCount, domain, onSubmit }: { level: FunnelLevel; questionCount: number; domain: string; onSubmit: () => void }) {
+// FIX: Updated Phase3 component to use activeLevel for dynamic badge highlighting
+function Phase3({ level, questionCount, domain, onSubmit }: { level: FunnelLevel; questionCount: number; domain: string; onSubmit: (answer: string) => void }) {
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+
   return (
     <GlassCard glow glowColor="accent" className="p-8">
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold">Phase 3: Adaptive Depth</h2>
-          <p className="text-sm text-muted-foreground">Strict funnel level: {level}</p>
+          <p className="text-sm text-muted-foreground">Current funnel level: {level}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {FUNNEL_LEVELS.map((funnelLevel) => (
-            <span key={funnelLevel} className={`rounded-md px-2.5 py-1 text-xs font-medium ${level === funnelLevel ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground"}`}>
+            <span 
+              key={funnelLevel} 
+              // FIX: CSS dynamically highlights the badge that matches activeLevel
+              className={`rounded-md px-2.5 py-1 text-xs font-medium transition-all duration-300 ${
+                level === funnelLevel 
+                  ? "bg-purple-600 text-white shadow-lg shadow-purple-500/30 scale-105" 
+                  : "bg-muted text-muted-foreground opacity-60"
+              }`}
+            >
               {funnelLevel}
             </span>
           ))}
@@ -661,13 +678,27 @@ function Phase3({ level, questionCount, domain, onSubmit }: { level: FunnelLevel
       </div>
       <div className="mt-5 grid gap-3">
         {["Break the problem into smaller signals", "Search for a ready-made answer only", "Skip the topic", "Guess and move on"].map((option) => (
-          <button key={option} type="button" className="rounded-lg border border-border bg-card/30 p-4 text-left transition hover:border-accent/50 hover:bg-accent/5">
+          <button 
+            key={option} 
+            type="button" 
+            onClick={() => setSelectedOption(option)}
+            className={`rounded-lg border p-4 text-left transition-all ${
+              selectedOption === option 
+                ? "border-accent bg-accent/10 text-accent font-medium" 
+                : "border-border bg-card/30 hover:border-accent/50 hover:bg-accent/5"
+            }`}
+          >
             {option}
           </button>
         ))}
       </div>
-      <GlowButton variant="accent" onClick={onSubmit} className="mt-6 w-full">
-        Submit Answer {questionCount + 1}/2
+      <GlowButton 
+        variant="accent" 
+        onClick={() => selectedOption && onSubmit(selectedOption)} 
+        disabled={!selectedOption}
+        className="mt-6 w-full"
+      >
+        Submit Answer {questionCount + 1}
       </GlowButton>
     </GlassCard>
   );
@@ -744,13 +775,4 @@ function toArray(value: string | string[] | undefined): string[] {
 
 function mergeCsv(existing: string, additions: string[]) {
   return Array.from(new Set([...existing.split(",").map((item) => item.trim()).filter(Boolean), ...additions])).join(", ");
-}
-
-function phaseLabel(phase: Phase) {
-  if (phase === "onboarding") return "Baseline data collection";
-  if (phase === "discovery") return "Skills discovery bridge";
-  if (phase === 1) return "Phase 1: career identity";
-  if (phase === 2) return "Phase 2: domain baseline";
-  if (phase === 3) return "Phase 3: adaptive depth";
-  return "Assessment complete";
 }
