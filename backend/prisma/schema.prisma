@@ -75,6 +75,7 @@ model User {
   personalityProfiles     PersonalityProfile[]
   learningVelocities      LearningVelocity[]
   decisionSnapshots       DecisionSnapshot[]
+  generatedNotes          GeneratedNote[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -971,6 +972,32 @@ model DecisionSnapshot {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+model GeneratedNote {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String   @db.ObjectId
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic          String
+  format         String
+  source         String   @default("ai-counselor")
+  sourceMessageId String?
+  fileName       String
+  mimeType       String
+  byteSize       Int
+  contentHash    String
+  metadata       Json
+  content        String?
+  generatedAt    DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([topic])
+  @@index([format])
+  @@index([generatedAt])
+  @@unique([userId, contentHash, format])
 }
 
 model MentorConversation {

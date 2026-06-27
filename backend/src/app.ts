@@ -45,6 +45,7 @@ import journeyRoutes from '@/modules/journey/journey.routes';
 import mentorRoutes from '@/modules/mentor/mentor.routes';
 import intelligenceRoutes from '@/modules/intelligence/intelligence.routes';
 import { ensureIntelligenceIndexes } from '@/modules/intelligence/intelligence.indexes';
+import notesRoutes from '@/modules/notes/notes.routes';
 import path from 'path';
 import fs from 'fs';
 
@@ -137,6 +138,7 @@ app.use('/api/quiz', quizRoutes);
 app.use('/api/journey', journeyRoutes);
 app.use('/api/mentor', mentorRoutes);
 app.use('/api/intelligence', intelligenceRoutes);
+app.use('/api/notes', notesRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Development-only debug routes (do not expose in production)
