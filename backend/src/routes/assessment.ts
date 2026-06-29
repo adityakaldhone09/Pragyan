@@ -8,6 +8,8 @@ import { validate } from '@/middleware/validator';
 import { assessmentAnswersSchema } from '@/validators/assessment';
 import { assessmentCreateSchema } from '@/validators/assessment';
 import { prisma } from '@/lib/prisma';
+import * as decisionController from '@/controllers/assessmentDecisionTree';
+import * as hybridAssessmentController from '@/controllers/hybridAssessment';
 
 const router = Router();
 
@@ -28,6 +30,13 @@ router.post('/save', authenticate, validate(assessmentAnswersSchema), assessment
 router.get('/history', authenticate, assessmentController.getAssessmentHistory);
 router.get('/latest', authenticate, assessmentController.getLatestAssessment);
 
+// Hybrid 3-phase assessment engine imported from backend (1).zip.
+router.post('/hybrid/parse-resume', hybridAssessmentController.parseResume);
+router.post('/hybrid/answers', authenticate, hybridAssessmentController.saveHybridAnswers);
+router.get('/hybrid/domain-questions/:domain', hybridAssessmentController.getDomainQuestions);
+router.post('/hybrid/start', hybridAssessmentController.startHybridAssessment);
+router.post('/hybrid/:sessionId/answer', hybridAssessmentController.submitHybridAnswer);
+
 /**
  * GET /api/assessment/metadata
  * Get assessment coverage info - what careers/skills/interests are covered
@@ -43,7 +52,7 @@ router.get('/metadata', async (_req, res) => {
       prisma.career.findMany({ take: 10, select: { title: true, category: true } }),
     ]);
 
-    const categories = [...new Set(careers.map((c) => c.category).filter(Boolean))];
+    const categories = [...new Set(careers.flatMap((c) => c.category ? [c.category] : []))];
 
     console.log(`[Assessment Metadata] Retrieved ${careerCount} careers, ${skillCount} skills, ${interestCount} interests`);
 
@@ -77,5 +86,11 @@ router.post('/generate', authenticate, authorize('ADMIN'), assessmentController.
 
 // Adaptive next-question endpoint
 router.post('/next', assessmentController.getNextQuestions);
+
+// Decision-tree assessment endpoints (configuration-driven)
+router.get('/decision/start', decisionController.startDecision);
+router.post('/decision/next', decisionController.answerDecision);
+router.post('/decision/complete', authenticate, decisionController.finishDecision);
+router.get('/decision/result/:sessionId', authenticate, decisionController.getResult);
 
 export default router;

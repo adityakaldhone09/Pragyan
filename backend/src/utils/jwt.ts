@@ -1,6 +1,7 @@
 // src/utils/jwt.ts
 
 import jwt from 'jsonwebtoken';
+import { randomUUID } from 'crypto';
 import { config } from '@/config/env';
 import { JwtPayload } from '@/types';
 
@@ -11,7 +12,7 @@ export const generateAccessToken = (payload: Omit<JwtPayload, 'iat' | 'exp'>): s
 };
 
 export const generateRefreshToken = (userId: string): string => {
-  return jwt.sign({ id: userId }, config.jwt.refreshSecret, {
+  return jwt.sign({ id: userId, jti: randomUUID() }, config.jwt.refreshSecret, {
     expiresIn: config.jwt.refreshExpiry as jwt.SignOptions['expiresIn'],
   });
 };
@@ -24,9 +25,9 @@ export const verifyAccessToken = (token: string): JwtPayload | null => {
   }
 };
 
-export const verifyRefreshToken = (token: string): { id: string } | null => {
+export const verifyRefreshToken = (token: string): { id: string; jti?: string } | null => {
   try {
-    return jwt.verify(token, config.jwt.refreshSecret) as { id: string };
+    return jwt.verify(token, config.jwt.refreshSecret) as { id: string; jti?: string };
   } catch (error) {
     return null;
   }

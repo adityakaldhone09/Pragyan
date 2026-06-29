@@ -1,4 +1,5 @@
 import { AIProviderBase, AIProviderOptions, AIProviderResult } from './AIProviderBase';
+import { generateLocalJson, generateLocalText } from './local-ai-engine';
 
 export class LocalAIProvider extends AIProviderBase {
   getProviderName(): string {
@@ -17,15 +18,11 @@ export class LocalAIProvider extends AIProviderBase {
     return false;
   }
 
-  private unavailable(): never {
-    throw new Error('Local AI provider is configured; remote AI calls are disabled.');
-  }
-
   protected doGenerateText(_prompt: string, _opts?: AIProviderOptions): Promise<AIProviderResult<string>> {
-    this.unavailable();
+    return Promise.resolve({ value: generateLocalText(_prompt), tokensUsed: 0 });
   }
 
   protected doGenerateJsonRaw(_prompt: string, _opts?: AIProviderOptions): Promise<AIProviderResult<string>> {
-    this.unavailable();
+    return Promise.resolve({ value: JSON.stringify(generateLocalJson(_prompt)), tokensUsed: 0 });
   }
 }

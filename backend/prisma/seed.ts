@@ -30,9 +30,9 @@ async function clearSeedCollections() {
       'User',
     ];
 
-    for (const collectionName of collections) {
-      await db.collection(collectionName).deleteMany({});
-    }
+    await Promise.all(
+      collections.map((collectionName) => db.collection(collectionName).deleteMany({}))
+    );
   } finally {
     await client.close();
   }
@@ -255,11 +255,11 @@ const skillSeeds = [
 async function main() {
   console.log('Starting MongoDB seed...');
 
-  await clearSeedCollections();
-
   if (!mongoUrl) {
     throw new Error('DATABASE_URL is required for seeding');
   }
+
+  await clearSeedCollections();
 
   const client = new MongoClient(mongoUrl);
   await client.connect();
@@ -332,52 +332,53 @@ async function main() {
       })),
     ];
 
-    await usersCollection.insertMany(users as any[]);
+    await Promise.all([
+      usersCollection.insertMany(users as any[]),
+      currentUsersCollection.insertMany(
+        users.map((user) => ({
+          _id: user._id,
+          userId: user._id,
+          email: user.email,
+          fullName: user.fullName,
+          role: user.role,
+          age: user.age,
+          location: user.location,
+          phone: user.phone,
+          linkedin: user.linkedin,
+          skills: user.skills,
+          interests: user.interests,
+          preferences: user.preferences,
+          experience: user.experience,
+          experienceType: user.experienceType,
+          education: user.education,
+          educationEntries: user.educationEntries,
+          skillLevel: user.skillLevel,
+          xp: user.xp,
+          streak: user.streak,
+          active: true,
+          lastLoginAt: now,
+          createdAt: now,
+          updatedAt: now,
+        })) as any[]
+      ),
+      adminUsersCollection.insertMany([
+        {
+          _id: adminId,
+          userId: adminId,
+          email: 'admin@pragyan.com',
+          fullName: 'Admin User',
+          role: 'ADMIN',
+          xp: 1000,
+          streak: 0,
+          active: true,
+          createdAt: now,
+          updatedAt: now,
+        },
+      ] as any[]),
+    ]);
 
-    await currentUsersCollection.insertMany(
-      users.map((user) => ({
-        _id: user._id,
-        userId: user._id,
-        email: user.email,
-        fullName: user.fullName,
-        role: user.role,
-        age: user.age,
-        location: user.location,
-        phone: user.phone,
-        linkedin: user.linkedin,
-        skills: user.skills,
-        interests: user.interests,
-        preferences: user.preferences,
-        experience: user.experience,
-        experienceType: user.experienceType,
-        education: user.education,
-        educationEntries: user.educationEntries,
-        skillLevel: user.skillLevel,
-        xp: user.xp,
-        streak: user.streak,
-        active: true,
-        lastLoginAt: now,
-        createdAt: now,
-        updatedAt: now,
-      })) as any[]
-    );
-
-    await adminUsersCollection.insertMany([
-      {
-        _id: adminId,
-        userId: adminId,
-        email: 'admin@pragyan.com',
-        fullName: 'Admin User',
-        role: 'ADMIN',
-        xp: 1000,
-        streak: 0,
-        active: true,
-        createdAt: now,
-        updatedAt: now,
-      },
-    ] as any[]);
-
-    for (const skillSeed of skillSeeds) {
+    await Promise.all(
+      skillSeeds.map(async (skillSeed) => {
       const skillId = new ObjectId();
       const taskDocuments: Array<Record<string, unknown>> = [];
       const resourceDocuments: Array<Record<string, unknown>> = [];
@@ -436,7 +437,8 @@ async function main() {
       if (resourceDocuments.length > 0) {
         await resourcesCollection.insertMany(resourceDocuments as any[]);
       }
-    }
+    })
+    );
 
     const assessmentId = new ObjectId();
     await assessmentCollection.insertOne({
@@ -475,48 +477,49 @@ async function main() {
     },
   ];
 
-    await assessmentQuestionsCollection.insertMany(
-      assessmentQuestions.map((question) => ({
-        _id: new ObjectId(),
-        assessmentId,
-        questionText: question.questionText,
-        options: question.options,
-        category: question.category,
-        createdAt: now,
-        updatedAt: now,
-      })) as any[]
-    );
-
-    await careerMatchesCollection.insertMany([
-      {
-        _id: new ObjectId(),
-        userId: sampleUserIds[0],
-        careerTitle: 'Frontend Developer',
-        company: 'Pragyan Labs',
-        description: 'Strong fit for frontend roles focused on React and design systems.',
-        matchScore: 92,
-        requiredSkills: ['React', 'TypeScript', 'CSS'],
-        growthAreas: ['Testing', 'Performance optimization'],
-        salaryRange: '$70k - $110k',
-        jobMarketDemand: 8,
-        createdAt: now,
-        updatedAt: now,
-      },
-      {
-        _id: new ObjectId(),
-        userId: adminId,
-        careerTitle: 'Full Stack Engineer',
-        company: 'Pragyan Labs',
-        description: 'Experienced profile with backend, frontend, and platform skills.',
-        matchScore: 98,
-        requiredSkills: ['Node.js', 'React', 'MongoDB'],
-        growthAreas: ['Leadership', 'Architecture'],
-        salaryRange: '$110k - $150k',
-        jobMarketDemand: 9,
-        createdAt: now,
-        updatedAt: now,
-      },
-    ] as any[]);
+    await Promise.all([
+      assessmentQuestionsCollection.insertMany(
+        assessmentQuestions.map((question) => ({
+          _id: new ObjectId(),
+          assessmentId,
+          questionText: question.questionText,
+          options: question.options,
+          category: question.category,
+          createdAt: now,
+          updatedAt: now,
+        })) as any[]
+      ),
+      careerMatchesCollection.insertMany([
+        {
+          _id: new ObjectId(),
+          userId: sampleUserIds[0],
+          careerTitle: 'Frontend Developer',
+          company: 'Pragyan Labs',
+          description: 'Strong fit for frontend roles focused on React and design systems.',
+          matchScore: 92,
+          requiredSkills: ['React', 'TypeScript', 'CSS'],
+          growthAreas: ['Testing', 'Performance optimization'],
+          salaryRange: '$70k - $110k',
+          jobMarketDemand: 8,
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          _id: new ObjectId(),
+          userId: adminId,
+          careerTitle: 'Full Stack Engineer',
+          company: 'Pragyan Labs',
+          description: 'Experienced profile with backend, frontend, and platform skills.',
+          matchScore: 98,
+          requiredSkills: ['Node.js', 'React', 'MongoDB'],
+          growthAreas: ['Leadership', 'Architecture'],
+          salaryRange: '$110k - $150k',
+          jobMarketDemand: 9,
+          createdAt: now,
+          updatedAt: now,
+        },
+      ] as any[]),
+    ]);
 
     const seededUsers = await usersCollection.countDocuments();
     console.log(`Seeded ${skillSeeds.length} skill roadmaps, demo users, assessment data, and career matches.`);

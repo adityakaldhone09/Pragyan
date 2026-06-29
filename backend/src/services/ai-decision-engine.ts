@@ -20,7 +20,10 @@ export class AIDecisionEngine {
     ]);
 
     // compute velocity metric (simple average of provided metrics.windowScore if present)
-    const velocityVals = (vels || []).map((v: any) => (v.metrics && v.metrics.score) ? Number(v.metrics.score) : 0).filter((n) => !Number.isNaN(n));
+    const velocityVals = (vels || []).flatMap((v: any) => {
+      const score = (v.metrics && v.metrics.score) ? Number(v.metrics.score) : 0;
+      return !Number.isNaN(score) ? [score] : [];
+    });
     const avgVelocity = velocityVals.length ? velocityVals.reduce((a: number, b: number) => a + b, 0) / velocityVals.length : 0;
 
     // personality traits
@@ -101,10 +104,11 @@ export class AIDecisionEngine {
 
     // record top recommendations to memory (best-effort)
     try {
-      for (let i = 0; i < Math.min(3, sorted.length); i++) {
-        const s = sorted[i];
-        await aiMemoryService.recordRecommendation(userId, { career: s.career, adaptiveScore: s.adaptiveScore, reasons: s.reasons }, 'adaptive-decision', s.adaptiveScore, 'adaptive-decision').catch(() => null);
-      }
+      await Promise.all(
+        sorted.slice(0, 3).map((s) =>
+          aiMemoryService.recordRecommendation(userId, { career: s.career, adaptiveScore: s.adaptiveScore, reasons: s.reasons }, 'adaptive-decision', s.adaptiveScore, 'adaptive-decision').catch(() => null)
+        )
+      );
     } catch (e) {
       // swallow
     }

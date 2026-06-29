@@ -6,6 +6,11 @@ export interface AIProviderOptions {
   maxTokens?: number;
   temperature?: number;
   timeoutMs?: number;
+  taskType?: string;
+  userId?: string;
+  input?: unknown;
+  promptVersion?: string;
+  format?: 'text' | 'json';
 }
 
 export interface AIProviderResult<T> {
@@ -23,6 +28,7 @@ export interface AIProviderAdapter {
   getModel(): string;
   generateText(prompt: string, opts?: AIProviderOptions): Promise<string>;
   generateJsonRaw(prompt: string, opts?: AIProviderOptions): Promise<string>;
+  getRuntime?(): AIProviderRuntime;
 }
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs?: number, timeoutMessage = 'AI request timed out') {
@@ -114,23 +120,23 @@ export abstract class AIProviderBase implements AIProviderAdapter {
     while (attempt <= this.maxRetries) {
       try {
         const result = await withTimeout(operation(), timeoutMs);
-        recordCall(this.getProviderName(), result.tokensUsed ?? 0, Date.now() - start);
+        recordCall(this.getProviderName(), result.tokensUsed ?? 0, Date.now() - start, this.getModel());
         return result.value;
       } catch (err: any) {
         attempt += 1;
 
         if (this.isQuotaOrAuthError(err)) {
           this.markCooldown();
-          recordFailure(this.getProviderName());
+          recordFailure(this.getProviderName(), err?.message || String(err), this.getModel());
           throw err;
         }
 
         if (!this.shouldRetryError(err) || attempt > this.maxRetries) {
-          recordFailure(this.getProviderName());
+          recordFailure(this.getProviderName(), err?.message || String(err), this.getModel());
           throw err;
         }
 
-        recordFailure(this.getProviderName());
+        recordFailure(this.getProviderName(), err?.message || String(err), this.getModel());
 
         let delayMs = this.baseDelay * Math.pow(2, attempt - 1);
         delayMs = Math.round(delayMs + Math.random() * 100);
@@ -159,9 +165,7 @@ export abstract class AIProviderBase implements AIProviderAdapter {
     validateFn: (raw: unknown) => T,
     opts?: AIProviderOptions
   ): Promise<T> {
-    let attempt = 0;
-
-    while (attempt <= this.maxRetries) {
+    const attemptValidation = async (attempt: number): Promise<T> => {
       try {
         const raw = await this.generateJsonRaw(prompt, opts);
 
@@ -178,27 +182,26 @@ export abstract class AIProviderBase implements AIProviderAdapter {
 
         return validateFn(parsed);
       } catch (err: any) {
-        attempt += 1;
-
         if (this.isQuotaOrAuthError(err)) {
           this.markCooldown();
-          recordFailure(this.getProviderName());
+          recordFailure(this.getProviderName(), err?.message || String(err), this.getModel());
           throw err;
         }
 
-        if (!this.shouldRetryValidationError(err) || attempt > this.maxRetries) {
-          recordFallback(this.getProviderName());
+        if (!this.shouldRetryValidationError(err) || attempt >= this.maxRetries) {
+          recordFallback(this.getProviderName(), this.getModel());
           throw err;
         }
 
-        recordFailure(this.getProviderName());
+        recordFailure(this.getProviderName(), '', this.getModel());
 
-        const delayMs = this.baseDelay * Math.pow(2, attempt - 1) + Math.random() * 100;
+        const delayMs = this.baseDelay * Math.pow(2, attempt) + Math.random() * 100;
         await sleep(Math.round(delayMs));
+        return attemptValidation(attempt + 1);
       }
-    }
+    };
 
-    throw new Error('generateJsonValidated: exceeded retries');
+    return attemptValidation(0);
   }
 
   getRuntime(): AIProviderRuntime {

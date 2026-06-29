@@ -4,6 +4,7 @@ import { Request, Response, NextFunction } from 'express';
 import { UnauthorizedError, ForbiddenError } from '@/utils/errors';
 import { verifyAccessToken } from '@/utils/jwt';
 import { JwtPayload } from '@/types';
+import { readAccessTokenCookie } from '@/security';
 
 declare global {
   namespace Express {
@@ -22,12 +23,13 @@ export const authenticate = (
 ): void => {
   try {
     const authHeader = req.headers.authorization;
+    const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
+    const token = bearerToken || readAccessTokenCookie(req.headers.cookie);
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!token) {
       throw new UnauthorizedError('No access token provided');
     }
 
-    const token = authHeader.substring(7);
     const payload = verifyAccessToken(token);
 
     if (!payload) {
@@ -54,3 +56,9 @@ export const authorize = (...roles: string[]) => {
     next();
   };
 };
+
+export const requireAuth = authenticate;
+
+export const requireRole = (...roles: string[]) => authorize(...roles);
+
+export const requireAdmin = authorize('ADMIN');

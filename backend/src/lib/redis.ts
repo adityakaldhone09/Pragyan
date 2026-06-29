@@ -128,13 +128,17 @@ class RedisWrapper {
   }
 
   async waitForKey(key: string, timeoutMs = 15000): Promise<string | null> {
-    const start = Date.now();
-    while (Date.now() - start < timeoutMs) {
+    const deadline = Date.now() + timeoutMs;
+
+    const poll = async (): Promise<string | null> => {
+      if (Date.now() >= deadline) return null;
       const v = await this.get(key);
       if (v !== null) return v;
       await new Promise((r) => setTimeout(r, 250));
-    }
-    return null;
+      return poll();
+    };
+
+    return poll();
   }
 }
 

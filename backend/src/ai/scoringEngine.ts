@@ -1,6 +1,6 @@
 import { CareerAdjustmentArraySchema } from './schemas';
 import safeParseAIResponse from './safeParser';
-import { generateContent } from '../ai/GeminiProvider';
+import { routeAI } from './aiRouter';
 import crypto from 'crypto';
 
 const ADJUSTMENTS_TTL = 60 * 60 * 6; // 6 hours
@@ -91,8 +91,8 @@ Careers: ${JSON.stringify(local.map((l) => ({ id: l.careerId, title: l.careerTit
       // cache step failed — continue to call AI
     }
 
-    const result = await generateContent(prompt);
-    const parsed = safeParseAIResponse(JSON.parse(result), CareerAdjustmentArraySchema);
+    const result = await routeAI('career_match', { prompt, input: assessmentProfile, format: 'json' });
+    const parsed = safeParseAIResponse(JSON.parse(result.value), CareerAdjustmentArraySchema);
 
     try {
       const hash = crypto.createHash('sha256').update(prompt).digest('hex');

@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { roadmapService } from '@/services/roadmap';
+import { getCareerByRole } from '@/data/careerCatalog';
 
 type ResourceType = 'documentation' | 'video' | 'practice' | 'quiz' | 'project';
 
@@ -492,25 +493,34 @@ function buildRoadmapInput(blueprint: RoadmapBlueprint, level: string, days: Gen
 export class RoadmapGenerationService {
   async generatePersonalizedRoadmap(userId: string, careerGoal: string, skillLevel: string) {
     const blueprint = resolveBlueprint(careerGoal);
+    const catalogEntry = getCareerByRole(careerGoal);
+    const enrichedBlueprint: RoadmapBlueprint = catalogEntry
+      ? {
+          ...blueprint,
+          title: `${catalogEntry.role} Roadmap`,
+          careerPath: catalogEntry.role,
+          requiredSkills: Array.from(new Set([...blueprint.requiredSkills, ...catalogEntry.requiredSkills])),
+        }
+      : blueprint;
     const normalizedLevel = normalizeLevel(skillLevel);
     const totalDays = getDayCount(normalizedLevel);
-    const stageDayCounts = allocateDays(totalDays, blueprint.stages.length);
+    const stageDayCounts = allocateDays(totalDays, enrichedBlueprint.stages.length);
 
     const learningDays: GeneratedDay[] = [];
     let dayNumber = 1;
 
-    blueprint.stages.forEach((stage, stageIndex) => {
+    enrichedBlueprint.stages.forEach((stage, stageIndex) => {
       const stageDays = stageDayCounts[stageIndex] || 1;
       for (let stageDay = 1; stageDay <= stageDays; stageDay += 1) {
-        learningDays.push(buildGeneratedDay(blueprint, normalizedLevel, dayNumber, stage, stageDay, stageDays));
+        learningDays.push(buildGeneratedDay(enrichedBlueprint, normalizedLevel, dayNumber, stage, stageDay, stageDays));
         dayNumber += 1;
       }
     });
 
-    const roadmapInput = buildRoadmapInput(blueprint, normalizedLevel, learningDays);
+    const roadmapInput = buildRoadmapInput(enrichedBlueprint, normalizedLevel, learningDays);
     const existingRoadmap = await prisma.roadmap.findFirst({
       where: {
-        careerPath: blueprint.careerPath,
+        careerPath: enrichedBlueprint.careerPath,
         difficulty: normalizedLevel,
       },
       orderBy: { updatedAt: 'desc' },

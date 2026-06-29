@@ -1001,21 +1001,22 @@ export class AdaptiveAssessmentService {
       });
     });
 
-    await Promise.all(answerRecords);
-
-    await Promise.all(
-      ranked.slice(0, 3).map((match) =>
-        prisma.recommendationHistory.create({
-          data: {
-            userId,
-            recommendation: match as unknown as object,
-            reason: match.reasons.join(' '),
-            score: match.match,
-            source: 'adaptive-assessment',
-          },
-        })
-      )
-    );
+    await Promise.all([
+      Promise.all(answerRecords),
+      Promise.all(
+        ranked.slice(0, 3).map((match) =>
+          prisma.recommendationHistory.create({
+            data: {
+              userId,
+              recommendation: match as unknown as object,
+              reason: match.reasons.join(' '),
+              score: match.match,
+              source: 'adaptive-assessment',
+            },
+          })
+        )
+      ),
+    ]);
 
     await redisClient.del(this.getSessionKey(session.sessionId));
 

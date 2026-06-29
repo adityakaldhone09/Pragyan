@@ -43,7 +43,7 @@ export const errorHandler = (
     if (!isProduction || err.statusCode >= 500) {
       console.error(`[AppError] ${req.method} ${req.path} → ${err.statusCode}: ${err.message}`);
     }
-    sendError(res, err.statusCode, err.message, err.errors);
+    sendError(res, err.statusCode, isProduction && err.statusCode >= 500 ? 'Internal server error' : err.message, err.errors);
     return;
   }
 

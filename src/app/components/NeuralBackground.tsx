@@ -15,7 +15,7 @@ export function NeuralBackground() {
   }, []);
 
   return (
-    <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+    <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
       {/* Animated gradient background */}
       <motion.div
         className="absolute inset-0 bg-gradient-to-br from-background via-background/95 to-background"
@@ -59,7 +59,7 @@ export function NeuralBackground() {
             if (distance < 20) {
               return (
                 <motion.line
-                  key={`${i}-${j}`}
+                  key={`${node.id}-${otherNode.id}`}
                   x1={`${node.x}%`}
                   y1={`${node.y}%`}
                   x2={`${otherNode.x}%`}

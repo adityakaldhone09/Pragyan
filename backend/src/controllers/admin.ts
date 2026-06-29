@@ -304,6 +304,70 @@ export const getAssessmentCompletionRates = asyncHandler(async (_req: Request, r
   );
 });
 
+export const getSecurityMetrics = asyncHandler(async (_req: Request, res: Response) => {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const securityLog = (prisma as any).securityLog;
+  const aiUsage = (prisma as any).aIUsage;
+
+  const [
+    blockedAIAttacks,
+    totalAIRequests,
+    rateLimitHits,
+    loginFailures,
+    replayDetections,
+    recentEvents,
+    usageToday,
+  ] = await Promise.all([
+    securityLog.count({ where: { event: 'AI_ATTACK_BLOCKED', createdAt: { gte: since } } }),
+    securityLog.count({ where: { event: 'AI_REQUEST', createdAt: { gte: since } } }),
+    securityLog.count({ where: { event: 'RATE_LIMIT', createdAt: { gte: since } } }),
+    securityLog.count({ where: { event: 'LOGIN_FAILURE', createdAt: { gte: since } } }),
+    securityLog.count({ where: { event: 'TOKEN_REPLAY_DETECTED', createdAt: { gte: since } } }),
+    securityLog.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 25,
+      select: {
+        id: true,
+        userId: true,
+        event: true,
+        metadata: true,
+        ipAddress: true,
+        userAgent: true,
+        createdAt: true,
+      },
+    }),
+    aiUsage.findMany({
+      where: { date: new Date().toISOString().slice(0, 10) },
+      orderBy: { dailyRequests: 'desc' },
+      take: 20,
+      select: {
+        actorKey: true,
+        userId: true,
+        dailyRequests: true,
+        tokensUsed: true,
+        lastRequest: true,
+      },
+    }),
+  ]);
+
+  return sendSuccess(
+    res,
+    {
+      windowHours: 24,
+      blockedAIAttacks,
+      totalAIRequests,
+      suspiciousActivity: loginFailures + replayDetections + blockedAIAttacks,
+      rateLimitHits,
+      loginFailures,
+      replayDetections,
+      usageToday,
+      recentEvents,
+    },
+    200,
+    'Security metrics fetched'
+  );
+});
+
 export const createAssessmentQuestion = asyncHandler(async (req: Request, res: Response) => {
   const { assessmentId, questionText, options, category = 'Adaptive' } = req.body || {};
   if (!assessmentId || !questionText || !Array.isArray(options) || !options.length) {

@@ -2,16 +2,16 @@ import { config } from '@/config/env';
 
 import { AIProviderBase, AIProviderOptions, AIProviderResult } from './AIProviderBase';
 
-const DEFAULT_MODEL = 'llama-3.1-70b-versatile';
+const DEFAULT_MODEL = 'llama-3.3-70b-versatile';
 
 export class GroqProvider extends AIProviderBase {
   private apiKey: string | null;
   private model: string;
 
-  constructor() {
+  constructor(model?: string) {
     super();
     this.apiKey = config.groq.apiKey || process.env.GROQ_API_KEY || null;
-    this.model = config.groq.model || DEFAULT_MODEL;
+    this.model = model || config.groq.reasoningModel || config.groq.chatModel || config.groq.fastModel || config.groq.model || DEFAULT_MODEL;
   }
 
   getProviderName(): string {

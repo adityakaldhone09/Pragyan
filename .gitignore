@@ -17,6 +17,7 @@ datasets/*.csv
 
 # Backend env (local only)
 backend/.env
+backend/.env.replica
 
 # Coverage artifacts
 backend/coverage/

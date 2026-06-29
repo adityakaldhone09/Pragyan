@@ -14,7 +14,21 @@ export const loginSchema = z.object({
 });
 
 export const refreshTokenSchema = z.object({
-  refreshToken: z.string().min(1, 'Refresh token is required'),
+  refreshToken: z.string().min(1, 'Refresh token is required').optional(),
+});
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().email('Invalid email address'),
+});
+
+export const verifyResetOtpSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  otp: z.string().regex(/^\d{6}$/, 'OTP must be a 6-digit code'),
+});
+
+export const resetPasswordSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  newPassword: z.string().min(6, 'Password must be at least 6 characters').max(100),
 });
 
 export const educationEntrySchema = z.object({
@@ -30,6 +44,8 @@ export const profileUpdateSchema = z.object({
   location: z.string().trim().max(100).optional(),
   phone: z.string().trim().max(30).optional(),
   linkedin: z.string().trim().max(200).optional(),
+  currentTitle: z.string().trim().max(120).optional(),
+  careerTrack: z.string().trim().max(120).optional(),
   skills: z.array(z.string().trim().min(1)).max(50).optional(),
   interests: z.array(z.string().trim().min(1)).max(50).optional(),
   preferences: z.array(z.string().trim().min(1)).max(50).optional(),
@@ -38,6 +54,12 @@ export const profileUpdateSchema = z.object({
   experienceType: z.enum(['experienced', 'fresher']).optional(),
   education: z.string().trim().max(1000).optional(),
   skillLevel: z.string().trim().max(50).optional(),
+  tenthBoard: z.string().trim().max(80).optional(),
+  tenthScore: z.string().trim().max(30).optional(),
+  twelfthBoard: z.string().trim().max(80).optional(),
+  twelfthScore: z.string().trim().max(30).optional(),
+  currentCourse: z.string().trim().max(160).optional(),
+  cgpa: z.string().trim().max(30).optional(),
 }).refine((data) => Object.keys(data).length > 0, {
   message: 'At least one profile field is required',
 });
@@ -45,5 +67,8 @@ export const profileUpdateSchema = z.object({
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>;
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export type VerifyResetOtpInput = z.infer<typeof verifyResetOtpSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type EducationEntryInput = z.infer<typeof educationEntrySchema>;
 export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;

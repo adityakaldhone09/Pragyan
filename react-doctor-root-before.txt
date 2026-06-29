@@ -1,0 +1,1646 @@
+﻿React Doctor v0.5.6
+
+  
+
+  ΓÜá Bugs: Array index used as a key ├ù43
+    Your users can see & submit the wrong data when this list
+    reorders or filters, so use a stable id like
+    `key={item.id}`, not the array index "idx".
+    ΓåÆ Use a stable id from the item, like `key={item.id}` or
+    `key={item.slug}`. Index keys break when the list reorders
+    or filters.
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/no-array-index-as-key
+
+    AITutor.tsx:134
+
+    frontend/src/app/components/EvolutionCharts.tsx:12
+
+    frontend/src/app/components/AnalysisSequence.tsx:60
+
+    frontend/src/app/components/LearningVelocityGraph.tsx:28
+
+    frontend/src/app/components/SkillHeatmap.tsx:15
+
+    frontend/src/app/components/DailyInsights.tsx:41
+
+    frontend/src/app/components/NeuralBackground.tsx:62
+
+    frontend/src/app/components/CinematicRadar.tsx:160
+
+    frontend/src/app/components/LiveMetrics.tsx:63
+
+    frontend/src/app/components/MemoryProfile.tsx:80
+
+    frontend/src/app/components/AICompanion.tsx:166
+
+    frontend/src/app/components/DecisionPanel.tsx:55
+
+    frontend/src/app/pages/AdminIntelligence.tsx:156
+
+    frontend/src/app/pages/LandingPage.tsx:87
+
+    frontend/src/app/pages/LandingPage.tsx:128
+
+    frontend/src/app/pages/LandingPage.tsx:214
+
+    frontend/src/app/pages/LandingPage.tsx:256
+
+    src/app/components/NeuralBackground.tsx:62
+
+    frontend/src/app/components/ui/slider.tsx:55
+
+    frontend/src/app/pages/DetailedAnalysis.tsx:275
+
+    frontend/src/app/pages/Roadmap.tsx:694
+
+    src/app/pages/Assessment.tsx:131
+
+    src/app/pages/Assessment.tsx:201
+
+    src/app/pages/DetailedAnalysis.tsx:167
+
+    src/app/pages/DetailedAnalysis.tsx:218
+
+    src/app/pages/DetailedAnalysis.tsx:353
+
+    src/app/pages/DetailedAnalysis.tsx:377
+
+    src/app/pages/DetailedAnalysis.tsx:407
+
+    src/app/pages/DetailedAnalysis.tsx:461
+
+    src/app/pages/DetailedAnalysis.tsx:500
+
+    src/app/pages/Roadmap.tsx:264
+
+    src/app/pages/Results.tsx:194
+
+    src/app/pages/Results.tsx:215
+
+    src/app/pages/Results.tsx:247
+
+    src/app/components/ui/slider.tsx:55
+
+    src/app/pages/LandingPage.tsx:87
+
+    src/app/pages/LandingPage.tsx:128
+
+    src/app/pages/LandingPage.tsx:214
+
+    src/app/pages/LandingPage.tsx:256
+
+    src/app/pages/Dashboard.tsx:133
+
+    src/app/pages/Dashboard.tsx:188
+
+    src/app/pages/Dashboard.tsx:256
+
+    src/app/pages/Dashboard.tsx:312
+
+  ΓÜá Bugs: Sequential independent awaits ├ù9
+    This await doesn't use the previous result, so your users
+    wait twice as long for nothing.
+    ΓåÆ These two awaits don't depend on each other. Wrap them in
+    `Promise.all([...])` so they run at the same time.
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/server-sequential-independent-await
+
+    backend/src/controllers/adminDev.ts:8
+
+    backend/src/services/ai-decision-engine.ts:15
+
+    backend/src/services/career-matching.ts:113
+
+    backend/src/services/job-sync.ts:95
+
+    backend/src/services/recommendation-engine.ts:112
+
+    backend/src/modules/journey/journey.service.ts:216
+
+    backend/src/services/progress.ts:56
+
+    backend/src/services/progress.ts:136
+
+    backend/src/services/progress.ts:344
+
+  ΓÜá Accessibility: Label missing associated control ├ù36
+    Screen reader users can't tell which input this label names
+    because it's tied to none, so add `htmlFor` or wrap the
+    input inside it.
+    ΓåÆ Tie every label to a control with `htmlFor`, or by
+    nesting the input.
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/label-has-associated-control
+
+    frontend/src/app/pages/Auth.tsx:322
+
+    frontend/src/app/pages/Auth.tsx:340
+
+    frontend/src/app/pages/Auth.tsx:362
+
+    frontend/src/app/pages/Auth.tsx:399
+
+    frontend/src/app/pages/Auth.tsx:423
+
+    frontend/src/app/pages/Auth.tsx:450
+
+    frontend/src/app/pages/Profile.tsx:572
+
+    frontend/src/app/pages/Profile.tsx:576
+
+    frontend/src/app/pages/Profile.tsx:580
+
+    frontend/src/app/pages/Profile.tsx:584
+
+    frontend/src/app/pages/Profile.tsx:588
+
+    frontend/src/app/pages/Profile.tsx:592
+
+    frontend/src/app/pages/Profile.tsx:596
+
+    frontend/src/app/pages/Profile.tsx:727
+
+    frontend/src/app/pages/Profile.tsx:731
+
+    frontend/src/app/pages/Profile.tsx:735
+
+    frontend/src/app/pages/Profile.tsx:740
+
+    frontend/src/app/pages/Profile.tsx:744
+
+    frontend/src/app/pages/Profile.tsx:750
+
+    frontend/src/app/pages/Profile.tsx:761
+
+    frontend/src/app/pages/Profile.tsx:776
+
+    frontend/src/app/pages/Profile.tsx:780
+
+    frontend/src/app/pages/Profile.tsx:784
+
+    frontend/src/app/pages/Profile.tsx:788
+
+    frontend/src/app/pages/Profile.tsx:792
+
+    frontend/src/app/pages/Profile.tsx:796
+
+    frontend/src/app/pages/Profile.tsx:894
+
+    frontend/src/app/pages/Profile.tsx:898
+
+    frontend/src/app/pages/Profile.tsx:902
+
+    frontend/src/app/pages/Profile.tsx:906
+
+    frontend/src/app/pages/Profile.tsx:910
+
+    frontend/src/app/pages/Profile.tsx:914
+
+    frontend/src/app/pages/Profile.tsx:918
+
+    src/app/pages/Auth.tsx:54
+
+    src/app/pages/Auth.tsx:70
+
+    src/app/pages/Auth.tsx:86
+
+  ΓÜá Performance: Independent awaits run sequentially ├ù9
+    These 4 sequential await statements run one after another
+    even though they look independent, so the page waits longer
+    than it needs to. Run them together with Promise.all()
+    instead
+    ΓåÆ Use `const [a, b] = await Promise.all([fetchA(),
+    fetchB()])` so independent calls run at the same time
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/async-parallel
+
+    backend/prisma/seed.ts:335
+
+    backend/prisma/seed.ts:480
+
+    backend/src/services/assessment.ts:20
+
+    backend/src/services/learning-resources.ts:1103
+
+    backend/src/models/RecommendationSnapshot.ts:49
+
+    backend/src/services/adaptive-assessment.ts:1004
+
+    backend/src/services/progress.ts:292
+
+    backend/src/services/auth.ts:870
+
+    backend/src/services/auth.ts:1175
+
+  ΓÜá Security: Raw HTML injection can run unsafe markup ├ù2
+    `dangerouslySetInnerHTML` is an XSS hole that runs
+    attacker-controlled HTML in your users' browsers.
+    ΓåÆ Render trusted content as React children so
+    attacker-controlled HTML cannot run in users' browsers.
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/no-danger
+
+    frontend/src/app/components/ui/chart.tsx:83
+
+    src/app/components/ui/chart.tsx:83
+
+  ΓÜá Bugs: Derived state stored in an effect
+    You pay an extra render for state derived from other values.
+    ΓåÆ Work out derived values while rendering: `const x =
+    fn(dep)`. To reset a component's state when a prop changes,
+    give it a key prop: `<Component key={prop} />`. See
+    https://react.dev/learn/you-might-not-need-an-effect
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/no-derived-state-effect
+
+    frontend/src/app/pages/Roadmap.tsx:382
+
+  ΓÜá Performance: Unstable context provider value ├ù10
+    Every reader of this context redraws on each render because
+    you build its `value` inline.
+    ΓåÆ Wrap the context value in `useMemo` or move it outside
+    the component so consumers do not redraw every render.
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/jsx-no-constructed-context-values
+
+    frontend/src/app/components/ui/form.tsx:39
+
+    frontend/src/app/components/ui/form.tsx:80
+
+    frontend/src/app/components/ui/chart.tsx:53
+
+    frontend/src/app/components/ui/carousel.tsx:109
+
+    src/app/components/ui/chart.tsx:53
+
+    src/app/components/ui/form.tsx:39
+
+    src/app/components/ui/form.tsx:80
+
+    src/app/components/ui/carousel.tsx:109
+
+    frontend/src/app/components/ui/toggle-group.tsx:36
+
+    src/app/components/ui/toggle-group.tsx:36
+
+  ΓÜá Performance: Heavy library loaded eagerly ├ù7
+    "recharts" ships extra code to your users up front & slows
+    page load. Load it on demand with React.lazy() or
+    next/dynamic.
+    ΓåÆ Load it only when needed: `const Component = dynamic(()
+    => import('library'), { ssr: false })` from next/dynamic,
+    or React.lazy().
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/prefer-dynamic-import
+
+    frontend/src/app/components/dashboard/PlacementIntelligence.tsx:4
+
+    frontend/src/app/components/journey/JourneySections.tsx:5
+
+    frontend/src/app/components/ui/chart.tsx:4
+
+    src/app/components/ui/chart.tsx:4
+
+    frontend/src/app/pages/Results.tsx:5
+
+    src/app/pages/DetailedAnalysis.tsx:30
+
+    src/app/pages/Results.tsx:10
+
+  ΓÜá Performance: Non-passive scroll listener
+    "scroll" listener without { passive: true } makes scrolling
+    janky for your users. Only add it if the handler doesn't
+    call event.preventDefault(), since passive listeners
+    silently ignore preventDefault().
+    ΓåÆ Add `{ passive: true }` as the third argument:
+    `addEventListener('scroll', handler, { passive: true })`.
+    Only do this if the handler doesn't call
+    `event.preventDefault()`, since passive listeners ignore it
+    (which breaks pull-to-refresh, custom gestures, and nested
+    scrolling).
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/client-passive-event-listeners
+
+    frontend/src/app/components/NeuralNeonScene.tsx:304
+
+  ΓÜá Maintainability: Component rendered by inline function call
+    Your users lose state because "renderSimpleMarkdown()"
+    builds UI from an inline call that React remounts, so pull
+    it into its own component instead.
+    ΓåÆ Make it a named component so React preserves its identity
+    and does not remount its state.
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/no-render-in-render
+
+    frontend/src/app/pages/Assistant.tsx:199
+
+  ΓÜá Performance: setState reads a stale value ├ù2
+    You can lose this update because
+    setCurrentQuestion(currentQuestion + ...) reads a stale
+    value.
+    ΓåÆ Use the callback form: `setState(prev => prev + 1)` to
+    always read the latest value
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/rerender-functional-setstate
+
+    src/app/pages/Assessment.tsx:72-74
+
+  ΓÜá Performance: array.find() inside a loop
+    This gets slow as your list grows because array.find() runs
+    inside a loop, so build a Map once before the loop for
+    instant lookups
+    ΓåÆ Build a `Map` once before the loop instead of calling
+    `array.find(...)` inside it
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/js-index-maps
+
+    frontend/src/app/components/CinematicRadar.tsx:72
+
+  ΓÜá Accessibility: Control missing accessible label ├ù15
+    Blind users can't tell what this control does because
+    screen readers find no label, so add visible text,
+    `aria-label`, or `aria-labelledby`.
+    ΓåÆ Give every interactive control a label screen readers can
+    read.
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/control-has-associated-label
+
+    AITutor.tsx:164
+
+    frontend/src/app/components/journey/JourneySections.tsx:215
+
+    frontend/src/app/pages/Auth.tsx:325
+
+    frontend/src/app/pages/Auth.tsx:343
+
+    frontend/src/app/pages/Auth.tsx:402
+
+    frontend/src/app/pages/Auth.tsx:426
+
+    frontend/src/app/pages/Auth.tsx:453
+
+    frontend/src/app/pages/AdminIntelligenceAudits.tsx:63
+
+    frontend/src/app/pages/Assistant.tsx:226
+
+    frontend/src/app/pages/Jobs.tsx:125
+
+    frontend/src/app/pages/Profile.tsx:516
+
+    frontend/src/app/pages/Roadmap.tsx:1145
+
+    src/app/pages/Auth.tsx:57
+
+    src/app/pages/Auth.tsx:73
+
+    src/app/pages/Auth.tsx:89
+
+  ΓÜá Accessibility: outline:none removes focus ring
+    Your keyboard users can't tell where they are because
+    outline: none hides the focus ring, so style :focus-visible
+    instead, or add a box-shadow focus ring.
+    ΓåÆ Style `:focus-visible { outline: 2px solid
+    var(--color-accent); outline-offset: 2px }` so the focus
+    ring shows for keyboard users but not mouse clicks.
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/no-outline-none
+
+    AITutor.tsx:175
+
+  ΓÜá Bugs: Data fetching inside an effect
+    fetch() inside useEffect can race, double-fire, or leak.
+    Use a data-fetching layer or Server Component instead.
+    ΓåÆ Use a data-fetching layer or Server Component so fetches
+    do not race, double-fire, or leak from `useEffect`.
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/no-fetch-in-effect
+
+    frontend/src/app/components/CinematicRadar.tsx:40
+
+  ΓÜá Performance: sort() to find min or max
+    This is slow because array.sort()[0] sorts the whole list
+    just to grab the smallest or largest, so use
+    Math.min(...array) instead
+    ΓåÆ Use `Math.min(...array)` or `Math.max(...array)` instead
+    of sorting the whole list just to read the first or last
+    item
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/js-min-max-loop
+
+    frontend/src/app/components/dashboard/PlacementIntelligence.tsx:704
+
+  ΓÜá Accessibility: Heading has no content ├ù2
+    Blind users can't use this heading to navigate because
+    screen readers skip it empty, so add text, `aria-label`, or
+    `aria-labelledby`.
+    ΓåÆ Put readable text in every heading.
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/heading-has-content
+
+    frontend/src/app/components/ui/card.tsx:33
+
+    src/app/components/ui/card.tsx:33
+
+  ΓÜá Bugs: Derived value copied into state ├ù7
+    Storing "particles" in state when you can derive it from
+    other values costs an extra render.
+    ΓåÆ Work out the value while rendering (or with useMemo if
+    it's expensive) instead of copying it into useState through
+    a useEffect. See
+    https://react.dev/learn/you-might-not-need-an-effect#updating-state-based-on-props-or-state
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/no-derived-state
+
+    frontend/src/app/components/FloatingParticles.tsx:25
+
+    src/app/components/FloatingParticles.tsx:25
+
+    frontend/src/app/pages/Profile.tsx:198
+
+    frontend/src/app/pages/Profile.tsx:233
+
+    frontend/src/app/pages/Profile.tsx:261
+
+    frontend/src/app/pages/Roadmap.tsx:383-384
+
+  ΓÜá Bugs: Parent kept in sync with a callback effect ├ù2
+    Your parent re-renders on every local state change because
+    this useEffect calls the prop "setApi" just to stay in sync.
+    ΓåÆ Move the shared state into a Provider so both sides read
+    the same value. Then you don't need a useEffect to keep
+    them in sync.
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/no-prop-callback-in-effect
+
+    frontend/src/app/components/ui/carousel.tsx:93
+
+    src/app/components/ui/carousel.tsx:93
+
+  ΓÜá Accessibility: Anchor used as a button ├ù4
+    Keyboard users can't reach this link because its `href`
+    goes nowhere (`#`, `javascript:`, or empty), so point it at
+    a real destination.
+    ΓåÆ Give links a real destination. Use `<button>` for in-page
+    actions.
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/anchor-is-valid
+
+    frontend/src/app/pages/Auth.tsx:603
+
+    frontend/src/app/pages/Auth.tsx:607
+
+    src/app/pages/Auth.tsx:210
+
+    src/app/pages/Auth.tsx:214
+
+  ΓÜá Performance: Array lookup inside a loop ├ù18
+    This scales poorly because `array.includes()` inside a loop
+    scans the whole list every time. Use a Set for
+    constant-time lookups.
+    ΓåÆ Use a `Set` or `Map` when you check for the same items
+    over and over. `Array.includes`/`find` scans the whole list
+    each time
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/js-set-map-lookups
+
+    backend/src/services/assessment.ts:698
+
+    backend/src/services/assessment.ts:702
+
+    backend/src/services/career-matching.ts:276-281
+
+    backend/src/services/adaptive-assessment.ts:595
+
+  ΓÜá Performance: Full Framer Motion import ├ù53
+    Importing "motion" ships about 30 kb of extra code and
+    slows page load. Use "m" with LazyMotion instead.
+    ΓåÆ Use `import { LazyMotion, m } from "framer-motion"` with
+    `domAnimation` features. Saves about 30kb.
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/use-lazy-motion
+
+    frontend/src/app/components/SectionHeader.tsx:1
+
+    frontend/src/app/components/FloatingParticles.tsx:1
+
+    frontend/src/app/components/HeroAI.tsx:2
+
+    frontend/src/app/components/dashboard/PlacementIntelligence.tsx:3
+
+    frontend/src/app/components/AnalysisSequence.tsx:2
+
+    frontend/src/app/components/journey/JourneySections.tsx:2
+
+    frontend/src/app/components/AdaptiveCore.tsx:2
+
+    frontend/src/app/components/IntelligenceCenter.tsx:5
+
+    frontend/src/app/components/AnimatedProgress.tsx:1
+
+    frontend/src/app/components/SkillHeatmap.tsx:2
+
+    frontend/src/app/components/AIThinkingLoader.tsx:1
+
+    frontend/src/app/components/AnimatedSection.tsx:4
+
+    frontend/src/app/components/NeuralBackground.tsx:1
+
+    frontend/src/app/components/CinematicRadar.tsx:2
+
+    frontend/src/app/components/GlowButton.tsx:1
+
+    frontend/src/app/components/LiveMetrics.tsx:2
+
+    frontend/src/app/components/LiveReasoningPanel.tsx:2
+
+    frontend/src/app/components/GlassCard.tsx:1
+
+    frontend/src/app/components/ConfidenceBar.tsx:2
+
+    frontend/src/app/components/DriftVisualization.tsx:2
+
+    frontend/src/app/components/CareerCard.tsx:2
+
+    frontend/src/app/components/GradientIconWrapper.tsx:1
+
+    frontend/src/app/components/Navigation.tsx:1
+
+    frontend/src/app/pages/AuthSuccess.tsx:3
+
+    src/app/components/Navigation.tsx:1
+
+    frontend/src/app/pages/RoadmapCatalog.tsx:2
+
+    frontend/src/app/pages/LandingPage.tsx:1
+
+    src/app/components/NeuralBackground.tsx:1
+
+    frontend/src/app/pages/Auth.tsx:1
+
+    frontend/src/app/pages/Dashboard.tsx:3
+
+    src/app/components/GradientIconWrapper.tsx:1
+
+    src/app/components/AIThinkingLoader.tsx:1
+
+    src/app/components/AnimatedProgress.tsx:1
+
+    frontend/src/app/pages/LearningResources.tsx:2
+
+    src/app/components/FloatingParticles.tsx:1
+
+    src/app/components/GlowButton.tsx:1
+
+    frontend/src/app/pages/Journey.tsx:3
+
+    frontend/src/app/pages/Assistant.tsx:2
+
+    frontend/src/app/pages/Assessment.tsx:1
+
+    frontend/src/app/pages/Jobs.tsx:1
+
+    src/app/components/GlassCard.tsx:1
+
+    frontend/src/app/pages/Profile.tsx:4
+
+    frontend/src/app/pages/Results.tsx:1
+
+    frontend/src/app/pages/DetailedAnalysis.tsx:1
+
+    frontend/src/app/pages/Roadmap.tsx:1
+
+    src/app/components/SectionHeader.tsx:1
+
+    src/app/pages/Assessment.tsx:1
+
+    src/app/pages/DetailedAnalysis.tsx:1
+
+    src/app/pages/Auth.tsx:1
+
+    src/app/pages/Roadmap.tsx:1
+
+    src/app/pages/Results.tsx:1
+
+    src/app/pages/LandingPage.tsx:1
+
+    src/app/pages/Dashboard.tsx:1
+
+  ΓÜá Accessibility: Role used instead of HTML tag ├ù8
+    Screen reader users get more reliable semantics from `<hr>`
+    than `role="separator"`, so use `<hr>` instead.
+    ΓåÆ Use the matching HTML element when one exists so browsers
+    and assistive tech get native semantics.
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/prefer-tag-over-role
+
+    frontend/src/app/components/ui/input-otp.tsx:71
+
+    frontend/src/app/components/ui/carousel.tsx:124
+
+    frontend/src/app/components/ui/carousel.tsx:161
+
+    frontend/src/app/components/ui/breadcrumb.tsx:56
+
+    src/app/components/ui/carousel.tsx:124
+
+    src/app/components/ui/carousel.tsx:161
+
+    src/app/components/ui/input-otp.tsx:71
+
+    src/app/components/ui/breadcrumb.tsx:56
+
+  ΓÜá Maintainability: deslop/unused-file ├ù137
+    Unused file is not reachable from any entry point, so it
+    adds maintenance surface without shipping any code.
+    ΓåÆ Delete the file if it is truly unreachable, or import it
+    from an entry point.
+
+    AITutor.tsx
+
+    backend/runSmokeCompiled.js
+
+    backend/server.js
+
+    backend/src/ai/localFallback.ts
+
+    backend/src/config/careerIntelligenceCatalog.ts
+
+    backend/src/config/database.ts
+
+    backend/src/config/roleMetadata.ts
+
+    backend/src/lib/cache.ts
+
+    backend/src/routes/automation.routes.ts
+
+    backend/src/runtimeSmokeTest.ts
+
+    backend/src/services/recommendation-snapshot.ts
+
+    backend/testGemini.ts
+
+    backend/tests/__mocks__/@google/generative-ai.ts (test file)
+
+    backend/tests/__mocks__/redisClient.ts (test file)
+
+    frontend/src/app/components/AICompanion.tsx
+
+    frontend/src/app/components/AdaptiveCore.tsx
+
+    frontend/src/app/components/AmbientBackground.tsx
+
+    frontend/src/app/components/AnalysisSequence.tsx
+
+    frontend/src/app/components/AnimatedCounter.tsx
+
+    frontend/src/app/components/AnimatedSection.tsx
+
+    frontend/src/app/components/CareerCard.tsx
+
+    frontend/src/app/components/CinematicRadar.tsx
+
+    frontend/src/app/components/ConfidenceBar.tsx
+
+    frontend/src/app/components/DailyInsights.tsx
+
+    frontend/src/app/components/DailyQuizModal.tsx
+
+    frontend/src/app/components/DecisionHistory.tsx
+
+    frontend/src/app/components/DecisionPanel.tsx
+
+    frontend/src/app/components/DriftVisualization.tsx
+
+    frontend/src/app/components/EcosystemHealth.tsx
+
+    frontend/src/app/components/EvolutionCharts.tsx
+
+    frontend/src/app/components/EvolutionTimeline.tsx
+
+    frontend/src/app/components/HeroAI.tsx
+
+    frontend/src/app/components/IntelligenceCenter.tsx
+
+    frontend/src/app/components/LearningVelocityGraph.tsx
+
+    frontend/src/app/components/LiveMetrics.tsx
+
+    frontend/src/app/components/LiveReasoningPanel.tsx
+
+    frontend/src/app/components/MemoryProfile.tsx
+
+    frontend/src/app/components/Navigation.tsx
+
+    frontend/src/app/components/NeuralNeonScene.tsx
+
+    frontend/src/app/components/RoadmapBranching.tsx
+
+    frontend/src/app/components/RoadmapLive.tsx
+
+    frontend/src/app/components/SkillHeatmap.tsx
+
+    frontend/src/app/components/dashboard/PlacementIntelligence.tsx
+
+    frontend/src/app/components/figma/ImageWithFallback.tsx
+
+    frontend/src/app/components/ui/accordion.tsx
+
+    frontend/src/app/components/ui/alert-dialog.tsx
+
+    frontend/src/app/components/ui/alert.tsx
+
+    frontend/src/app/components/ui/aspect-ratio.tsx
+
+    frontend/src/app/components/ui/breadcrumb.tsx
+
+    frontend/src/app/components/ui/calendar.tsx
+
+    frontend/src/app/components/ui/card.tsx
+
+    frontend/src/app/components/ui/carousel.tsx
+
+    frontend/src/app/components/ui/chart.tsx
+
+    frontend/src/app/components/ui/checkbox.tsx
+
+    frontend/src/app/components/ui/collapsible.tsx
+
+    frontend/src/app/components/ui/command.tsx
+
+    frontend/src/app/components/ui/context-menu.tsx
+
+    frontend/src/app/components/ui/dialog.tsx
+
+    frontend/src/app/components/ui/drawer.tsx
+
+    frontend/src/app/components/ui/dropdown-menu.tsx
+
+    frontend/src/app/components/ui/form.tsx
+
+    frontend/src/app/components/ui/hover-card.tsx
+
+    frontend/src/app/components/ui/label.tsx
+
+    frontend/src/app/components/ui/menubar.tsx
+
+    frontend/src/app/components/ui/navigation-menu.tsx
+
+    frontend/src/app/components/ui/pagination.tsx
+
+    frontend/src/app/components/ui/popover.tsx
+
+    frontend/src/app/components/ui/progress.tsx
+
+    frontend/src/app/components/ui/radio-group.tsx
+
+    frontend/src/app/components/ui/resizable.tsx
+
+    frontend/src/app/components/ui/scroll-area.tsx
+
+    frontend/src/app/components/ui/select.tsx
+
+    frontend/src/app/components/ui/separator.tsx
+
+    frontend/src/app/components/ui/sheet.tsx
+
+    frontend/src/app/components/ui/sidebar.tsx
+
+    frontend/src/app/components/ui/skeleton.tsx
+
+    frontend/src/app/components/ui/slider.tsx
+
+    frontend/src/app/components/ui/switch.tsx
+
+    frontend/src/app/components/ui/table.tsx
+
+    frontend/src/app/components/ui/tabs.tsx
+
+    frontend/src/app/components/ui/toggle-group.tsx
+
+    frontend/src/app/components/ui/toggle.tsx
+
+    frontend/src/app/components/ui/tooltip.tsx
+
+    frontend/src/app/components/ui/use-mobile.ts
+
+    frontend/src/app/context/adaptiveAI.tsx
+
+    frontend/src/app/pages/ResultsPremium.tsx
+
+    frontend/src/services/quizService.ts
+
+    gemini.ts
+
+    src/app/components/figma/ImageWithFallback.tsx
+
+    src/app/components/ui/accordion.tsx
+
+    src/app/components/ui/alert-dialog.tsx
+
+    src/app/components/ui/alert.tsx
+
+    src/app/components/ui/aspect-ratio.tsx
+
+    src/app/components/ui/avatar.tsx
+
+    src/app/components/ui/badge.tsx
+
+    src/app/components/ui/breadcrumb.tsx
+
+    src/app/components/ui/button.tsx
+
+    src/app/components/ui/calendar.tsx
+
+    src/app/components/ui/card.tsx
+
+    src/app/components/ui/carousel.tsx
+
+    src/app/components/ui/chart.tsx
+
+    src/app/components/ui/checkbox.tsx
+
+    src/app/components/ui/collapsible.tsx
+
+    src/app/components/ui/command.tsx
+
+    src/app/components/ui/context-menu.tsx
+
+    src/app/components/ui/dialog.tsx
+
+    src/app/components/ui/drawer.tsx
+
+    src/app/components/ui/dropdown-menu.tsx
+
+    src/app/components/ui/form.tsx
+
+    src/app/components/ui/hover-card.tsx
+
+    src/app/components/ui/input-otp.tsx
+
+    src/app/components/ui/input.tsx
+
+    src/app/components/ui/label.tsx
+
+    src/app/components/ui/menubar.tsx
+
+    src/app/components/ui/navigation-menu.tsx
+
+    src/app/components/ui/pagination.tsx
+
+    src/app/components/ui/popover.tsx
+
+    src/app/components/ui/progress.tsx
+
+    src/app/components/ui/radio-group.tsx
+
+    src/app/components/ui/resizable.tsx
+
+    src/app/components/ui/scroll-area.tsx
+
+    src/app/components/ui/select.tsx
+
+    src/app/components/ui/separator.tsx
+
+    src/app/components/ui/sheet.tsx
+
+    src/app/components/ui/sidebar.tsx
+
+    src/app/components/ui/skeleton.tsx
+
+    src/app/components/ui/slider.tsx
+
+    src/app/components/ui/sonner.tsx
+
+    src/app/components/ui/switch.tsx
+
+    src/app/components/ui/table.tsx
+
+    src/app/components/ui/tabs.tsx
+
+    src/app/components/ui/textarea.tsx
+
+    src/app/components/ui/toggle-group.tsx
+
+    src/app/components/ui/toggle.tsx
+
+    src/app/components/ui/tooltip.tsx
+
+    src/app/components/ui/use-mobile.ts
+
+    src/app/components/ui/utils.ts
+
+  ΓÜá Accessibility: Text is too small ├ù2
+    Your users strain to read 11px text, so use at least 12px
+    for body text, & 16px is best.
+    ΓåÆ Use at least 12px for body text, and 16px is best. Small
+    text is hard to read, especially on phones.
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/no-tiny-text
+
+    frontend/src/app/components/LiveReasoningPanel.tsx:96
+
+    frontend/src/app/components/CareerCard.tsx:30
+
+  ΓÜá Bugs: Button missing explicit type ├ù33
+    Your users can submit the form by accident because a
+    `<button>` with no `type` defaults to submit.
+    ΓåÆ Set an explicit button `type` so plain buttons do not
+    submit forms by accident: `type="button"`, `"submit"`, or
+    `"reset"`.
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/button-has-type
+
+    AITutor.tsx:93
+
+    AITutor.tsx:108
+
+    AITutor.tsx:180
+
+    frontend/src/app/components/HeroAI.tsx:115-116
+
+    frontend/src/app/components/DailyQuizModal.tsx:116
+
+    frontend/src/app/components/DailyQuizModal.tsx:142-143
+
+    frontend/src/app/components/LevelUpModal.tsx:13
+
+    frontend/src/app/components/IntelligenceCenter.tsx:40
+
+    frontend/src/app/components/AICompanion.tsx:157
+
+    frontend/src/app/components/DecisionPanel.tsx:63-65
+
+    frontend/src/app/pages/Journey.tsx:208-211
+
+    frontend/src/app/pages/AdminIntelligenceAudits.tsx:64
+
+    frontend/src/app/pages/AdminIntelligenceAudits.tsx:102-103
+
+    frontend/src/app/pages/Assessment.tsx:292
+
+    frontend/src/app/components/ui/sidebar.tsx:286
+
+    frontend/src/app/pages/Roadmap.tsx:970
+
+    frontend/src/app/pages/Roadmap.tsx:977
+
+    frontend/src/app/pages/Roadmap.tsx:1056
+
+    frontend/src/app/pages/Roadmap.tsx:1251
+
+    src/app/pages/Assessment.tsx:238
+
+    src/app/pages/DetailedAnalysis.tsx:527
+
+    src/app/components/ui/sidebar.tsx:286
+
+    src/app/pages/Auth.tsx:137
+
+    src/app/pages/Auth.tsx:158
+
+    src/app/pages/Roadmap.tsx:292
+
+    src/app/pages/Results.tsx:278
+
+    src/app/pages/Dashboard.tsx:334
+
+  ΓÜá Performance: Listener re-subscribes on every handler change ├ù2
+    useEffect re-adds the "onSelect" listener every time the
+    handler changes.
+    ΓåÆ Store the handler in a ref and have the listener read
+    `handlerRef.current()`. The subscription stays put while
+    the latest handler still runs.
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/advanced-event-handler-refs
+
+    frontend/src/app/components/ui/carousel.tsx:96
+
+    src/app/components/ui/carousel.tsx:96
+
+  ΓÜá Performance: State only used in handlers ├ù5
+    Each update to "loading" redraws your component for nothing
+    because this useState is set but never shown on screen.
+    ΓåÆ Use useRef instead of useState when the value is only set
+    and never shown on screen. `ref.current = ...` updates it
+    without redrawing the component.
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/rerender-state-only-in-handlers
+
+    frontend/src/app/components/MemoryProfile.tsx:21
+
+    frontend/src/app/pages/RoadmapCatalog.tsx:38
+
+    frontend/src/app/pages/Dashboard.tsx:261
+
+    frontend/src/app/pages/Journey.tsx:23
+
+    frontend/src/app/pages/Assessment.tsx:20
+
+  ΓÜá Bugs: State updates chained through effects ├ù7
+    Chaining state updates triggers an extra render each step.
+    ΓåÆ Set all the related state together in the event handler
+    that starts it, instead of having one useEffect react to a
+    state change and set more state. See
+    https://react.dev/learn/you-might-not-need-an-effect#chains-of-computations
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/no-chain-state-updates
+
+    frontend/src/app/pages/Assistant.tsx:154
+
+    frontend/src/app/pages/Profile.tsx:218
+
+    frontend/src/app/pages/Profile.tsx:246
+
+    frontend/src/app/pages/Roadmap.tsx:393-399
+
+  ΓÜá Bugs: State initialized from a mount effect ├ù5
+    Your users see an extra render with empty "loading" because
+    a useEffect sets its starting value.
+    ΓåÆ Pass the initial value directly to useState() instead of
+    setting it from a mount-only useEffect. For SSR hydration,
+    prefer useSyncExternalStore().
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/no-initialize-state
+
+    frontend/src/app/components/dashboard/PlacementIntelligence.tsx:315
+
+    frontend/src/app/components/NeuralBackground.tsx:14
+
+    src/app/components/NeuralBackground.tsx:14
+
+    frontend/src/app/components/ui/use-mobile.ts:16
+
+    src/app/components/ui/use-mobile.ts:16
+
+  ΓÜá Accessibility: Anchor has no content ├ù2
+    Blind users can't follow this link because screen readers
+    announce nothing, so add visible text, `aria-label`, or
+    `aria-labelledby`.
+    ΓåÆ Put readable text inside every `<a>`.
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/anchor-has-content
+
+    frontend/src/app/components/ui/pagination.tsx:52
+
+    src/app/components/ui/pagination.tsx:52
+
+  ΓÜá Performance: Empty default prop breaks memo ├ù2
+    This keeps redrawing children that compare props because
+    default prop value [] makes a brand new array every render,
+    so move it to a constant at the top of the file
+    ΓåÆ Move it to the top of the file: `const EMPTY_ITEMS:
+    Item[] = []`, then use that as the default value
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/rerender-memo-with-default-value
+
+    frontend/src/app/components/SkillHeatmap.tsx:8
+
+    frontend/src/app/components/CinematicRadar.tsx:34
+
+  ΓÜá Performance: transition: all animates everything
+    This can stutter because transition: "all" animates every
+    property, even slow layout ones, so list only the
+    properties you actually change
+    ΓåÆ List the specific properties: `transition: "opacity
+    200ms, transform 200ms"`. In Tailwind, use
+    `transition-colors`, `transition-opacity`, or
+    `transition-transform`
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/no-transition-all
+
+    AITutor.tsx:162
+
+  ΓÜá Performance: await before an early-return guard
+    This await blocks the function before an early-return that
+    doesn't use the awaited value, so the skip path waits for
+    nothing. Move the await below the guard so it only runs
+    when you need the data
+    ΓåÆ Move the `await` below the early-return guard so the skip
+    path stays fast and avoids unnecessary async work.
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/async-defer-await
+
+    backend/prisma/seed.ts:258
+
+  ΓÜá Maintainability: Static value rebuilt every render ├ù16
+    `sizeMap` inside `AIThinkingLoader` uses no local state but
+    is rebuilt every render, so it looks new each time & breaks
+    memoized children. Move it to the top of the file, outside
+    the component.
+    ΓåÆ Move the value above the component, at the top of the
+    file. It doesn't use local state, so rebuilding it each
+    update is wasted and makes it look new every time.
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/prefer-module-scope-static-value
+
+    frontend/src/app/components/AIThinkingLoader.tsx:12
+
+    frontend/src/app/components/AIThinkingLoader.tsx:18
+
+    frontend/src/app/components/GlowButton.tsx:22
+
+    frontend/src/app/components/GlowButton.tsx:29
+
+    frontend/src/app/components/GlassCard.tsx:22
+
+    frontend/src/app/components/GradientIconWrapper.tsx:19
+
+    frontend/src/app/components/GradientIconWrapper.tsx:25
+
+    frontend/src/app/components/GradientIconWrapper.tsx:32
+
+    src/app/components/GradientIconWrapper.tsx:19
+
+    src/app/components/GradientIconWrapper.tsx:25
+
+    src/app/components/GradientIconWrapper.tsx:32
+
+    src/app/components/AIThinkingLoader.tsx:12
+
+    src/app/components/AIThinkingLoader.tsx:18
+
+    src/app/components/GlowButton.tsx:19
+
+    src/app/components/GlowButton.tsx:26
+
+    src/app/components/GlassCard.tsx:19
+
+  ΓÜá Maintainability: deslop/unused-export ├ù86
+    Unused export: `generateRoadmapCatalog` is exported but no
+    module imports it, so it expands the public surface and can
+    mislead callers about supported API.
+    ΓåÆ Drop the `export` keyword (or remove the declaration) if
+    no other module uses this symbol.
+
+    backend/scripts/roadmap-catalog.ts:733
+
+    backend/src/ai/aiRouter.ts:114
+
+    backend/src/ai/cache.service.ts:76
+
+    backend/src/ai/cache.service.ts:80
+
+    backend/src/ai/cache.service.ts:146
+
+    backend/src/ai/gemini.service.ts:110
+
+    backend/src/ai/groq.service.ts:83
+
+    backend/src/ai/promptBuilder.ts:21
+
+    backend/src/ai/promptBuilder.ts:153
+
+    backend/src/ai/questionGenerator.ts:98
+
+    backend/src/ai/resultEnhancer.ts:102
+
+    backend/src/ai/schemas.ts:3
+
+    backend/src/ai/schemas.ts:15
+
+    backend/src/ai/schemas.ts:23
+
+    backend/src/ai/schemas.ts:36
+
+    backend/src/ai/schemas.ts:49
+
+    backend/src/ai/schemas.ts:57
+
+    backend/src/ai/schemas.ts:61
+
+    backend/src/ai/schemas.ts:74
+
+    backend/src/ai/scoringEngine.ts:140
+
+    backend/src/config/startupDiagnostics.ts:18
+
+    backend/src/controllers/adminDev.ts:6
+
+    backend/src/controllers/debug.ts:6
+
+    backend/src/data/careerCatalog.ts:480
+
+    backend/src/data/projectCatalog.ts:398
+
+    backend/src/middleware/auth.ts:60-64
+
+    backend/src/middleware/redisRateLimiter.ts:37
+
+    backend/src/modules/intelligence/intelligence.service.ts:8
+
+    backend/src/modules/journey/journey.service.ts:29
+
+    backend/src/modules/journey/journey.utils.ts:141
+
+    backend/src/modules/mentor/mentor.memory.service.ts:13
+
+    backend/src/modules/mentor/mentor.service.ts:26
+
+    backend/src/security/ai/aiAudit.ts:13
+
+    backend/src/security/ai/aiFirewall.ts:48
+
+    backend/src/security/audit.security.ts:44
+
+    backend/src/security/authCookies.ts:34
+
+    backend/src/services/adaptive-assessment.ts:521
+
+    backend/src/services/adaptive-learning.ts:33
+
+    backend/src/services/adaptive-learning.ts:46
+
+    backend/src/services/adaptive-learning.ts:71
+
+    backend/src/services/adaptive-learning.ts:99
+
+    backend/src/services/ai-decision-engine.ts:5
+
+    backend/src/services/aiMemory.ts:3
+
+    backend/src/services/assessment.ts:11
+
+    backend/src/services/auth.ts:140
+
+    backend/src/services/career-intelligence.ts:57
+
+    backend/src/services/daily-analytics.ts:39
+
+    backend/src/services/job-sync.ts:161
+
+    backend/src/services/learning-resources.ts:739
+
+    backend/src/services/learning-resources.ts:889
+
+    backend/src/services/progress.ts:23
+
+    backend/src/services/quiz.ts:6
+
+    backend/src/services/recommendation-engine.ts:62
+
+    backend/src/services/roadmap-generation.ts:493
+
+    backend/src/services/roadmap.ts:55
+
+    backend/src/utils/errors.ts:50
+
+    backend/src/validators/ai.ts:51
+
+    backend/src/validators/auth.ts:34
+
+    backend/src/validators/learningResources.ts:15
+
+    backend/src/validators/learningResources.ts:36
+
+    backend/src/validators/profile-builder.ts:29
+
+    backend/src/validators/roadmap.ts:48
+
+    backend/src/validators/roadmap.ts:52
+
+    frontend/src/app/components/journey/JourneySections.tsx:13
+
+    frontend/src/app/components/journey/JourneySections.tsx:315
+
+    frontend/src/services/apiClient.ts:88
+
+    frontend/src/utils/animations.ts:6
+
+    frontend/src/utils/animations.ts:60
+
+    frontend/src/utils/animations.ts:102
+
+    frontend/src/utils/animations.ts:112
+
+    frontend/src/utils/animations.ts:124
+
+    frontend/src/utils/animations.ts:136
+
+    frontend/src/utils/animations.ts:153
+
+    frontend/src/utils/animations.ts:165
+
+    frontend/src/utils/animations.ts:174
+
+    frontend/src/utils/animations.ts:188
+
+    frontend/src/utils/animations.ts:201
+
+    frontend/src/utils/animations.ts:242
+
+    frontend/src/utils/animations.ts:257
+
+    frontend/src/utils/animations.ts:266
+
+    frontend/src/utils/animations.ts:279
+
+    frontend/src/utils/animations.ts:287
+
+    frontend/src/utils/animations.ts:302
+
+    frontend/src/utils/animations.ts:313
+
+  ΓÜá Bugs: Data passed to parent via effect ├ù2
+    Handing data back to a parent from a useEffect costs your
+    users an extra render.
+    ΓåÆ Fetch the data in the parent and pass it down as a prop
+    (or return it from the hook), instead of handing it back up
+    through a prop callback in a useEffect. See
+    https://react.dev/learn/you-might-not-need-an-effect#passing-data-to-the-parent
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/no-pass-data-to-parent
+
+    frontend/src/app/components/ui/carousel.tsx:93
+
+    src/app/components/ui/carousel.tsx:93
+
+  ΓÜá Performance: useMemo before an early return ├ù2
+    This runs even when the component bails out because the
+    useMemo builds JSX before an early return, so move the JSX
+    into a child wrapped in memo to skip it on the early return
+    ΓåÆ Move the JSX into a child component wrapped in memo, so
+    the parent's early return skips it
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/rerender-memo-before-early-return
+
+    frontend/src/app/components/ui/chart.tsx:131
+
+    src/app/components/ui/chart.tsx:131
+
+  ΓÜá Performance: Spread copy before sort() ├ù11
+    This wastes work because [...array].sort() copies the array
+    just to sort it, so use array.toSorted() to sort without
+    the extra copy (ES2023)
+    ΓåÆ Use `array.toSorted()` (ES2023) instead of
+    `[...array].sort()` so you sort without copying the array
+    first
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/js-tosorted-immutable
+
+    backend/src/services/job-match-engine.ts:109-110
+
+    backend/src/services/career-intelligence.ts:184-192
+
+    frontend/src/app/components/dashboard/PlacementIntelligence.tsx:704
+
+    frontend/src/app/pages/Dashboard.tsx:341
+
+  ΓÜá Accessibility: Redundant ARIA role ├ù2
+    Screen reader users gain nothing from this `role` because
+    `<nav>` already acts as a `navigation`, so remove it.
+    ΓåÆ Remove redundant `role` attributes so assistive tech
+    reads the element's native semantics without extra noise.
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/no-redundant-roles
+
+    frontend/src/app/components/ui/pagination.tsx:14
+
+    src/app/components/ui/pagination.tsx:14
+
+  ΓÜá Performance: Large animated blur
+    Large animated blurs can use significant GPU memory on
+    phones because blur(12px) gets heavier as the blur and
+    element grow. Use a smaller blur or a smaller element.
+    ΓåÆ Keep the blur under 10px, or blur a smaller element. Big
+    blurs use a lot more GPU memory as the element grows
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/no-large-animated-blur
+
+    frontend/src/app/components/LiveMetrics.tsx:22
+
+  ΓÜá Maintainability: Pure function rebuilt every render
+    `getApiBaseUrl` inside `Auth` uses no local state but is
+    rebuilt on every render, so it wastes work & breaks
+    memoized children. Move it to the top of the file, outside
+    the component.
+    ΓåÆ Move the function above the component, at the top of the
+    file. It doesn't use local state, so rebuilding it each
+    update is wasted work.
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/prefer-module-scope-pure-function
+
+    frontend/src/app/pages/Auth.tsx:215
+
+  ΓÜá Maintainability: Large component is hard to read and change ├ù13
+    Component "NeuralNeonScene" is 405 lines long, which is
+    hard to read & change. Split it into a few smaller
+    components.
+    ΓåÆ Pull each section into its own component so the parent is
+    easier to read, test, and change.
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/no-giant-component
+
+    frontend/src/app/components/NeuralNeonScene.tsx:26
+
+    frontend/src/app/pages/RoadmapCatalog.tsx:37
+
+    frontend/src/app/pages/LandingPage.tsx:11
+
+    frontend/src/app/pages/Auth.tsx:17
+
+    frontend/src/app/pages/LearningResources.tsx:21
+
+    frontend/src/app/pages/Journey.tsx:15
+
+    frontend/src/app/pages/Assessment.tsx:14
+
+    frontend/src/app/pages/Profile.tsx:98
+
+    frontend/src/app/pages/DetailedAnalysis.tsx:86
+
+    frontend/src/app/pages/Roadmap.tsx:132
+
+    src/app/pages/DetailedAnalysis.tsx:112
+
+    src/app/pages/LandingPage.tsx:11
+
+    src/app/pages/Dashboard.tsx:24
+
+  ΓÜá Performance: useMemo on a cheap value ├ù2
+    This costs more than it saves because useMemo is wrapping a
+    value that's already cheap, so remove the useMemo
+    ΓåÆ Remove the useMemo. Property reads, math, and ternaries
+    are already fast, so wrapping them doesn't help
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/no-usememo-simple-expression
+
+    frontend/src/app/components/ui/sidebar.tsx:610
+
+    src/app/components/ui/sidebar.tsx:610
+
+  ΓÜá Maintainability: deslop/unused-dependency ├ù9
+    Unused dependency: `@mui/icons-material`
+    Unused dependency: `@mui/material`
+    Unused dependency: `@popperjs/core`
+    Unused dependency: `canvas-confetti`
+    Unused dependency: `react-dnd`
+    Unused dependency: `react-dnd-html5-backend`
+    Unused dependency: `react-popper`
+    Unused dependency: `react-responsive-masonry`
+    Unused dependency: `react-slick`
+    ΓåÆ An unused dependency adds install time and supply-chain
+    surface without being used; remove it from package.json if
+    it is genuinely unused.
+
+  ΓÜá Accessibility: Redundant words in image alt ├ù2
+    Screen reader users hear "image" or "photo" twice because
+    they already announce it, so describe what the image shows
+    instead.
+    ΓåÆ Do not put 'image' or 'photo' in alt text. Describe what
+    is shown.
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/img-redundant-alt
+
+    frontend/src/app/components/figma/ImageWithFallback.tsx:21
+
+    src/app/components/figma/ImageWithFallback.tsx:21
+
+  ΓÜá Bugs: Many related useState calls ├ù11
+    9 useState calls in "RoadmapCatalog" can each trigger a
+    separate render.
+    ΓåÆ Group related state in `useReducer` so one logical update
+    does not fan out into separate renders.
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/prefer-useReducer
+
+    frontend/src/app/pages/RoadmapCatalog.tsx:37
+
+    frontend/src/app/pages/Auth.tsx:17
+
+    frontend/src/app/pages/Dashboard.tsx:254
+
+    frontend/src/app/pages/LearningResources.tsx:21
+
+    frontend/src/app/pages/Journey.tsx:15
+
+    frontend/src/app/pages/Assistant.tsx:29
+
+    frontend/src/app/pages/Assessment.tsx:14
+
+    frontend/src/app/pages/Jobs.tsx:12
+
+    frontend/src/app/pages/Profile.tsx:98
+
+    frontend/src/app/pages/DetailedAnalysis.tsx:86
+
+    frontend/src/app/pages/Roadmap.tsx:132
+
+  ΓÜá Maintainability: Multiple components in one file ├ù26
+    This file declares several components, so each component is
+    harder to find, test, and change.
+    ΓåÆ Move secondary components into their own files so each
+    component stays easier to find, test, and change.
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/no-multi-comp
+
+    frontend/src/app/components/ui/input-otp.tsx:39
+
+    frontend/src/app/components/ui/input-otp.tsx:69
+
+    frontend/src/app/components/ui/avatar.tsx:24
+
+    frontend/src/app/components/ui/avatar.tsx:37
+
+    frontend/src/app/components/ui/hover-card.tsx:14
+
+    frontend/src/app/components/ui/hover-card.tsx:22
+
+    frontend/src/app/components/AnimatedSection.tsx:55
+
+    frontend/src/app/components/AnimatedSection.tsx:79
+
+    frontend/src/app/components/ui/collapsible.tsx:11
+
+    frontend/src/app/components/ui/collapsible.tsx:22
+
+    frontend/src/app/components/ui/alert.tsx:37
+
+    frontend/src/app/components/ui/alert.tsx:50
+
+    src/app/components/ui/hover-card.tsx:14
+
+    src/app/components/ui/hover-card.tsx:22
+
+    src/app/components/ui/collapsible.tsx:11
+
+    src/app/components/ui/collapsible.tsx:22
+
+    src/app/components/ui/alert.tsx:37
+
+    src/app/components/ui/alert.tsx:50
+
+    frontend/src/app/components/ui/resizable.tsx:25
+
+    frontend/src/app/components/ui/resizable.tsx:31
+
+    src/app/components/ui/input-otp.tsx:39
+
+    src/app/components/ui/input-otp.tsx:69
+
+    src/app/components/ui/avatar.tsx:24
+
+    src/app/components/ui/avatar.tsx:37
+
+    src/app/components/ui/resizable.tsx:25
+
+    src/app/components/ui/resizable.tsx:31
+
+  ΓÜá Maintainability: Non-component export in component file ├ù8
+    This file exports non-components, so Fast Refresh can't
+    safely preserve component state.
+    ΓåÆ Move non-component exports out of component files so Fast
+    Refresh can preserve component state instead of
+    full-reloading.
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/only-export-components
+
+    frontend/src/app/components/ui/navigation-menu.tsx:167
+
+    frontend/src/app/components/ui/badge.tsx:46
+
+    frontend/src/app/components/ui/button.tsx:58
+
+    src/app/components/ui/button.tsx:58
+
+    src/app/components/ui/badge.tsx:46
+
+    frontend/src/app/components/ui/toggle.tsx:47
+
+    src/app/components/ui/navigation-menu.tsx:167
+
+    src/app/components/ui/toggle.tsx:47
+
+  ΓÜá Maintainability: JSX nested too deeply ├ù4
+    This JSX is hard to read at 16 levels deep, past the limit
+    of 14.
+    ΓåÆ Pull deeply nested JSX into smaller components so it's
+    easier to read.
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/jsx-max-depth
+
+    frontend/src/app/pages/Roadmap.tsx:934-938
+
+  ΓÜá Performance: Animating scale from zero ├ù9
+    This looks abrupt to your users because scale: 0 pops the
+    element in from a single point, so use scale: 0.95 with
+    opacity: 0 for a smoother entrance
+    ΓåÆ Use `initial={{ scale: 0.95, opacity: 0 }}`. Elements
+    should gently shrink and fade, not vanish into a point
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/no-scale-from-zero
+
+    frontend/src/app/components/NeuralBackground.tsx:87
+
+    src/app/components/NeuralBackground.tsx:87
+
+    frontend/src/app/pages/Assessment.tsx:269
+
+    frontend/src/app/pages/Roadmap.tsx:1019
+
+    src/app/pages/Assessment.tsx:223
+
+    src/app/pages/Roadmap.tsx:206
+
+    src/app/pages/Results.tsx:103
+
+    src/app/pages/Results.tsx:119
+
+    src/app/pages/Dashboard.tsx:236
+
+
+  ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+  All 636 issues
+
+  Security > 2 warnings
+  Bugs > 121 warnings
+  Performance > 138 warnings
+  Accessibility > 74 warnings
+  Maintainability > 301 warnings
+
+Agent guidance
+  - Treat React Doctor diagnostics as starting hypotheses. Read the relevant code before confirming or suppressing each finding.
+  - For each group, decide true positive, false positive, or needs-human-review, then assign high/medium/low confidence.
+  - Do not suppress a finding without evidence from the file in question. Confidence requires code context.
+  - Understand the root cause before editing. Fix the underlying code instead of changing react-doctor config or suppressing rules unless explicitly asked.
+  - Investigate deeply where relevant: race conditions, security-sensitive flows, state propagation, multi-file refactors, and downstream dependency chains.
+  - Ignore pure style preferences, theoretical issues without real impact, missing features, and unrelated pre-existing code.
+  - Start with high-confidence fixes that preserve behavior. Leave low-confidence or product-dependent changes as notes.
+  - Run `npx react-doctor@latest --verbose --diff` before and after changes, plus relevant tests after each focused batch.
+  - When available, spawn subagents or isolated worktrees for independent rule families, then review and merge only the best safe fixes.
+  - Split unrelated, broad, or behavior-changing work into separate PRs/branches instead of one large cleanup.
+  - For confirmed issues that cannot be fixed now, create GitHub issues with the rule, file/line, confidence, impact, and proposed fix.
+  - If a fix needs an API, UX, or architecture decision, stop and ask before editing.
+
+  ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ  57 / 100 Critical
+  Γöé ΓÇó ΓÇó Γöé  ΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæ
+  Γöé  ΓöÇ  Γöé  React Doctor (https://react.doctor)
+  ΓööΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ
+
+  Full diagnostics written to C:\Users\Lenovo\AppData\Local\Temp\react-doctor-7ccacc01-8728-43ef-b9ee-e118cdf279a7
+
+  ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+  Share: https://react.doctor/share?p=%40figma%2Fmy-make-file&s=57&w=636&f=237
+  Tell others how you did on socials
+
+  Docs: https://react.doctor/docs
+  Learn more about fixing issues, setting up CI/CD, and
+  configuring rules with a config file
+
+  GitHub: https://github.com/millionco/react-doctor
+  Report issues and star the repository!
+

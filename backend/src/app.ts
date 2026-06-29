@@ -1,19 +1,28 @@
 // src/app.ts
 
 import express, { Application, Request, Response } from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
 import morgan from 'morgan';
 import session from 'express-session';
 import passport from 'passport';
 import { config } from '@/config/env';
 import { errorHandler } from '@/middleware/errorHandler';
 import { configurePassport } from '@/config/passport';
+import {
+  aiApiRateLimiter,
+  authRateLimiter,
+  generalApiRateLimiter,
+  requestSizeLimits,
+  sanitizeRequest,
+  secureCors,
+  secureHeaders,
+} from '@/security';
+import { aiFirewall } from '@/security/ai/aiFirewall';
+import { aiUsageLimiter } from '@/security/ai/aiUsageLimiter';
 
 // Routes
 import authRoutes from '@/routes/auth';
 import roadmapRoutes from '@/routes/roadmap';
+import assessmentRoadmapRoutes from '@/routes/assessmentRoadmap';
 import progressRoutes from '@/routes/progress';
 import assessmentRoutes from '@/routes/assessment';
 import aiRoutes from '@/routes/ai';
@@ -22,6 +31,7 @@ import adminRoutes from '@/routes/admin';
 import profileRoutes from '@/routes/profile';
 import skillRoutes from '@/routes/skill';
 import taskRoutes from '@/routes/task';
+import healthRoutes from '@/routes/health';
 import careerMatchingRoutes from '@/routes/career-matching';
 import careersRoutes from '@/routes/careers';
 import jobsRoutes from '@/routes/jobs';
@@ -44,7 +54,7 @@ configurePassport();
 
 // ============ SECURITY MIDDLEWARE ============
 
-app.use(helmet());
+app.use(secureHeaders);
 
 app.set('trust proxy', 1);
 
@@ -64,55 +74,18 @@ app.use(
   })
 );
 
-// Temporary debug: print session / cookie config
-console.log('[Session Config] SESSION_SECRET set?:', !!config.oauth.sessionSecret);
-console.log('[Session Config] nodeEnv:', config.nodeEnv);
-console.log('[Session Config] cookie.secure:', config.nodeEnv === 'production');
-console.log('[Session Config] cookie.sameSite:', 'lax');
-console.log('[Session Config] cookie.httpOnly:', true);
-console.log('[Session Config] saveUninitialized:', false);
-console.log('[Session Config] resave:', false);
-
 app.use(passport.initialize());
 app.use(passport.session());
 
 const isDevelopment = config.nodeEnv !== 'production';
-const rateLimitMessage = { success: false, message: 'Too many requests' };
-
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: isDevelopment ? 1000 : 100, // allow higher burst in development
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: rateLimitMessage,
-  handler: (_req, res) => {
-    res.status(429).json(rateLimitMessage);
-  },
-});
-
-app.use('/api/', limiter);
 
 // CORS
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin || config.cors.allowedOrigins.includes(origin)) {
-        callback(null, true);
-        return;
-      }
-
-      callback(new Error('CORS blocked: origin not allowed'));
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  })
-);
+app.use(secureCors);
 
 // ============ BODY PARSING ============
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ limit: '10mb', extended: true }));
+app.use(requestSizeLimits);
+app.use(sanitizeRequest);
 
 // ============ LOGGING ============
 
@@ -127,6 +100,8 @@ app.get('/health', (_req: Request, res: Response) => {
   res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+app.use('/api/health', healthRoutes);
+
 app.post('/api/top-career', (_req: Request, res: Response) => {
   res.json({
     success: true,
@@ -136,10 +111,17 @@ app.post('/api/top-career', (_req: Request, res: Response) => {
 });
 
 // API routes
+app.use('/api', generalApiRateLimiter);
+app.use('/api/auth', authRateLimiter);
+app.use('/api/ai', aiApiRateLimiter, aiUsageLimiter, aiFirewall);
+app.use('/api/mentor', aiApiRateLimiter, aiUsageLimiter, aiFirewall);
+app.use('/api/recommendations/intelligence', aiApiRateLimiter, aiUsageLimiter, aiFirewall);
+
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/skills', skillRoutes);
 app.use('/api/tasks', taskRoutes);
+app.use('/api/roadmap', assessmentRoadmapRoutes);
 app.use('/api/roadmaps', roadmapRoutes);
 app.use('/api/progress', progressRoutes);
 // Protect assessment and AI endpoints with Redis-backed per-user/IP limiter (falls back to in-memory)

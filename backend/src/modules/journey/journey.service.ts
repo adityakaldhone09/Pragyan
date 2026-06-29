@@ -16,7 +16,10 @@ import {
 } from './journey.utils';
 
 function uniqueValues(values: string[]) {
-  return Array.from(new Set(values.filter(Boolean).map((value) => value.trim()).filter(Boolean)));
+  return Array.from(new Set(values.flatMap((value) => {
+    const trimmed = value?.trim();
+    return trimmed ? [trimmed] : [];
+  })));
 }
 
 function toDayKey(date = new Date()) {
@@ -42,8 +45,7 @@ export class JourneyService {
       .find((roadmap: any) => {
         if (!roadmap) return false;
         const haystack = [roadmap.title, roadmap.category, roadmap.careerPath, roadmap.description, ...(roadmap.tags || [])]
-          .filter(Boolean)
-          .map((value) => toCareerSlug(String(value)));
+          .flatMap((value) => value ? [toCareerSlug(String(value))] : []);
 
         return haystack.includes(normalizedSlug);
       }) || userRoadmaps[0]?.roadmap || null;
@@ -56,8 +58,7 @@ export class JourneyService {
 
     const selected = candidates.find((roadmap: any) => {
       const haystack = [roadmap.title, roadmap.category, roadmap.careerPath, roadmap.description, ...(roadmap.tags || [])]
-        .filter(Boolean)
-        .map((value) => toCareerSlug(String(value)));
+        .flatMap((value) => value ? [toCareerSlug(String(value))] : []);
 
       return haystack.includes(normalizedSlug);
     }) || personalizedRoadmapDetail || candidates[0] || null;

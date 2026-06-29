@@ -4,6 +4,8 @@ import { getResourceCatalogBlueprint } from '@/data/resourceCatalog';
 import { deriveAdaptiveLearningProfile as deriveSharedAdaptiveLearningProfile } from '@/services/adaptive-learning';
 
 const RESOURCE_TYPES = ['youtube', 'documentation', 'practice', 'article', 'mini-project', 'certification'] as const;
+const DAILY_RESOURCE_TYPES = ['documentation', 'youtube', 'practice'] as const;
+type DailyResourceType = typeof DAILY_RESOURCE_TYPES[number];
 const DIFFICULTY_ORDER = ['beginner', 'intermediate', 'advanced', 'expert'] as const;
 const TOPIC_TEMPLATES = [
   'foundations',
@@ -368,8 +370,10 @@ function resolveDifficultyBand(roadmap: RoadmapLike) {
 
 function getSkills(roadmap: RoadmapLike) {
   const skills = [roadmap.category, ...(roadmap.requiredSkills || []), ...(roadmap.tags || [])]
-    .map((item) => String(item || '').trim())
-    .filter(Boolean);
+    .flatMap((item) => {
+      const trimmed = String(item || '').trim();
+      return trimmed ? [trimmed] : [];
+    });
 
   return Array.from(new Set(skills));
 }
@@ -385,24 +389,36 @@ function getLearningStructure(roadmap: RoadmapLike) {
 function buildTopicPlan(roadmap: RoadmapLike) {
   const skills = getSkills(roadmap);
   const learningStructure = getLearningStructure(roadmap);
-  const dayCount = Math.max(learningStructure.length || 0, 5);
-  const focusWords = learningStructure.map((item) => item.focus).filter(Boolean).map(String);
-  const baseSeeds = Array.from(
+  const dayCount = Math.max(learningStructure.length || 1, 1);
+
+  const dayTopics = learningStructure.flatMap((item) => {
+    if (!item.focus) return [];
+    return [titleCase(String(item.focus))];
+  });
+
+  const fallbackTopics = Array.from(
     new Set([
-      roadmap.title,
       roadmap.category,
+      roadmap.title,
       ...skills,
-      ...focusWords,
       ...TOPIC_TEMPLATES.map((template) => `${roadmap.category} ${template}`),
     ])
-  );
+  ).map(titleCase);
 
-  return baseSeeds.slice(0, 25).map((topic, index) => ({
-    topic: titleCase(topic),
-    topicSlug: slugify(topic),
-    skill: skills[index % Math.max(skills.length, 1)] || roadmap.category,
-    dayNumber: (index % dayCount) + 1,
-  }));
+  const topics = Array.from(new Set([...dayTopics, ...fallbackTopics]));
+
+  return Array.from({ length: dayCount }, (_, index) => {
+    const topic = topics[index] || topics[0] || roadmap.category;
+    const topicSlug = slugify(topic);
+    const skill = skills[index % Math.max(skills.length, 1)] || roadmap.category;
+
+    return {
+      topic,
+      topicSlug,
+      skill,
+      dayNumber: index + 1,
+    };
+  });
 }
 
 function buildUrl(type: typeof RESOURCE_TYPES[number], topic: string, roadmapTitle: string, skill: string) {
@@ -597,7 +613,7 @@ function buildResourceCandidates(roadmap: RoadmapLike) {
   const roadmapSkills = getSkills(roadmap);
 
   return topicPlan.flatMap((topicNode, index) => {
-    return RESOURCE_TYPES.map((resourceType, resourceIndex) => {
+    return DAILY_RESOURCE_TYPES.map((resourceType, resourceIndex) => {
       const scoreBoost = Math.max(0, 100 - index * 2 - resourceIndex * 3);
       const skill = topicNode.skill || roadmap.category;
       const topic = topicNode.topic;
@@ -634,7 +650,7 @@ function buildResourceCandidates(roadmap: RoadmapLike) {
         description: buildResourceDescription(resourceType, topic, roadmapTitle),
         provider,
         estimatedMinutes: estimateMinutes(resourceType, difficulty),
-        isOfficial: resourceType === 'documentation' || resourceType === 'certification',
+        isOfficial: resourceType === 'documentation',
         aiScore: scoreBoost,
         source: 'ai-generated',
         tags: Array.from(new Set([roadmap.category, ...roadmapSkills, topicNode.topicSlug, resourceType].filter(Boolean))),
@@ -677,12 +693,15 @@ async function getPersonalizationProfile(userId?: string, roadmapId?: string): P
     }),
   ]);
 
-  const completedTopics = history.filter((entry) => entry.completed).map((entry) => entry.resource.topic);
+  const completedTopics = history.flatMap((entry) => entry.completed && entry.resource?.topic ? [entry.resource.topic] : []);
   const weakSkills = Array.from(new Set([
     ...(user?.preferences || []),
     ...(user?.interests || []),
     ...(latestAssessment?.weaknesses || []),
-  ].map((item) => String(item).trim()).filter(Boolean)));
+  ].flatMap((item) => {
+    const trimmed = String(item).trim();
+    return trimmed ? [trimmed] : [];
+  })));
 
   const assessmentStrengths = Array.isArray(latestAssessment?.strengths) ? latestAssessment.strengths : [];
   const assessmentWeaknesses = Array.isArray(latestAssessment?.weaknesses) ? latestAssessment.weaknesses : [];
@@ -698,7 +717,10 @@ async function getPersonalizationProfile(userId?: string, roadmapId?: string): P
     ...(user?.skills || []),
     ...(user?.interests || []),
     ...(latestAssessment?.suggestedCareers || []),
-  ].map((item) => String(item).trim()).filter(Boolean)));
+  ].flatMap((item) => {
+    const trimmed = String(item).trim();
+    return trimmed ? [trimmed] : [];
+  })));
   const careerGoal = latestAssessment?.suggestedCareers?.[0] || user?.experience || user?.experienceType || user?.education || '';
 
   return {
@@ -785,37 +807,23 @@ async function ensureRoadmapResources(roadmap: RoadmapLike) {
     orderBy: [{ aiScore: 'desc' }, { updatedAt: 'desc' }],
   });
 
-  if (cached.length) {
+  const topicPlan = buildTopicPlan(roadmap);
+  const expectedLength = Math.max(topicPlan.length, 1) * DAILY_RESOURCE_TYPES.length;
+  const cachedValid =
+    cached.length === expectedLength &&
+    cached.every((resource) => DAILY_RESOURCE_TYPES.includes(resource.resourceType as DailyResourceType));
+
+  if (cachedValid) {
     return cached;
   }
+
+  await prisma.learningResource.deleteMany({ where: { roadmapId: roadmap.id } });
 
   const candidates = buildResourceCandidates(roadmap);
   await Promise.all(
     candidates.map((resource) =>
-      prisma.learningResource.upsert({
-        where: { resourceKey: resource.resourceKey },
-        update: {
-          roadmapCategory: resource.roadmapCategory,
-          roadmapTitle: resource.roadmapTitle,
-          skill: resource.skill,
-          topic: resource.topic,
-          topicSlug: resource.topicSlug,
-          dayNumber: resource.dayNumber,
-          resourceType: resource.resourceType,
-          difficulty: resource.difficulty,
-          title: resource.title,
-          url: resource.url,
-          description: resource.description,
-          provider: resource.provider,
-          estimatedMinutes: resource.estimatedMinutes,
-          isOfficial: resource.isOfficial,
-          aiScore: resource.aiScore,
-          source: resource.source,
-          tags: resource.tags,
-          metadata: resource.metadata,
-          roadmapId: roadmap.id,
-        },
-        create: resource,
+      prisma.learningResource.create({
+        data: resource,
       })
     )
   );
@@ -854,13 +862,14 @@ async function rankResourcesWithAI(roadmap: RoadmapLike, userSkills: string[], r
     if (Array.isArray(parsed.ranked) && parsed.ranked.length) {
       return {
         summary: typeof parsed.summary === 'string' ? parsed.summary : 'AI personalized the resource order.',
-        ranked: parsed.ranked
-          .map((entry) => ({
-            id: String(entry.id),
+        ranked: parsed.ranked.flatMap((entry) => {
+          const id = String(entry.id);
+          return id ? [{
+            id,
             score: Number(entry.score ?? 0),
             reason: String(entry.reason || 'Recommended by AI'),
-          }))
-          .filter((entry) => entry.id),
+          }] : [];
+        }),
       };
     }
   } catch (error) {
@@ -1092,8 +1101,10 @@ export class LearningResourceService {
 
       const xpDelta = Math.max(5, Math.round((input.progressPercent ?? 100) / 10));
       const { xpService } = await import('@/services/xp');
-      await xpService.awardXp(userId, xpDelta, 'resource-complete', { resourceId: input.resourceId });
-      await prisma.user.update({ where: { id: userId }, data: { streak: nextStreak } });
+      await Promise.all([
+        xpService.awardXp(userId, xpDelta, 'resource-complete', { resourceId: input.resourceId }),
+        prisma.user.update({ where: { id: userId }, data: { streak: nextStreak } }),
+      ]);
     }
 
     return result;

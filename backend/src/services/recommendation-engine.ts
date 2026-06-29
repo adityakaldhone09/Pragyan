@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { careerMatchingEngine, type AssessmentAnswers } from '@/services/career-matching';
 import safeParseAIResponse from '@/ai/safeParser';
 import { ExplainSchema, RoadmapSectionResponseSchema } from '@/ai/schemas';
-import { generateContent } from '../ai/GeminiProvider';
+import { routeAI } from '@/ai/aiRouter';
 
 export interface RecommendationRequestProfile {
   skills?: string[];
@@ -149,8 +149,17 @@ export class RecommendationEngineService {
     ].join('\n\n');
 
     try {
-      const raw = await (await import('@/services/ai-layers')).aiLayers.generateStructuredJson(prompt, { timeoutMs: 15000 });
-      const parsed = safeParseAIResponse(JSON.parse(raw), RoadmapSectionResponseSchema);
+      const result = await routeAI('summary', {
+        prompt,
+        input: {
+          skills: profile.skills || [],
+          interests: profile.interests || [],
+          personality: profile.personality || [],
+          roadmaps: serializedRoadmaps,
+        },
+        format: 'json',
+      });
+      const parsed = safeParseAIResponse(JSON.parse(result.value), RoadmapSectionResponseSchema);
 
       return this.mapRoadmapSections(parsed.sections, roadmapCatalog);
     } catch (error) {
@@ -253,8 +262,15 @@ export class RecommendationEngineService {
         }
       }
 
-      const result = await generateContent(prompt);
-      const structured = safeParseAIResponse(JSON.parse(result), ExplainSchema);
+      const result = await routeAI('skill_gap_analysis', {
+        prompt,
+        input: {
+          career: career.title,
+          profile,
+        },
+        format: 'json',
+      });
+      const structured = safeParseAIResponse(JSON.parse(result.value), ExplainSchema);
 
       const explanation = typeof structured?.summary === 'string'
         ? structured.summary
@@ -342,15 +358,22 @@ export class RecommendationEngineService {
     );
   }
 
+  private normalizeTokenList(items?: string[]): string[] {
+    return (items || []).flatMap((item) => {
+      const normalized = item.toLowerCase().trim();
+      return normalized ? [normalized] : [];
+    });
+  }
+
   private normalizeProfile(profile: RecommendationRequestProfile): AssessmentAnswers {
     return {
-      skills: (profile.skills || []).map((item) => item.toLowerCase().trim()).filter(Boolean),
-      interests: (profile.interests || []).map((item) => item.toLowerCase().trim()).filter(Boolean),
-      personality: (profile.personality || []).map((item) => item.toLowerCase().trim()).filter(Boolean),
+      skills: this.normalizeTokenList(profile.skills),
+      interests: this.normalizeTokenList(profile.interests),
+      personality: this.normalizeTokenList(profile.personality),
       education: (profile.education || '').toLowerCase().trim(),
       experience: (profile.experience || '').toLowerCase().trim(),
-      workStyle: (profile.workStyle || []).map((item) => item.toLowerCase().trim()).filter(Boolean),
-      careerGoals: (profile.learningPreferences || []).map((item) => item.toLowerCase().trim()).filter(Boolean),
+      workStyle: this.normalizeTokenList(profile.workStyle),
+      careerGoals: this.normalizeTokenList(profile.learningPreferences),
     };
   }
 
@@ -477,7 +500,7 @@ export class RecommendationEngineService {
     });
 
     const scored = roadmapPool
-      .map((roadmap) => {
+      .flatMap((roadmap) => {
         const haystack = [
           roadmap.title,
           roadmap.category,
@@ -493,12 +516,8 @@ export class RecommendationEngineService {
           if (haystack.includes(keyword)) score += 10;
         }
 
-        return {
-          roadmap,
-          score,
-        };
+        return score > 0 ? [{ roadmap, score }] : [];
       })
-      .filter((item) => item.score > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, 8)
       .map((item) => ({
@@ -593,14 +612,8 @@ export class RecommendationEngineService {
 
     return Array.from(grouped.entries())
       .slice(0, 6)
-      .map(([category, roadmaps], index) => ({
-        id: `${category.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'general'}-${index}`,
-        title: category,
-        summary: `Practical roadmap picks for the ${category} domain, organized from the current database catalog.`,
-        priority: index + 1,
-        focusPoints: ['Core fundamentals', 'Hands-on projects', 'Interview readiness'],
-        category,
-        roadmaps: roadmaps.slice(0, 4).map((roadmap) => ({
+      .flatMap(([category, roadmaps], index) => {
+        const mappedRoadmaps = roadmaps.slice(0, 4).map((roadmap) => ({
           id: roadmap.id,
           title: roadmap.title,
           category: roadmap.category,
@@ -610,9 +623,18 @@ export class RecommendationEngineService {
           tags: roadmap.tags || [],
           description: roadmap.description,
           estimatedHours: roadmap.estimatedHours,
-        })),
-      }))
-      .filter((section) => section.roadmaps.length > 0);
+        }));
+
+        return mappedRoadmaps.length > 0 ? [{
+          id: `${category.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'general'}-${index}`,
+          title: category,
+          summary: `Practical roadmap picks for the ${category} domain, organized from the current database catalog.`,
+          priority: index + 1,
+          focusPoints: ['Core fundamentals', 'Hands-on projects', 'Interview readiness'],
+          category,
+          roadmaps: mappedRoadmaps,
+        }] : [];
+      });
   }
 
   private safeJsonParse<T>(value: string, fallback: T): T {

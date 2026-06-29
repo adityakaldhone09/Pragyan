@@ -8,6 +8,7 @@ import { isGoogleOAuthConfigured, isGitHubOAuthConfigured } from '@/config/passp
 import { generateAccessToken, generateRefreshToken } from '@/utils/jwt';
 import { prisma } from '@/lib/prisma';
 import type { OAuthUserProfile } from '@/types/auth';
+import { setAuthCookies } from '@/security';
 
 function buildFrontendUrl(path: string, query?: Record<string, string>) {
   const url = new URL(path, config.frontendUrl);
@@ -79,6 +80,7 @@ function redirectOAuthSuccess(
   session: { accessToken: string; refreshToken: string },
   options: { mode?: 'login' | 'link'; provider?: 'google' | 'github' } = {}
 ) {
+  setAuthCookies(res, session);
   const url = new URL('/auth/success', config.frontendUrl);
   if (options.mode) {
     url.searchParams.set('mode', options.mode);
@@ -113,11 +115,7 @@ function executePassportCallback(strategy: 'google' | 'github') {
     return passport.authenticate(strategy, { session: false }, async (error: unknown, profile: OAuthUserProfile | false | null, info: { message?: string } | undefined) => {
       if (error) {
         console.error('[OAuth:passportCallback:error]', error);
-        if (error instanceof Error && error.stack) {
-          console.error(error.stack);
-        }
-
-        return res.status(500).type('text/plain').send(error instanceof Error ? error.stack || error.message : String(error));
+        return res.status(500).type('text/plain').send('Unable to complete OAuth login');
       }
 
       if (!profile) {

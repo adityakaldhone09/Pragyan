@@ -23,10 +23,11 @@ export const getDebugForecast = asyncHandler(async (req: Request, res: Response)
 
   // Fire-and-forget audit log; do not block response on logging.
   try {
-    const filters = { ...req.query };
+    const targetUser = typeof req.query.targetUser === 'string' ? req.query.targetUser : null;
+    const filters = targetUser ? { targetUser } : {};
     void logIntelligenceDebugAccess({
       adminId: req.user.id,
-      targetUser: typeof filters.targetUser === 'string' ? filters.targetUser : null,
+      targetUser,
       endpoint: req.originalUrl || req.url || '/api/intelligence/debug',
       filters,
       env: process.env.NODE_ENV,
@@ -75,7 +76,7 @@ export const getAuditLogs = asyncHandler(async (req: Request, res: Response) => 
 
   // enrich admin emails in batch
   const prisma = (globalThis as any).prisma;
-  const adminIds = Array.from(new Set(docs.map((d: any) => d.adminId).filter(Boolean)));
+  const adminIds = Array.from(new Set(docs.flatMap((d: any) => d.adminId ? [d.adminId] : [])));
   const adminMap: Record<string, string> = {};
   if (adminIds.length) {
     const users = await prisma.user.findMany({ where: { id: { in: adminIds } }, select: { id: true, email: true } }).catch(() => []);

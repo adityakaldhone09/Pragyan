@@ -31,6 +31,12 @@ model User {
   education        String?
   educationEntries Json?
   skillLevel       String?
+  tenthBoard       String?
+  tenthScore       String?
+  twelfthBoard     String?
+  twelfthScore     String?
+  currentCourse    String?
+  cgpa             String?
   xp               Float    @default(0)
   streak           Int      @default(0)
   level            Int      @default(1)
@@ -41,7 +47,10 @@ model User {
   refreshTokens           RefreshToken[]
   socialAccounts          SocialAccount[]
   githubRepositories      GithubRepository[]
+  portfolioProjects       UserPortfolioProject[]
+  certifications          UserCertification[]
   assessmentAnswers       AssessmentAnswer[]
+  userAssessmentAnswers   UserAssessmentAnswer[]
   assessmentResults       AssessmentResult[]
   assessmentSessions      AssessmentSession[]
   progress                UserProgress[]
@@ -52,6 +61,7 @@ model User {
   dailyQuizAttempts       DailyQuizAttempt[]
   dailyLearning           UserDailyLearning[]
   userRoadmaps            UserRoadmap[]
+  assessmentRoadmap       AssessmentRoadmap?
   taskProgress            TaskProgress[]
   resourceLearningHistory  ResourceLearningHistory[]
   careerMatches           CareerMatch[]
@@ -60,6 +70,7 @@ model User {
   // AI Memory & Personalization relations
   aiMemoryProfiles        AIMemoryProfile[]
   recommendationHistories RecommendationHistory[]
+  recommendationSnapshots RecommendationSnapshot[]
   roadmapMutations        RoadmapMutation[]
   personalityProfiles     PersonalityProfile[]
   learningVelocities      LearningVelocity[]
@@ -126,6 +137,43 @@ model GithubRepository {
   @@index([userId])
 }
 
+model UserPortfolioProject {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  techStack   String[] @default([])
+  highlights  String[] @default([])
+  liveUrl     String?
+  repoUrl     String?
+  featured    Boolean  @default(false)
+  source      String   @default("manual")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model UserCertification {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String   @db.ObjectId
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title         String
+  issuer        String
+  credentialId  String?
+  credentialUrl String?
+  issuedAt      DateTime?
+  expiresAt     DateTime?
+  description   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
 model RefreshToken {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   token     String   @unique
@@ -136,6 +184,51 @@ model RefreshToken {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+model SecurityLog {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String?  @db.ObjectId
+  event     String
+  metadata  Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([event])
+  @@index([createdAt])
+}
+
+model AIUsage {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  actorKey      String
+  userId        String?  @db.ObjectId
+  date          String
+  dailyRequests Int      @default(0)
+  tokensUsed    Int      @default(0)
+  lastRequest   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([actorKey, date])
+  @@index([userId])
+  @@index([date])
+  @@index([lastRequest])
+}
+
+model PasswordResetOTP {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String?  @db.ObjectId
+  email     String
+  otpHash   String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([expiresAt])
 }
 
 // ============ SKILL & ROADMAP MODELS ============
@@ -388,6 +481,23 @@ model UserRoadmap {
   @@index([roadmapId])
 }
 
+model AssessmentRoadmap {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String   @unique @db.ObjectId
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId       String?  @db.ObjectId
+  domain          String
+  recommendedRole String
+  skillGaps       String[] @default([])
+  track           Json
+  dailyPlan       Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sessionId])
+}
+
 // ============ ASSESSMENT MODELS ============
 
 model Assessment {
@@ -429,6 +539,28 @@ model AssessmentAnswer {
   @@index([userId])
 }
 
+model UserAssessmentAnswer {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String   @db.ObjectId
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId      String?  @db.ObjectId
+  phase          Int
+  questionId     String?
+  questionText   String
+  questionType   String
+  topic          String?
+  funnelLevel    String?
+  options        String[] @default([])
+  selectedAnswer String[] @default([])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, phase])
+  @@index([sessionId])
+}
+
 model AssessmentResult {
   id               String   @id @default(auto()) @map("_id") @db.ObjectId
   userId           String   @db.ObjectId
@@ -452,6 +584,12 @@ model AssessmentSession {
   answers         String
   selectedOptions String[]
   analysis        String
+  tenthBoard      String?
+  tenthScore      String?
+  twelfthBoard    String?
+  twelfthScore    String?
+  currentCourse   String?
+  cgpa            String?
   completedAt     DateTime @default(now())
 
   createdAt DateTime @default(now())
@@ -459,6 +597,27 @@ model AssessmentSession {
 
   @@index([userId])
   @@index([completedAt])
+}
+
+// Persisted decision-tree assessment path for each user session
+model AssessmentPath {
+  id                   String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId               String   @db.ObjectId
+  assessmentSessionId  String?  
+
+  selectedCategory     String?
+  selectedSector       String?
+  selectedQualification String?
+  selectedBranch       String?
+  selectedRole         String?
+
+  finalCareerPath      String
+  confidence           Int?
+
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([userId])
 }
 
 model UserProgress {
@@ -735,6 +894,28 @@ model RecommendationHistory {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+// Cached AI outputs to avoid repeat Gemini calls for identical prompts
+model RecommendationSnapshot {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String   @db.ObjectId
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind          String
+  requestHash   String
+  promptVersion String
+  provider      String
+  model         String
+  input         Json?
+  response      Json
+  expiresAt     DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, kind, requestHash, promptVersion, provider, model])
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model RoadmapMutation {

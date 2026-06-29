@@ -51,12 +51,13 @@ export class ProgressService {
   }
 
   async completeTask(userId: string, roadmapId: string, taskId: string) {
-    const progress = await this.getUserProgress(userId, roadmapId);
-
-    const task = await prisma.task.findUnique({
-      where: { id: taskId },
-      include: { day: true },
-    });
+    const [progress, task] = await Promise.all([
+      this.getUserProgress(userId, roadmapId),
+      prisma.task.findUnique({
+        where: { id: taskId },
+        include: { day: true },
+      }),
+    ]);
 
     if (!task) {
       throw new NotFoundError('Task not found');
@@ -126,19 +127,20 @@ export class ProgressService {
       throw new NotFoundError('User not found');
     }
 
-    const allProgress = await prisma.userProgress.findMany({
-      where: { userId },
-      include: {
-        roadmap: true,
-      },
-    });
-
-    const completedRoadmaps = await prisma.completedRoadmap.findMany({
-      where: { userId },
-      include: {
-        roadmap: true,
-      },
-    });
+    const [allProgress, completedRoadmaps] = await Promise.all([
+      prisma.userProgress.findMany({
+        where: { userId },
+        include: {
+          roadmap: true,
+        },
+      }),
+      prisma.completedRoadmap.findMany({
+        where: { userId },
+        include: {
+          roadmap: true,
+        },
+      }),
+    ]);
 
     return {
       user: {
@@ -285,67 +287,65 @@ export class ProgressService {
       await xpService.awardXp(userId, xpDelta, 'task-complete', { taskId, roadmapId: input.roadmapId });
 
       if (xpDelta > 0) {
-        await prisma.user.update({ where: { id: userId }, data: { streak: nextStreak } });
-      }
-
-      if (xpDelta > 0) {
-        await prisma.completedTaskHistory.upsert({
-          where: {
-            userId_taskId: {
+        await Promise.all([
+          prisma.user.update({ where: { id: userId }, data: { streak: nextStreak } }),
+          prisma.completedTaskHistory.upsert({
+            where: {
+              userId_taskId: {
+                userId,
+                taskId,
+              },
+            },
+            update: {
+              completedAt: new Date(),
+              roadmapId: input.roadmapId,
+              xpAwarded: xpReward,
+            },
+            create: {
               userId,
               taskId,
+              roadmapId: input.roadmapId,
+              xpAwarded: xpReward,
             },
-          },
-          update: {
-            completedAt: new Date(),
-            roadmapId: input.roadmapId,
-            xpAwarded: xpReward,
-          },
-          create: {
-            userId,
-            taskId,
-            roadmapId: input.roadmapId,
-            xpAwarded: xpReward,
-          },
-        });
-
-        await prisma.userDailyLearning.upsert({
-          where: {
-            userId_date: {
+          }),
+          prisma.userDailyLearning.upsert({
+            where: {
+              userId_date: {
+                userId,
+                date: today,
+              },
+            },
+            update: {
+              tasksCompleted: {
+                increment: 1,
+              },
+              xpEarned: {
+                increment: xpReward,
+              },
+            },
+            create: {
               userId,
               date: today,
+              tasksCompleted: 1,
+              xpEarned: xpReward,
             },
-          },
-          update: {
-            tasksCompleted: {
-              increment: 1,
-            },
-            xpEarned: {
-              increment: xpReward,
-            },
-          },
-          create: {
-            userId,
-            date: today,
-            tasksCompleted: 1,
-            xpEarned: xpReward,
-          },
-        });
-
-        await this.ensureAchievement(userId, completedTasks.length, nextStreak);
+          }),
+          this.ensureAchievement(userId, completedTasks.length, nextStreak),
+        ]);
       }
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { xp: true, streak: true },
-    });
-
-    const achievements = await prisma.userAchievement.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-      take: 5,
-    });
+    const [user, achievements] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { xp: true, streak: true },
+      }),
+      prisma.userAchievement.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+      }),
+    ]);
 
     return {
       progress: updatedProgress,
@@ -417,25 +417,27 @@ export class ProgressService {
       });
     }
 
-    for (const achievement of pending) {
-      await prisma.userAchievement.upsert({
-        where: {
-          userId_code: {
+    await Promise.all(
+      pending.map((achievement) =>
+        prisma.userAchievement.upsert({
+          where: {
+            userId_code: {
+              userId,
+              code: achievement.code,
+            },
+          },
+          update: {
+            unlockedAt: new Date(),
+          },
+          create: {
             userId,
             code: achievement.code,
+            title: achievement.title,
+            description: achievement.description,
           },
-        },
-        update: {
-          unlockedAt: new Date(),
-        },
-        create: {
-          userId,
-          code: achievement.code,
-          title: achievement.title,
-          description: achievement.description,
-        },
-      });
-    }
+        })
+      )
+    );
   }
 }
 

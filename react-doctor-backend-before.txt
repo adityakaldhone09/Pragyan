@@ -1,0 +1,294 @@
+﻿React Doctor v0.5.6
+
+  
+
+  ΓÜá Bugs: Sequential independent awaits ├ù9
+    This await doesn't use the previous result, so your users
+    wait twice as long for nothing.
+    ΓåÆ These two awaits don't depend on each other. Wrap them in
+    `Promise.all([...])` so they run at the same time.
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/server-sequential-independent-await
+
+    src/controllers/adminDev.ts:8
+
+    src/services/ai-decision-engine.ts:15
+
+    src/modules/journey/journey.service.ts:216
+
+    src/services/progress.ts:56
+
+    src/services/progress.ts:136
+
+    src/services/progress.ts:344
+
+    src/services/recommendation-engine.ts:112
+
+    src/services/job-sync.ts:95
+
+    src/services/career-matching.ts:113
+
+  ΓÜá Performance: Independent awaits run sequentially ├ù9
+    These 4 sequential await statements run one after another
+    even though they look independent, so the page waits longer
+    than it needs to. Run them together with Promise.all()
+    instead
+    ΓåÆ Use `const [a, b] = await Promise.all([fetchA(),
+    fetchB()])` so independent calls run at the same time
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/async-parallel
+
+    prisma/seed.ts:335
+
+    prisma/seed.ts:480
+
+    src/services/assessment.ts:20
+
+    src/services/learning-resources.ts:1103
+
+    src/services/adaptive-assessment.ts:1004
+
+    src/services/progress.ts:292
+
+    src/services/auth.ts:870
+
+    src/services/auth.ts:1175
+
+    src/models/RecommendationSnapshot.ts:49
+
+  ΓÜá Performance: Array lookup inside a loop ├ù18
+    This scales poorly because `array.includes()` inside a loop
+    scans the whole list every time. Use a Set for
+    constant-time lookups.
+    ΓåÆ Use a `Set` or `Map` when you check for the same items
+    over and over. `Array.includes`/`find` scans the whole list
+    each time
+    Curl with no cache & follow the canonical fix and false positive check recipe before fixing: https://react.doctor/docs/rules/react-doctor/js-set-map-lookups
+
+    src/services/assessment.ts:698
+
+    src/services/assessment.ts:702
+
+    src/services/adaptive-assessment.ts:595
+
+    src/services/career-matching.ts:276-281
+
+  ΓÜá Maintainability: deslop/unused-file ├ù13
+    Unused file is not reachable from any entry point, so it
+    adds maintenance surface without shipping any code.
+    ΓåÆ Delete the file if it is truly unreachable, or import it
+    from an entry point.
+
+    runSmokeCompiled.js
+
+    server.js
+
+    src/ai/localFallback.ts
+
+    src/config/careerIntelligenceCatalog.ts
+
+    src/config/database.ts
+
+    src/config/roleMetadata.ts
+
+    src/lib/cache.ts
+
+    src/routes/automation.routes.ts
+
+    src/runtimeSmokeTest.ts
+
+    src/services/recommendation-snapshot.ts
+
+    testGemini.ts
+
+    tests/__mocks__/@google/generative-ai.ts (test file)
+
+    tests/__mocks__/redisClient.ts (test file)
+
+  ΓÜá Maintainability: deslop/unused-export ├ù65
+    Unused export: `generateRoadmapCatalog` is exported but no
+    module imports it, so it expands the public surface and can
+    mislead callers about supported API.
+    ΓåÆ Drop the `export` keyword (or remove the declaration) if
+    no other module uses this symbol.
+
+    scripts/roadmap-catalog.ts:733
+
+    src/ai/aiRouter.ts:114
+
+    src/ai/cache.service.ts:76
+
+    src/ai/cache.service.ts:80
+
+    src/ai/cache.service.ts:146
+
+    src/ai/gemini.service.ts:110
+
+    src/ai/groq.service.ts:83
+
+    src/ai/promptBuilder.ts:21
+
+    src/ai/promptBuilder.ts:153
+
+    src/ai/questionGenerator.ts:98
+
+    src/ai/resultEnhancer.ts:102
+
+    src/ai/schemas.ts:3
+
+    src/ai/schemas.ts:15
+
+    src/ai/schemas.ts:23
+
+    src/ai/schemas.ts:36
+
+    src/ai/schemas.ts:49
+
+    src/ai/schemas.ts:57
+
+    src/ai/schemas.ts:61
+
+    src/ai/schemas.ts:74
+
+    src/ai/scoringEngine.ts:140
+
+    src/config/startupDiagnostics.ts:18
+
+    src/controllers/adminDev.ts:6
+
+    src/controllers/debug.ts:6
+
+    src/data/careerCatalog.ts:480
+
+    src/data/projectCatalog.ts:398
+
+    src/middleware/auth.ts:60-64
+
+    src/middleware/redisRateLimiter.ts:37
+
+    src/modules/intelligence/intelligence.service.ts:8
+
+    src/modules/journey/journey.service.ts:29
+
+    src/modules/journey/journey.utils.ts:141
+
+    src/modules/mentor/mentor.memory.service.ts:13
+
+    src/modules/mentor/mentor.service.ts:26
+
+    src/security/ai/aiAudit.ts:13
+
+    src/security/ai/aiFirewall.ts:48
+
+    src/security/audit.security.ts:44
+
+    src/security/authCookies.ts:34
+
+    src/services/adaptive-assessment.ts:521
+
+    src/services/adaptive-learning.ts:33
+
+    src/services/adaptive-learning.ts:46
+
+    src/services/adaptive-learning.ts:71
+
+    src/services/adaptive-learning.ts:99
+
+    src/services/ai-decision-engine.ts:5
+
+    src/services/aiMemory.ts:3
+
+    src/services/assessment.ts:11
+
+    src/services/auth.ts:140
+
+    src/services/career-intelligence.ts:57
+
+    src/services/daily-analytics.ts:39
+
+    src/services/job-sync.ts:161
+
+    src/services/learning-resources.ts:739
+
+    src/services/learning-resources.ts:889
+
+    src/services/progress.ts:23
+
+    src/services/quiz.ts:6
+
+    src/services/recommendation-engine.ts:62
+
+    src/services/roadmap-generation.ts:493
+
+    src/services/roadmap.ts:55
+
+    src/utils/errors.ts:50
+
+    src/validators/ai.ts:51
+
+    src/validators/auth.ts:34
+
+    src/validators/learningResources.ts:15
+
+    src/validators/learningResources.ts:36
+
+    src/validators/profile-builder.ts:29
+
+    src/validators/roadmap.ts:48
+
+    src/validators/roadmap.ts:52
+
+  ΓÜá Maintainability: deslop/unused-dependency ├ù2
+    Unused dependency: `bcrypt`
+    Unused dependency: `pragyan`
+    ΓåÆ An unused dependency adds install time and supply-chain
+    surface without being used; remove it from package.json if
+    it is genuinely unused.
+
+
+  ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+  All 116 issues
+
+  Bugs > 9 warnings
+  Performance > 27 warnings
+  Maintainability > 80 warnings
+
+Agent guidance
+  - Treat React Doctor diagnostics as starting hypotheses. Read the relevant code before confirming or suppressing each finding.
+  - For each group, decide true positive, false positive, or needs-human-review, then assign high/medium/low confidence.
+  - Do not suppress a finding without evidence from the file in question. Confidence requires code context.
+  - Understand the root cause before editing. Fix the underlying code instead of changing react-doctor config or suppressing rules unless explicitly asked.
+  - Investigate deeply where relevant: race conditions, security-sensitive flows, state propagation, multi-file refactors, and downstream dependency chains.
+  - Ignore pure style preferences, theoretical issues without real impact, missing features, and unrelated pre-existing code.
+  - Start with high-confidence fixes that preserve behavior. Leave low-confidence or product-dependent changes as notes.
+  - Run `npx react-doctor@latest --verbose --diff` before and after changes, plus relevant tests after each focused batch.
+  - When available, spawn subagents or isolated worktrees for independent rule families, then review and merge only the best safe fixes.
+  - Split unrelated, broad, or behavior-changing work into separate PRs/branches instead of one large cleanup.
+  - For confirmed issues that cannot be fixed now, create GitHub issues with the rule, file/line, confidence, impact, and proposed fix.
+  - If a fix needs an API, UX, or architecture decision, stop and ask before editing.
+
+  ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ  77 / 100 Needs work
+  Γöé Γùá Γùá Γöé  ΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæ
+  Γöé  Γû╜  Γöé  React Doctor (https://react.doctor)
+  ΓööΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ
+
+  Full diagnostics written to C:\Users\Lenovo\AppData\Local\Temp\react-doctor-c72ebb15-20e3-4ebe-a954-33baec0d8d11
+
+  ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+  Share: https://react.doctor/share?p=pragyan-backend&s=77&w=116&f=64
+  Tell others how you did on socials
+
+  Docs: https://react.doctor/docs
+  Learn more about fixing issues, setting up CI/CD, and
+  configuring rules with a config file
+
+  GitHub: https://github.com/millionco/react-doctor
+  Report issues and star the repository!
+
+
+React Doctor is not installed in this project.
+Ask the user if they would like to set it up, then run:
+
+  npx react-doctor install --yes
+
+This adds agent skill files, a `doctor` package script, and react-doctor as a dev dependency.

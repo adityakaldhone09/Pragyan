@@ -26,5 +26,6 @@ router.put('/adaptive/weights', adminController.upsertWeights);
 
 router.post('/careers', adminController.createCareer);
 router.put('/careers/:id/weights', adminController.updateCareerWeights);
+router.get('/security/metrics', adminController.getSecurityMetrics);
 
 export default router;

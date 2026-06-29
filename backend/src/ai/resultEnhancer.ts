@@ -1,4 +1,4 @@
-import { generateContent } from './GeminiProvider';
+import { routeAI } from './aiRouter';
 import safeParseAIResponse from './safeParser';
 import { CareerEnhancementArraySchema } from './schemas';
 import crypto from 'crypto';
@@ -46,9 +46,9 @@ export async function generateCareerEnhancements(profile: any, matches: any[]) {
         preparationTips: ['Practice relevant interview questions', 'Prepare a showcase project', 'Network with professionals in the field'],
       }));
     } else {
-      const aiResponse = await generateContent(payload);
+      const aiResponse = await routeAI('career_match', { prompt: payload, input: { profile, careers }, format: 'json' });
       try {
-        const raw = JSON.parse(aiResponse);
+        const raw = JSON.parse(aiResponse.value);
         const looksLikeQuestionStub = Array.isArray(raw) && raw.length > 0 && raw[0] && !raw[0].careerId && raw[0].question;
 
         if (looksLikeQuestionStub) {

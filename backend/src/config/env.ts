@@ -37,12 +37,15 @@ export const config = {
 
   gemini: {
     apiKey: process.env.GEMINI_API_KEY || null,
-    model: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
+    model: process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite',
   },
 
   groq: {
     apiKey: process.env.GROQ_API_KEY || null,
-    model: process.env.GROQ_MODEL || 'llama-3.1-70b-versatile',
+    model: process.env.GROQ_MODEL || process.env.ROQ_MODEL || process.env.GROQ_REASONING_MODEL || 'openai/gpt-oss-120b',
+    reasoningModel: process.env.GROQ_REASONING_MODEL || process.env.GROQ_MODEL || process.env.ROQ_MODEL || 'openai/gpt-oss-120b',
+    chatModel: process.env.GROQ_CHAT_MODEL || 'llama-3.3-70b-versatile',
+    fastModel: process.env.GROQ_FAST_MODEL || 'llama-3.1-8b-instant',
   },
   
   database: {
@@ -51,7 +54,7 @@ export const config = {
   
   jwt: {
     secret: process.env.JWT_SECRET || 'your_jwt_secret_key',
-    expiry: process.env.JWT_EXPIRY || '7d',
+    expiry: process.env.JWT_EXPIRY || '15m',
     refreshSecret: process.env.JWT_REFRESH_SECRET || 'your_jwt_refresh_secret_key',
     refreshExpiry: process.env.JWT_REFRESH_EXPIRY || '30d',
   },
@@ -61,8 +64,10 @@ export const config = {
     allowedOrigins: (() => {
       const configuredOrigins = (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || 'http://localhost:5173,http://127.0.0.1:5173')
         .split(',')
-        .map((origin) => origin.trim())
-        .filter(Boolean);
+        .flatMap((origin) => {
+          const trimmed = origin.trim();
+          return trimmed ? [trimmed] : [];
+        });
 
       const expandedOrigins = configuredOrigins.flatMap((origin) => {
         try {
@@ -89,6 +94,14 @@ export const config = {
   
   bcrypt: {
     rounds: parseInt(process.env.BCRYPT_ROUNDS || '10', 10),
+  },
+
+  email: {
+    host: process.env.EMAIL_HOST || null,
+    port: parseInt(process.env.EMAIL_PORT || '587', 10),
+    user: process.env.EMAIL_USER || null,
+    password: process.env.EMAIL_PASSWORD || null,
+    from: process.env.EMAIL_FROM || process.env.EMAIL_USER || null,
   },
 
   rapidApi: {
