@@ -1,61 +1,66 @@
 import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { assessmentService } from "@/services/assessmentService";
+import { useAuth } from "@/hooks/useAuth";
+import type { AssessmentResult } from "@/types/api";
 import {
   CheckCircle2, ArrowRight, Brain, Lightbulb, Target, FileSearch
 } from "lucide-react";
 
 type Phase = "landing" | "quiz" | "results";
 
-const questions = [
-  {
-    category: "GENERAL",
-    tab: "General",
-    question: "What is your highest level of education?",
-    options: ["High School", "Bachelor's Degree", "Master's Degree", "Doctorate"],
-  },
-  {
-    category: "SKILLS",
-    tab: "Skills",
-    question: "Which programming languages are you proficient in?",
-    options: ["Python", "JavaScript", "Java", "C++"],
-  },
-  {
-    category: "INTERESTS",
-    tab: "Interests",
-    question: "Which of these domains interests you the most?",
-    options: ["Artificial Intelligence", "Web Development", "Data Science", "Cybersecurity"],
-  },
-  {
-    category: "ROLE ALIGNMENT",
-    tab: "Role Alignment",
-    question: "Which of the following Government Job roles do you think your skills in React, Express JS, and deep learning are most aligned with?",
-    options: ["Data Scientist", "Software Engineer", "Artificial Intelligence Specialist", "Cybersecurity Analyst"],
-  },
-];
-
-const tabs = ["General", "Skills", "Interests", "Role Alignment"];
-
 export default function Assessments() {
+  const { user } = useAuth();
   const [phase, setPhase] = useState<Phase>("landing");
   const [currentQ, setCurrentQ] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
-  const [answers, setAnswers] = useState<string[]>([]);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [result, setResult] = useState<AssessmentResult | null>(null);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
+
+  const { data: questions = [], isLoading } = useQuery({
+    queryKey: ["assessment", "questions"],
+    queryFn: assessmentService.getQuestions,
+    retry: false,
+  });
+
+  const submitMutation = useMutation<AssessmentResult, Error, Record<string, string>>({
+    mutationFn: (payload) => assessmentService.submitAssessment(payload),
+    onSuccess: (data) => {
+      setResult(data);
+      setSubmissionError(null);
+      setPhase("results");
+    },
+    onError: (error) => {
+      setSubmissionError(error.message || "Unable to submit assessment. Please try again.");
+    },
+  });
 
   const handleNext = () => {
-    if (selected) {
-      setAnswers([...answers, selected]);
+    if (selected && questions[currentQ]) {
+      const questionId = questions[currentQ].id || String(currentQ);
+      const nextAnswers = { ...answers, [questionId]: selected };
+      setAnswers(nextAnswers);
       setSelected(null);
       if (currentQ < questions.length - 1) {
         setCurrentQ(currentQ + 1);
       } else {
-        setPhase("results");
+        submitMutation.mutate(nextAnswers);
       }
     }
   };
 
   const currentQuestion = questions[currentQ];
-  const activeTab = tabs.findIndex(t => t === currentQuestion?.tab);
+
+  if (isLoading) {
+    return (
+      <div className="max-w-5xl mx-auto pb-12 text-center py-12">
+        <p className="text-muted-foreground">Loading assessment...</p>
+      </div>
+    );
+  }
 
   if (phase === "landing") {
     return (
@@ -113,7 +118,16 @@ export default function Assessments() {
   }
 
   if (phase === "quiz") {
+    if (!currentQuestion) {
+      return (
+        <div className="max-w-3xl mx-auto pb-12 text-center py-12">
+          <p className="text-muted-foreground">No questions available</p>
+        </div>
+      );
+    }
+
     const progress = ((currentQ) / questions.length) * 100;
+    const currentAnswer = selected ?? answers[currentQuestion.id || String(currentQ)];
 
     return (
       <div className="max-w-3xl mx-auto pb-12">
@@ -123,49 +137,36 @@ export default function Assessments() {
 
         <div className="mt-6 bg-card border border-border rounded-[20px] p-1 shadow-sm">
           <div className="px-6 pt-5 pb-2 flex items-center justify-between text-sm">
-            <span className="text-muted-foreground font-medium">Phase 1 of 3</span>
-            <span className="text-muted-foreground">Question {currentQ + 1} of {questions.length}</span>
+            <span className="text-muted-foreground font-medium">Question {currentQ + 1} of {questions.length}</span>
           </div>
           <div className="px-6 pb-5">
-            <Progress value={progress + 25} className="h-1.5" />
-          </div>
-
-          <div className="px-6 pb-4 flex gap-2">
-            {tabs.map((tab, idx) => (
-              <button
-                key={tab}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                  idx === activeTab
-                    ? "bg-primary text-white"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80"
-                }`}
-                data-testid={`tab-${tab.toLowerCase().replace(/\s/g, '-')}`}
-              >
-                {tab}
-              </button>
-            ))}
+            <Progress value={progress} className="h-1.5" />
           </div>
 
           <div className="px-6 py-6 border-t border-border">
-            <p className="text-xs font-semibold text-primary mb-3 uppercase tracking-wider">{currentQuestion.category}</p>
             <p className="text-lg font-semibold text-foreground mb-6 leading-snug">{currentQuestion.question}</p>
 
             <div className="space-y-3">
-              {currentQuestion.options.map((opt) => (
+              {(currentQuestion.options || []).map((opt: string) => (
                 <button
                   key={opt}
-                  onClick={() => setSelected(opt)}
-                  data-testid={`option-${opt.toLowerCase().replace(/\s/g, '-')}`}
+                  type="button"
+                  onClick={() => {
+                    setSelected(opt);
+                    const questionId = currentQuestion.id || String(currentQ);
+                    setAnswers((prev) => ({ ...prev, [questionId]: opt }));
+                  }}
+                  data-testid={`option-${opt.toLowerCase().replace(/\s/g, "-")}`}
                   className={`w-full text-left px-5 py-4 rounded-xl border-2 text-sm font-medium transition-all flex items-center gap-3 ${
-                    selected === opt
+                    currentAnswer === opt
                       ? "border-primary bg-primary/5 text-primary"
                       : "border-border bg-white text-foreground hover:border-primary/40"
                   }`}
                 >
                   <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                    selected === opt ? "border-primary" : "border-muted-foreground/40"
+                    currentAnswer === opt ? "border-primary" : "border-muted-foreground/40"
                   }`}>
-                    {selected === opt && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
+                    {currentAnswer === opt && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
                   </div>
                   {opt}
                 </button>
@@ -173,14 +174,18 @@ export default function Assessments() {
             </div>
           </div>
 
+          {submissionError ? (
+            <div className="px-6 pb-4 text-sm text-red-600">{submissionError}</div>
+          ) : null}
+
           <div className="px-6 pb-6">
             <Button
               className="w-full rounded-xl py-3 text-base font-medium"
               onClick={handleNext}
-              disabled={!selected}
+              disabled={!selected || submitMutation.isLoading}
               data-testid="button-next-question"
             >
-              {currentQ === questions.length - 1 ? "Submit Assessment" : "Next Question"} <ArrowRight className="w-4 h-4 ml-2" />
+              {(submitMutation.isLoading && currentQ === questions.length - 1) ? "Submitting..." : currentQ === questions.length - 1 ? "Submit Assessment" : "Next Question"} <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>
         </div>
@@ -188,49 +193,69 @@ export default function Assessments() {
     );
   }
 
-  return (
-    <div className="max-w-3xl mx-auto pb-12">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground tracking-tight">Assessments</h1>
-      </div>
-
-      <div className="mt-8 bg-card border border-border rounded-[20px] p-10 shadow-sm text-center" data-testid="assessment-complete">
-        <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6">
-          <CheckCircle2 className="w-10 h-10 text-green-500" />
+  if (phase === "results") {
+    return (
+      <div className="max-w-3xl mx-auto pb-12">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground tracking-tight">Assessments</h1>
         </div>
-        <h2 className="text-2xl font-bold text-foreground mb-2">Assessment Complete!</h2>
-        <p className="text-muted-foreground mb-8">Your assessment has been successfully analyzed by Pragyan AI.</p>
 
-        <div className="text-left space-y-5 border-t border-border pt-6">
-          {[
-            { color: "bg-purple-100 text-purple-600", label: "Recommended Path", value: "Software Engineer in AI-Powered Government Solutions", link: true },
-            { color: "bg-green-100 text-green-600", label: "Strengths", value: "React, Express JS, Deep Learning, Agile Development Methodologies" },
-            { color: "bg-red-100 text-red-600", label: "Skill Gaps", value: "JavaScript, Data Structures, System Design, Cloud Technologies" },
-            { color: "bg-blue-100 text-blue-600", label: "Required Skills", value: "React, Express JS, Deep Learning, Agile Methodologies, Cloud Computing, Cybersecurity, Data Structures and Algorithms" },
-            { color: "bg-orange-100 text-orange-600", label: "Job Availability", value: "High demand for skilled software engineers in government tech is rising, with a focus on AI and data-driven solutions." },
-            { color: "bg-green-100 text-green-600", label: "Recommended Mode", value: "Growth" },
-          ].map(({ color, label, value, link }) => (
-            <div key={label} className="flex items-start gap-4">
-              <div className={`w-8 h-8 rounded-lg ${color} flex items-center justify-center flex-shrink-0 mt-0.5`}>
-                <Target className="w-4 h-4" />
+        <div className="mt-8 bg-card border border-border rounded-[20px] p-10 shadow-sm text-center" data-testid="assessment-complete">
+          <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6">
+            <CheckCircle2 className="w-10 h-10 text-green-500" />
+          </div>
+          <h2 className="text-2xl font-bold text-foreground mb-2">Assessment Complete!</h2>
+          <p className="text-muted-foreground mb-8">Your assessment has been successfully analyzed by Pragyan AI.</p>
+
+          <div className="text-left space-y-5 border-t border-border pt-6">
+            {[
+              { color: "bg-purple-100 text-purple-600", label: "Recommended Path", value: result?.summary?.suggestedCareers?.join(", ") || "Check your dashboard for personalized recommendations" },
+              { color: "bg-green-100 text-green-600", label: "Status", value: result?.persisted ? "Assessment recorded and analysis in progress" : "Assessment analysis complete; persistence may be delayed" },
+            ].map(({ color, label, value }) => (
+              <div key={label} className="flex items-start gap-4">
+                <div className={`w-8 h-8 rounded-lg ${color} flex items-center justify-center flex-shrink-0 mt-0.5`}>
+                  <Target className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="font-semibold text-sm text-foreground">{label}</span>
+                  <p className="text-sm mt-0.5 text-muted-foreground">{value}</p>
+                </div>
               </div>
-              <div>
-                <span className="font-semibold text-sm text-foreground">{label}</span>
-                <p className={`text-sm mt-0.5 ${link ? "text-primary font-medium" : "text-muted-foreground"}`}>{value}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
 
-        <div className="flex gap-4 mt-8 pt-6 border-t border-border">
-          <Button variant="outline" className="flex-1 rounded-xl py-3" data-testid="button-view-report">
-            View Full Report
-          </Button>
-          <Button className="flex-1 rounded-xl py-3" data-testid="button-explore-roadmap">
-            Explore Recommended Roadmap <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
+          <div className="mt-6 text-left">
+            {result?.summary?.strengths?.length ? (
+              <div className="mb-4">
+                <h3 className="text-sm font-semibold text-foreground mb-2">Strengths</h3>
+                <p className="text-sm text-muted-foreground">{result.summary.strengths.join(', ')}</p>
+              </div>
+            ) : null}
+            {result?.summary?.weaknesses?.length ? (
+              <div className="mb-4">
+                <h3 className="text-sm font-semibold text-foreground mb-2">Growth areas</h3>
+                <p className="text-sm text-muted-foreground">{result.summary.weaknesses.join(', ')}</p>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="flex gap-4 mt-8 pt-6 border-t border-border">
+            <Button variant="outline" className="flex-1 rounded-xl py-3" onClick={() => {
+              setPhase("landing");
+              setCurrentQ(0);
+              setAnswers({});
+              setSelected(null);
+              setResult(null);
+              setSubmissionError(null);
+            }} data-testid="button-retake-assessment">
+              Retake Assessment
+            </Button>
+            <Button className="flex-1 rounded-xl py-3" onClick={() => window.location.href = "/dashboard"} data-testid="button-explore-roadmap">
+              Go to Dashboard <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  }
 }

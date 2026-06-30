@@ -2,11 +2,20 @@ import { Link, useLocation } from "wouter";
 import { 
   Home, Compass, BrainCircuit, Map, 
   CheckSquare, BookOpen, User, Info, 
-  Settings, Grid, Sparkles, Bell
+  Settings, Grid, Sparkles, Bell, LogOut
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useAuth } from "@/hooks/useAuth";
 
-const navItems = [
+type NavItem = {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  exact?: boolean;
+};
+
+const navItems: NavItem[] = [
   { href: "/home", label: "Home", icon: Home },
   { href: "/career-discovery", label: "Career Discovery", icon: Compass },
   { href: "/ai-counselor", label: "AI Counselor", icon: BrainCircuit },
@@ -21,6 +30,14 @@ const navItems = [
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
+  const [, navigate] = useLocation();
+  const { user, logout } = useAuth();
+  const initials = (user?.fullName || user?.email || "U")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("") || "U";
 
   const isActive = (href: string, exact = false) => {
     if (exact) return location === href;
@@ -69,8 +86,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <Bell className="w-6 h-6" />
               <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-destructive rounded-full border-2 border-white"></span>
             </button>
+            <button
+              onClick={() => {
+                void logout().then(() => navigate("/auth"));
+              }}
+              className="p-2 text-foreground/70 hover:text-foreground transition-colors hover:bg-muted rounded-full"
+              aria-label="Logout"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
             <Avatar className="w-10 h-10 border border-border">
-              <AvatarFallback className="bg-orange-500 text-white font-medium">SB</AvatarFallback>
+              <AvatarFallback className="bg-orange-500 text-white font-medium">{initials}</AvatarFallback>
             </Avatar>
           </div>
         </header>

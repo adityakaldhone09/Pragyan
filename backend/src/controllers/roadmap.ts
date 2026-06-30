@@ -4,6 +4,7 @@ import { Request, Response } from 'express';
 import { roadmapService } from '@/services/roadmap';
 import { progressService } from '@/services/progress';
 import { recommendationEngineService } from '@/services/recommendation-engine';
+import { contextAggregator } from '@/services/contextAggregator';
 import { authService } from '@/services/auth';
 import { sendSuccess, sendPaginated, sendError } from '@/utils/response';
 import { CreateRoadmapInput, SearchRoadmapInput } from '@/validators/roadmap';
@@ -98,6 +99,7 @@ export const saveRoadmapProgress = asyncHandler(async (req: Request, res: Respon
     currentDay,
   });
 
+  void contextAggregator.invalidate(req.user.id).catch(() => undefined);
   return sendSuccess(res, progress, 200, 'Roadmap progress saved');
 });
 
@@ -128,6 +130,7 @@ export const updateRoadmapTaskProgress = asyncHandler(async (req: Request, res: 
     xpReward,
   });
 
+  void contextAggregator.invalidate(req.user.id).catch(() => undefined);
   return sendSuccess(res, result, 200, 'Task progress updated');
 });
 

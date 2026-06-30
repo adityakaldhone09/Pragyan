@@ -43,7 +43,11 @@ class CareerMatchingEngine {
    * Analyze user assessment answers and generate career recommendations
    */
   async analyzeAssessment(userId: string, answers: AssessmentAnswers): Promise<CareerMatchResult[]> {
-    const client = new MongoClient(this.mongoUrl);
+    const client = new MongoClient(this.mongoUrl, {
+      connectTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 5000,
+    });
 
     try {
       await client.connect();
@@ -52,13 +56,40 @@ class CareerMatchingEngine {
       // Get all careers from database
       const careers = await db.collection('Career').find({}).toArray();
 
-      if (careers.length === 0) {
+      if (!Array.isArray(careers) || careers.length === 0) {
         console.warn('No careers found in database. Please run import script.');
         return [];
       }
 
+      const careerIds = careers.map((career) => career._id).filter(Boolean);
+      const [skillMappings, interestMappings] = await Promise.all([
+        db.collection('CareerSkillMapping').find({ careerId: { $in: careerIds } }).toArray(),
+        db.collection('CareerInterestMapping').find({ careerId: { $in: careerIds } }).toArray(),
+      ]);
+
+      const skillsByCareer = new Map<string, string[]>();
+      const interestsByCareer = new Map<string, string[]>();
+
+      skillMappings.forEach((mapping: any) => {
+        const key = String(mapping.careerId);
+        const list = skillsByCareer.get(key) || [];
+        if (typeof mapping.skill === 'string') {
+          list.push(mapping.skill.toLowerCase());
+        }
+        skillsByCareer.set(key, list);
+      });
+
+      interestMappings.forEach((mapping: any) => {
+        const key = String(mapping.careerId);
+        const list = interestsByCareer.get(key) || [];
+        if (typeof mapping.interest === 'string') {
+          list.push(mapping.interest.toLowerCase());
+        }
+        interestsByCareer.set(key, list);
+      });
+
       const matchResults = await Promise.all(
-        careers.map((career) => this.scoreCareerMatch(career, answers, db, userId))
+        careers.map((career) => this.scoreCareerMatch(career, answers, skillsByCareer, interestsByCareer, db, userId))
       );
 
       const matches: CareerMatchResult[] = [];
@@ -92,9 +123,15 @@ class CareerMatchingEngine {
   private async scoreCareerMatch(
     career: any,
     answers: AssessmentAnswers,
-    db: any,
+    skillsByCareer: Map<string, string[]>,
+    interestsByCareer: Map<string, string[]>,
+    // `db` is intentionally passed for potential DB lookups inside scoring helpers.
+    // Mark as used to avoid TS unused parameter error.
+    db: any /* used intentionally */,
     _userId: string
   ): Promise<CareerMatchResult> {
+    // reference db to avoid unused parameter TypeScript error
+    void db;
     const userSkills = (answers.skills || []).map(s => s.toLowerCase());
     const userInterests = (answers.interests || []).map(i => i.toLowerCase());
     const userPersonalityTokens = [
@@ -105,18 +142,8 @@ class CareerMatchingEngine {
       .flatMap((item) => item.toLowerCase().split(/[^a-z0-9+]+/).flatMap((token) => token ? [token] : []));
 
     // Get career skills and interests
-    const skillMappings = await db
-      .collection('CareerSkillMapping')
-      .find({ careerId: career._id })
-      .toArray();
-
-    const interestMappings = await db
-      .collection('CareerInterestMapping')
-      .find({ careerId: career._id })
-      .toArray();
-
-    const careerSkills = skillMappings.map((sm: any) => sm.skill.toLowerCase());
-    const careerInterests = interestMappings.map((im: any) => im.interest.toLowerCase());
+    const careerSkills = skillsByCareer.get(String(career._id)) || [];
+    const careerInterests = interestsByCareer.get(String(career._id)) || [];
 
     // Calculate skill match
     const skillMatches = userSkills.filter(skill =>
@@ -375,7 +402,11 @@ class CareerMatchingEngine {
    * Save career matches to database
    */
   private async saveCareerMatches(userId: string, matches: CareerMatchResult[]): Promise<void> {
-    const client = new MongoClient(this.mongoUrl);
+    const client = new MongoClient(this.mongoUrl, {
+      connectTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 5000,
+    });
 
     try {
       await client.connect();

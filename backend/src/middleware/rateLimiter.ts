@@ -7,8 +7,9 @@ interface Bucket {
 
 const buckets = new Map<string, Bucket>();
 
-const MAX_TOKENS = 10; // requests for anonymous
-const MAX_TOKENS_AUTH = 60; // requests for authenticated users
+const isDevelopment = process.env.NODE_ENV !== 'production';
+const MAX_TOKENS = isDevelopment ? 200 : 10; // requests for anonymous
+const MAX_TOKENS_AUTH = isDevelopment ? 600 : 60; // requests for authenticated users
 const REFILL_INTERVAL_MS = 60 * 1000; // refill per minute
 
 function getKey(req: Request) {
@@ -32,7 +33,8 @@ export function rateLimiter(req: Request, res: Response, next: NextFunction) {
     const elapsed = now - bucket.lastRefill;
     if (elapsed > REFILL_INTERVAL_MS) {
       const cycles = Math.floor(elapsed / REFILL_INTERVAL_MS);
-      bucket.tokens = Math.min(MAX_TOKENS, bucket.tokens + cycles * MAX_TOKENS);
+      const maxTokens = key.startsWith('user:') ? MAX_TOKENS_AUTH : MAX_TOKENS;
+      bucket.tokens = Math.min(maxTokens, bucket.tokens + cycles * maxTokens);
       bucket.lastRefill = now;
     }
 

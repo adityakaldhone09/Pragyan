@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { asyncHandler } from '@/middleware/errorHandler';
 import { profileBuilderService } from '@/services/profile-builder';
+import { contextAggregator } from '@/services/contextAggregator';
 import { sendError, sendSuccess } from '@/utils/response';
 import { authService } from '@/services/auth';
 import { safeParseAIResponse } from '@/ai/safeParser';
@@ -62,6 +63,7 @@ export const updateCoreProfile = asyncHandler(async (req: Request, res: Response
   if (!userId) return;
 
   const updated = await authService.updateUserProfile(userId, req.body);
+  void contextAggregator.invalidate(userId).catch(() => undefined);
   return sendSuccess(res, updated, 200, 'Profile updated successfully');
 });
 
@@ -70,6 +72,7 @@ export const createProject = asyncHandler(async (req: Request, res: Response) =>
   if (!userId) return;
 
   const project = await profileBuilderService.saveProject(userId, req.body as PortfolioProjectInput);
+  void contextAggregator.invalidate(userId).catch(() => undefined);
   return sendSuccess(res, project, 201, 'Project created successfully');
 });
 
@@ -78,6 +81,7 @@ export const updateProject = asyncHandler(async (req: Request, res: Response) =>
   if (!userId) return;
 
   const project = await profileBuilderService.saveProject(userId, req.body as PortfolioProjectInput, req.params.projectId);
+  void contextAggregator.invalidate(userId).catch(() => undefined);
   return sendSuccess(res, project, 200, 'Project updated successfully');
 });
 
@@ -86,6 +90,7 @@ export const deleteProject = asyncHandler(async (req: Request, res: Response) =>
   if (!userId) return;
 
   const result = await profileBuilderService.deleteProject(userId, req.params.projectId);
+  void contextAggregator.invalidate(userId).catch(() => undefined);
   return sendSuccess(res, result, 200, 'Project deleted successfully');
 });
 
@@ -94,6 +99,7 @@ export const createCertification = asyncHandler(async (req: Request, res: Respon
   if (!userId) return;
 
   const certification = await profileBuilderService.saveCertification(userId, req.body as CertificationInput);
+  void contextAggregator.invalidate(userId).catch(() => undefined);
   return sendSuccess(res, certification, 201, 'Certification created successfully');
 });
 
@@ -102,6 +108,7 @@ export const updateCertification = asyncHandler(async (req: Request, res: Respon
   if (!userId) return;
 
   const certification = await profileBuilderService.saveCertification(userId, req.body as CertificationInput, req.params.certificationId);
+  void contextAggregator.invalidate(userId).catch(() => undefined);
   return sendSuccess(res, certification, 200, 'Certification updated successfully');
 });
 
@@ -110,6 +117,7 @@ export const deleteCertification = asyncHandler(async (req: Request, res: Respon
   if (!userId) return;
 
   const result = await profileBuilderService.deleteCertification(userId, req.params.certificationId);
+  void contextAggregator.invalidate(userId).catch(() => undefined);
   return sendSuccess(res, result, 200, 'Certification deleted successfully');
 });
 
@@ -118,6 +126,7 @@ export const importGithubRepositories = asyncHandler(async (req: Request, res: R
   if (!userId) return;
 
   const imported = await profileBuilderService.importGithubRepositories(userId, req.body as GithubImportInput);
+  void contextAggregator.invalidate(userId).catch(() => undefined);
   return sendSuccess(res, { imported }, 201, 'GitHub repositories imported successfully');
 });
 

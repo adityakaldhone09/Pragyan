@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 import * as hybridAssessmentService from '@/services/hybridAssessment/hybridAssessmentService';
+import { aiMemoryService } from '@/services/aiMemory';
 import { saveUserAnswers } from '@/services/hybridAssessment/userAnswerService';
 import type { DomainAnswer, HybridUserProfile, UserAssessmentAnswerInput } from '@/types/hybridAssessment';
 
@@ -9,6 +10,28 @@ export async function parseResume(req: Request, res: Response, next: NextFunctio
     if (!resumeText) return res.status(400).json({ success: false, error: 'resumeText is required' });
 
     const data = await hybridAssessmentService.handleResumeUpload(resumeText);
+    if (req.user?.id) {
+      try {
+        const current = await aiMemoryService.getProfile(req.user.id).catch(() => null);
+        const previousData = current?.profileData && typeof current.profileData === 'object'
+          ? current.profileData as Record<string, unknown>
+          : {};
+
+        await aiMemoryService.saveProfile(req.user.id, {
+          ...previousData,
+          resume: {
+            hasResume: true,
+            parsedProfile: data,
+            updatedAt: new Date().toISOString(),
+          },
+        }, current?.compositeScore ?? undefined, current?.xp ?? undefined);
+
+        const { contextAggregator } = await import('@/services/contextAggregator');
+        void contextAggregator.invalidate(req.user.id).catch(() => undefined);
+      } catch (e) {
+        // ignore
+      }
+    }
     return res.status(200).json({ success: true, data });
   } catch (error) {
     return next(error);

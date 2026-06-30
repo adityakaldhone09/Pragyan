@@ -10,6 +10,7 @@ dist/
 # Frontend build & deps
 frontend/node_modules/
 frontend/dist/
+frontend/package-lock.json
 
 # Large datasets
 datasets/*.csv

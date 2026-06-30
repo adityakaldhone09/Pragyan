@@ -27,7 +27,12 @@ const DEFAULT_CAREERS = ['Software Developer', 'Data Analyst', 'Product Designer
 
 function asStringArray(value: unknown): string[] {
   return Array.isArray(value)
-    ? value.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 12)
+    ? value
+        .flatMap((item) => {
+          const normalized = String(item || '').trim();
+          return normalized ? [normalized] : [];
+        })
+        .slice(0, 12)
     : [];
 }
 

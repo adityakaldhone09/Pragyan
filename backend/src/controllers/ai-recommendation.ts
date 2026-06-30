@@ -9,11 +9,130 @@ import { aiProvider } from '@/services/aiProvider';
 import { deriveAdaptiveLearningProfile, getRecommendedTaskMix, shouldTriggerRevision } from '@/services/adaptive-learning';
 import { sendSuccess, sendError } from '@/utils/response';
 import { asyncHandler } from '@/middleware/errorHandler';
-import aiTelemetry from '@/lib/aiTelemetry';
+import aiTelemetry, { TelemetryEvent } from '@/lib/aiTelemetry';
 import {
   getLLMCareerRecommendation as runCareerAgent,
   LLMCareerRecommendationInput,
 } from '@/ai/careerAgent';
+
+interface AIActionCard {
+  id: string;
+  label: string;
+  description?: string;
+  route: string;
+  type: 'roadmap' | 'career' | 'profile' | 'assessment' | 'resources' | 'jobs' | 'resume' | 'general';
+}
+
+function buildAIChatActions(message: string, context: Record<string, unknown>, user?: any): AIActionCard[] {
+  const normalized = String(message || '').toLowerCase();
+  const hasAny = (terms: string[]) => terms.some((term) => normalized.includes(term));
+  const career = String(context.career || context.goal || user?.careerTrack || user?.currentTitle || '').trim();
+  const completedTopics = Array.isArray(context.completedTopics) ? context.completedTopics : [];
+  const hasRoadmapContext = Boolean(
+    context.roadmapTitle || context.roadmap || context.mentorTopic || context.mentorLevel || completedTopics.length
+  );
+
+  const actions: AIActionCard[] = [];
+  const add = (action: AIActionCard) => {
+    if (!actions.some((existing) => existing.id === action.id)) {
+      actions.push(action);
+    }
+  };
+
+  const careerLabel = career ? `${career}` : 'your next career';
+
+  if (hasAny(['/roadmap', 'roadmap', 'continue your roadmap', 'current roadmap', 'roadmap help'])) {
+    add({
+      id: 'continue-roadmap',
+      label: 'Continue your roadmap',
+      description: hasRoadmapContext
+        ? 'Pick up where your current roadmap left off.'
+        : `Open the roadmap for ${careerLabel}.`,
+      route: '/roadmap',
+      type: 'roadmap',
+    });
+  }
+
+  if (hasAny(['/resume', 'resume', 'cv', 'profile', 'LinkedIn'])) {
+    add({
+      id: 'review-resume',
+      label: 'Review your profile',
+      description: `Check your profile and resume guidance for ${careerLabel}.`,
+      route: '/profile',
+      type: 'profile',
+    });
+  }
+
+  if (hasAny(['/interview', 'interview prep', 'job search', 'hiring', 'application', 'offer'])) {
+    add({
+      id: 'prepare-interview',
+      label: 'Prepare for interviews',
+      description: 'Get interview prep and role-fit guidance to feel confident.',
+      route: '/career-discovery',
+      type: 'jobs',
+    });
+  }
+
+  if (hasAny(['/resources', 'resource', 'learn', 'study', 'practice', 'skill'])) {
+    add({
+      id: 'find-resources',
+      label: 'Find learning resources',
+      description: 'Discover resources and study material to improve your skills.',
+      route: '/resources',
+      type: 'resources',
+    });
+  }
+
+  if (hasAny(['/assess', 'assessment', 'score', 'fit', 'match', 'test'])) {
+    add({
+      id: 'take-assessment',
+      label: 'Review assessment options',
+      description: 'See how to improve your fit and score with Pragyan assessments.',
+      route: '/assessments',
+      type: 'assessment',
+    });
+  }
+
+  if (hasAny(['career', 'job', 'role', 'path', 'track', 'match']) && !actions.some((item) => item.id === 'explore-careers')) {
+    add({
+      id: 'explore-careers',
+      label: 'Explore career options',
+      description: `Compare career paths and roles that fit ${careerLabel}.`,
+      route: '/career-discovery',
+      type: 'career',
+    });
+  }
+
+  if (actions.length === 0) {
+    if (hasRoadmapContext) {
+      add({
+        id: 'continue-roadmap',
+        label: 'Continue your roadmap',
+        description: 'Continue the learning path you are already on.',
+        route: '/roadmap',
+        type: 'roadmap',
+      });
+    }
+
+    add({
+      id: 'review-resume',
+      label: 'Review your profile',
+      description: `Update your profile and resume for ${careerLabel}.`,
+      route: '/profile',
+      type: 'profile',
+    });
+
+    add({
+      id: 'explore-careers',
+      label: 'Explore career options',
+      description: `Look for paths and opportunities aligned with ${careerLabel}.`,
+      route: '/career-discovery',
+      type: 'career',
+    });
+  }
+
+  return actions.slice(0, 3);
+}
 
 export const getRecommendations = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
@@ -103,10 +222,22 @@ export const getLLMCareerRecommendation = asyncHandler(async (req: Request, res:
   } = req.body || {};
 
   const payload: LLMCareerRecommendationInput = {
-    interests: Array.isArray(interests) ? interests.map(String).filter(Boolean) : [],
-    strengths: Array.isArray(strengths) ? strengths.map(String).filter(Boolean) : [],
-    weaknesses: Array.isArray(weaknesses) ? weaknesses.map(String).filter(Boolean) : [],
-    skills: Array.isArray(skills) ? skills.map(String).filter(Boolean) : [],
+    interests: Array.isArray(interests) ? interests.flatMap((item) => {
+      const value = String(item);
+      return value ? [value] : [];
+    }) : [],
+    strengths: Array.isArray(strengths) ? strengths.flatMap((item) => {
+      const value = String(item);
+      return value ? [value] : [];
+    }) : [],
+    weaknesses: Array.isArray(weaknesses) ? weaknesses.flatMap((item) => {
+      const value = String(item);
+      return value ? [value] : [];
+    }) : [],
+    skills: Array.isArray(skills) ? skills.flatMap((item) => {
+      const value = String(item);
+      return value ? [value] : [];
+    }) : [],
     quizScore: Number(quizScore) || 0,
     learningHours: Number(learningHours) || 2,
   };
@@ -133,6 +264,70 @@ export const chatAssistant = asyncHandler(async (req: Request, res: Response) =>
         .join('\n')
     : '';
 
+  // aggregate per-user context and append a concise summary to the prompt
+  const userContext = req.user?.id ? await (await import('@/services/contextAggregator')).contextAggregator.getContext(req.user.id) : ({} as any);
+
+  const contextSummary = [] as string[];
+  if (userContext?.profile) contextSummary.push(`Profile: ${userContext.profile.user.fullName || 'N/A'}`);
+  if (userContext?.careerGoal) contextSummary.push(`CareerGoal: ${userContext.careerGoal}`);
+  if (userContext?.topCareer) contextSummary.push(`TopCareer: ${userContext.topCareer?.career || userContext.topCareer?.careerId || ''}`);
+  if (Array.isArray(userContext?.weakSkills) && userContext.weakSkills.length) contextSummary.push(`WeakSkills: ${userContext.weakSkills.slice(0,5).join(', ')}`);
+  if (Array.isArray(userContext?.strongSkills) && userContext.strongSkills.length) contextSummary.push(`StrongSkills: ${userContext.strongSkills.slice(0,5).join(', ')}`);
+  if (userContext?.roadmapProgress) {
+    const roadmapProgressItems = Array.isArray(userContext.roadmapProgress) ? userContext.roadmapProgress : [];
+    contextSummary.push(`RoadmapProgressCount: ${roadmapProgressItems.length}`);
+    const roadmapProgressSummary = roadmapProgressItems
+      .slice(0, 3)
+      .map((progress: any) => `${progress?.roadmap?.title || progress?.roadmapId || 'roadmap'} ${Math.round(Number(progress?.progressPercentage || 0))}%`)
+      .join(', ');
+    if (roadmapProgressSummary) contextSummary.push(`RoadmapProgress: ${roadmapProgressSummary}`);
+  }
+  if (Array.isArray(userContext?.projects) && userContext.projects.length) {
+    const projectTitles = userContext.projects.slice(0, 3).map((project: any) => project?.title).filter(Boolean);
+    if (projectTitles.length) contextSummary.push(`Projects: ${projectTitles.join(', ')}`);
+  }
+  if (Array.isArray(userContext?.certificates) && userContext.certificates.length) {
+    const certificateTitles = userContext.certificates.slice(0, 3).map((certificate: any) => certificate?.title).filter(Boolean);
+    if (certificateTitles.length) contextSummary.push(`Certificates: ${certificateTitles.join(', ')}`);
+  }
+  if (userContext?.resumeStatus?.hasResume) {
+    const parsed = (userContext.resumeStatus as any).parsedProfile || {};
+    const resumeSkills = Array.isArray(parsed.Skills) ? parsed.Skills.slice(0, 5).join(', ') : '';
+    contextSummary.push(`ResumeUploaded: yes${resumeSkills ? `; ResumeSkills: ${resumeSkills}` : ''}`);
+  }
+
+  const contextAwareFallbackHints = [] as string[];
+  if (Array.isArray(userContext?.projects) && userContext.projects.length) {
+    const projectTitles = userContext.projects.slice(0, 2).map((project: any) => project?.title).filter(Boolean);
+    if (projectTitles.length) contextAwareFallbackHints.push(`Highlight project proof such as ${projectTitles.join(', ')}.`);
+  }
+  if (Array.isArray(userContext?.certificates) && userContext.certificates.length) {
+    const certificateTitles = userContext.certificates.slice(0, 2).map((certificate: any) => certificate?.title).filter(Boolean);
+    if (certificateTitles.length) contextAwareFallbackHints.push(`Use credentials such as ${certificateTitles.join(', ')} to support your positioning.`);
+  }
+  if (userContext?.resumeStatus?.hasResume) {
+    const parsed = (userContext.resumeStatus as any).parsedProfile || {};
+    const resumeSkills = Array.isArray(parsed.Skills) ? parsed.Skills.slice(0, 4).join(', ') : '';
+    contextAwareFallbackHints.push(resumeSkills ? `Your uploaded resume shows ${resumeSkills}; connect those skills to the target role.` : 'Use the uploaded resume as the source of truth for profile polish.');
+  }
+  if (Array.isArray(userContext?.roadmapProgress) && userContext.roadmapProgress.length) {
+    const progress = userContext.roadmapProgress[0] as any;
+    contextAwareFallbackHints.push(`Your current roadmap progress is ${Math.round(Number(progress?.progressPercentage || 0))}%, so recommendations should reflect that latest completion state.`);
+  }
+
+  const lowerMessage = message.toLowerCase();
+  const exactContextLines = [] as string[];
+  if (lowerMessage.includes('project') && Array.isArray(userContext?.projects) && userContext.projects.length) {
+    const projectTitle = userContext.projects[0]?.title;
+    if (projectTitle) exactContextLines.push(`Exact project: ${projectTitle}`);
+  }
+  if ((lowerMessage.includes('certificate') || lowerMessage.includes('certification')) && Array.isArray(userContext?.certificates) && userContext.certificates.length) {
+    const certificateTitle = userContext.certificates[0]?.title;
+    if (certificateTitle) exactContextLines.push(`Exact certificate: ${certificateTitle}`);
+  }
+
+  const userContextBlock = contextSummary.length ? `User context (private): ${contextSummary.join('; ')}` : '';
+
   const prompt = [
     'You are Pragyan, an AI career operating system assistant.',
     'Answer in concise markdown with practical bullet points when helpful.',
@@ -146,30 +341,82 @@ export const chatAssistant = asyncHandler(async (req: Request, res: Response) =>
     context.roadmapTitle ? `Roadmap title: ${context.roadmapTitle}` : '',
     Array.isArray(context.completedTopics) && context.completedTopics.length ? `Completed topics: ${context.completedTopics.join(', ')}` : '',
     Array.isArray(context.weakSkills) && context.weakSkills.length ? `Weak skills: ${context.weakSkills.join(', ')}` : '',
+    userContextBlock,
     context.mentorLevel
       ? 'If this is a roadmap mentor request, structure the reply with: simple explanation, real-life analogy, code example or steps, mini quiz, and a practice task. Adapt the depth to the mentor level.'
       : '',
     historyText ? `Conversation so far:\n${historyText}` : '',
     `User message: ${message}`,
+    exactContextLines.length ? `When answering, preserve these stored names exactly: ${exactContextLines.join('; ')}` : '',
     'If the request needs backend data you do not have, be transparent and suggest the closest available Pragyan feature.',
     'Return a helpful response only.'
   ].filter(Boolean).join('\n\n');
 
   try {
     const result = await routeAI('mentor_chat', { prompt, format: 'text' });
-    return sendSuccess(res, { reply: result.value, provider: result.provider, fallbackUsed: false }, 200, 'AI assistant response');
+    const reply = exactContextLines.length ? `${result.value}\n\n${exactContextLines.join('\n')}` : result.value;
+    const actions = buildAIChatActions(message, context, req.user);
+    aiTelemetry.publishTelemetryEvent(TelemetryEvent.AI_ACTION_CARDS_GENERATED, {
+      userId: req.user?.id,
+      message,
+      actionCount: actions.length,
+      actionIds: actions.map((action) => action.id),
+      career: String(context.career || context.goal || (req.user as any)?.careerTrack || (req.user as any)?.currentTitle || ''),
+      route: 'mentor_chat',
+    });
+
+    return sendSuccess(
+      res,
+      { reply, provider: result.provider, fallbackUsed: false, actions },
+      200,
+      'AI assistant response'
+    );
   } catch (error) {
-    const fallback = 'I can help with that. Based on your current Pragyan data, focus on the top recommended career, align your roadmap, and keep your resume targeted to the skills gap.';
+    const fallback = [
+      'I can help with that. Based on your current Pragyan data, focus on the top recommended career, align your roadmap, and keep your resume targeted to the skills gap.',
+      ...contextAwareFallbackHints,
+      ...exactContextLines,
+    ].join('\n');
     console.error('AI assistant generation failed:', error);
     const runtime = typeof aiProvider?.getRuntime === 'function' ? aiProvider.getRuntime() : { provider: 'unknown', model: 'unknown' };
     const errorMsg = error && error instanceof Error ? error.message : String(error);
+    const actions = buildAIChatActions(message, context, req.user);
+    aiTelemetry.publishTelemetryEvent(TelemetryEvent.AI_ACTION_CARDS_GENERATED, {
+      userId: req.user?.id,
+      message,
+      actionCount: actions.length,
+      actionIds: actions.map((action) => action.id),
+      career: String(context.career || context.goal || (req.user as any)?.careerTrack || (req.user as any)?.currentTitle || ''),
+      route: 'mentor_chat',
+      fallback: true,
+    });
+
     return sendSuccess(
       res,
-      { reply: fallback, provider: runtime.provider || 'local', fallbackUsed: true, error: errorMsg },
+      { reply: fallback, provider: runtime.provider || 'local', fallbackUsed: true, error: errorMsg, actions },
       200,
       'AI assistant fallback response'
     );
   }
+});
+
+export const recordAIActionEvent = asyncHandler(async (req: Request, res: Response) => {
+  const { actionId, actionType, label, route, source = 'ai-counselor' } = req.body || {};
+
+  if (!actionId || !actionType || !route) {
+    return sendError(res, 400, 'actionId, actionType, and route are required');
+  }
+
+  aiTelemetry.publishTelemetryEvent(TelemetryEvent.AI_ACTION_CLICKED, {
+    userId: req.user?.id,
+    actionId,
+    actionType,
+    label,
+    route,
+    source,
+  });
+
+  return sendSuccess(res, { recorded: true }, 201, 'AI action event recorded');
 });
 
 export const generateDailyPlan = asyncHandler(async (req: Request, res: Response) => {

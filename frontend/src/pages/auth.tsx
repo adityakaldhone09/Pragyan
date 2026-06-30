@@ -1,7 +1,10 @@
 import { FormEvent, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
-import { ArrowRight, Eye, LockKeyhole, Mail, Sparkles, User } from "lucide-react";
+import { ArrowRight, Eye, Github, LockKeyhole, Mail, Sparkles, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { authService } from "@/services/authService";
+import { useAuth } from "@/hooks/useAuth";
 
 type AuthMode = "signin" | "signup";
 
@@ -13,12 +16,37 @@ export default function AuthPage() {
       : "signin";
   }, [location]);
   const [mode, setMode] = useState<AuthMode>(initialMode);
+  const { login, register } = useAuth();
+  const { data: authConfig } = useQuery({
+    queryKey: ["auth-config"],
+    queryFn: authService.getConfig,
+  });
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const isSignup = mode === "signup";
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    navigate("/home");
+    const formData = new FormData(event.currentTarget);
+    const email = String(formData.get("email") || "");
+    const password = String(formData.get("password") || "");
+    const fullName = String(formData.get("fullName") || "");
+
+    setError("");
+    setSubmitting(true);
+    try {
+      if (isSignup) {
+        await register({ fullName, email, password });
+      } else {
+        await login({ email, password });
+      }
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Authentication failed");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -110,7 +138,7 @@ export default function AuthPage() {
                 <span className="mb-2 block text-sm font-semibold">Full name</span>
                 <span className="relative block">
                   <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input className="h-11 pl-10" placeholder="Sanika Bhosale" required />
+                  <Input name="fullName" className="h-11 pl-10" placeholder="Sanika Bhosale" required />
                 </span>
               </label>
             )}
@@ -119,7 +147,7 @@ export default function AuthPage() {
               <span className="mb-2 block text-sm font-semibold">Email address</span>
               <span className="relative block">
                 <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input className="h-11 pl-10" type="email" placeholder="you@example.com" required />
+                <Input name="email" className="h-11 pl-10" type="email" placeholder="you@example.com" required />
               </span>
             </label>
 
@@ -127,7 +155,7 @@ export default function AuthPage() {
               <span className="mb-2 block text-sm font-semibold">Password</span>
               <span className="relative block">
                 <LockKeyhole className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input className="h-11 pl-10 pr-10" type="password" placeholder="Enter password" required />
+                <Input name="password" className="h-11 pl-10 pr-10" type="password" placeholder="Enter password" required />
                 <Eye className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               </span>
             </label>
@@ -138,19 +166,49 @@ export default function AuthPage() {
                   <input type="checkbox" className="h-4 w-4 rounded border-border accent-primary" />
                   Remember me
                 </label>
-                <button type="button" className="font-semibold text-primary">
+                <Link href="/forgot-password" className="font-semibold text-primary">
                   Forgot password?
-                </button>
+                </Link>
+              </div>
+            )}
+
+            {error && (
+              <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm font-medium text-destructive">
+                {error}
               </div>
             )}
 
             <button
               type="submit"
+              disabled={submitting}
               className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-primary-border bg-primary px-5 py-3 text-sm font-bold text-primary-foreground shadow-md"
             >
-              {isSignup ? "Create account" : "Sign in"} <ArrowRight className="h-4 w-4" />
+              {submitting ? "Please wait..." : isSignup ? "Create account" : "Sign in"} <ArrowRight className="h-4 w-4" />
             </button>
           </form>
+
+          {(authConfig?.googleEnabled || authConfig?.githubEnabled) && (
+            <div className="mt-5 grid gap-3">
+              {authConfig.googleEnabled && (
+                <button
+                  type="button"
+                  onClick={() => { window.location.href = authConfig.googleLoginUrl; }}
+                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-border bg-white px-5 py-3 text-sm font-bold text-foreground shadow-sm"
+                >
+                  <Sparkles className="h-4 w-4" /> Continue with Google
+                </button>
+              )}
+              {authConfig.githubEnabled && (
+                <button
+                  type="button"
+                  onClick={() => { window.location.href = authConfig.githubLoginUrl; }}
+                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-border bg-white px-5 py-3 text-sm font-bold text-foreground shadow-sm"
+                >
+                  <Github className="h-4 w-4" /> Continue with GitHub
+                </button>
+              )}
+            </div>
+          )}
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
             {isSignup ? "Already have an account?" : "New to Pragyan AI?"}{" "}

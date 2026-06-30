@@ -2,8 +2,9 @@ import { Request, Response, NextFunction } from 'express';
 import redisClient from '@/lib/redis';
 import { rateLimiter as inMemoryLimiter } from './rateLimiter';
 
-const DEFAULT_LIMIT = 20; // per window
-const DEFAULT_LIMIT_AUTH = 60; // higher limit for authenticated users
+const isDevelopment = process.env.NODE_ENV !== 'production';
+const DEFAULT_LIMIT = isDevelopment ? 200 : 20; // per window
+const DEFAULT_LIMIT_AUTH = isDevelopment ? 600 : 60; // higher limit for authenticated users
 const WINDOW_SECONDS = 60; // 1 minute
 
 export async function redisRateLimiter(req: Request, res: Response, next: NextFunction) {

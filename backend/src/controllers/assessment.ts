@@ -105,7 +105,20 @@ export const submitAssessment = asyncHandler(async (req: Request, res: Response)
   // If persistence failed, include a clear flag for the frontend
   if (!response.persisted) {
     console.warn('[submitAssessment] Persistence missing in response - communicating to frontend');
+    try {
+      const { contextAggregator } = await import('@/services/contextAggregator');
+      void contextAggregator.invalidate(req.user.id).catch(() => undefined);
+    } catch (e) {
+      // ignore
+    }
     return sendSuccess(res, { ...response, persisted: null, persistenceWarning: 'Persistence failed; result returned deterministically' }, 201, 'Assessment submitted with persistence warning');
+  }
+
+  try {
+    const { contextAggregator } = await import('@/services/contextAggregator');
+    await contextAggregator.invalidate(req.user.id);
+  } catch (e) {
+    // ignore
   }
 
   return sendSuccess(res, response, 201, 'Assessment submitted successfully');
@@ -188,6 +201,13 @@ export const submitAdaptiveAssessment = asyncHandler(async (req: Request, res: R
       console.error('[AI ENHANCE(adaptive) ERROR]', { userId: req.user?.id, sessionId: sessionId || null, error: (err as any)?.message || err, timestamp: new Date().toISOString() });
     }
   })();
+
+  try {
+    const { contextAggregator } = await import('@/services/contextAggregator');
+    await contextAggregator.invalidate(req.user.id);
+  } catch (e) {
+    // ignore
+  }
 
   return sendSuccess(res, { ...result, ai: null, aiEnhancementScheduled: true }, 201, 'Adaptive assessment submitted');
 });

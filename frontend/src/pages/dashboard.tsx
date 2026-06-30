@@ -1,3 +1,5 @@
+import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { CircularProgress } from "@/components/ui/circular-progress";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
@@ -7,36 +9,74 @@ import {
   ArrowRight
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { useAuth } from "@/hooks/useAuth";
+import { dashboardService } from "@/services/dashboardService";
+import { aiService } from "@/services/aiService";
+
+function getFirstName(fullName?: string | null) {
+  const source = fullName?.trim() || "there";
+  return source.split(/\s+/)[0];
+}
 
 export default function Dashboard() {
+  const { user } = useAuth();
+  const { data: dashboardData, isLoading: dashboardLoading } = useQuery({
+    queryKey: ["dashboard"],
+    queryFn: dashboardService.getDashboard,
+    retry: false,
+  });
+
+  const { data: recommendations = [], isLoading: recommendationsLoading } = useQuery({
+    queryKey: ["ai", "recommend-careers"],
+    queryFn: aiService.getCareerRecommendations,
+    retry: false,
+  });
+
+  const firstName = useMemo(() => getFirstName(user?.fullName), [user?.fullName]);
+  const topRecommendation = recommendations[0];
+
+  // Calculate stats from dashboard data
+  const stats = useMemo(() => ({
+    clarityScore: Math.round(((recommendations.length / 10) * 100)) || 0,
+    roadmapProgress: dashboardData?.progress?.[0]?.progressPercentage || 0,
+    skillsInProgress: user?.skills?.length || 0,
+    recommendedCareers: recommendations.length || 0,
+    totalXp: dashboardData?.user?.xp || 0,
+    streak: dashboardData?.user?.streak || 0,
+    completedRoadmaps: dashboardData?.completedRoadmaps?.length || 0,
+  }), [dashboardData, recommendations, user?.skills]);
+
+  const currentRoadmap = dashboardData?.progress?.[0];
+
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-12">
       <div>
         <h1 className="text-3xl font-bold text-foreground tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">Welcome back Sanika! Let's continue your journey..</p>
+        <p className="text-muted-foreground mt-1">Welcome back {firstName}! Let's continue your journey..</p>
       </div>
 
       <div className="grid grid-cols-4 gap-6">
         <div className="bg-card border border-border rounded-[20px] p-6 shadow-sm flex flex-col items-center text-center">
-          <CircularProgress value={42} size={70} strokeWidth={6} />
+          <CircularProgress value={stats.clarityScore} size={70} strokeWidth={6} />
           <h3 className="font-semibold mt-4 text-sm text-foreground">Career Clarity Score</h3>
-          <p className="text-xs text-muted-foreground mt-1">Keep exploring</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {stats.clarityScore < 50 ? "Keep exploring" : stats.clarityScore < 75 ? "Getting there" : "Strong match"}
+          </p>
         </div>
         <div className="bg-card border border-border rounded-[20px] p-6 shadow-sm flex flex-col items-center text-center">
           <CircularProgress 
-            value={3} 
-            max={12} 
+            value={Math.round(stats.roadmapProgress)} 
             size={70} 
             strokeWidth={6} 
             color="hsl(var(--primary))"
-            valueFormatter={(val, max) => `${val} / ${max}`}
+            valueFormatter={(val) => `${val}%`}
           />
           <h3 className="font-semibold mt-4 text-sm text-foreground">Roadmap Progress</h3>
-          <p className="text-xs text-muted-foreground mt-1">Steps Completed</p>
+          <p className="text-xs text-muted-foreground mt-1">Currently Active</p>
         </div>
         <div className="bg-card border border-border rounded-[20px] p-6 shadow-sm flex flex-col items-center text-center">
           <CircularProgress 
-            value={2} 
+            value={stats.skillsInProgress} 
             max={10} 
             size={70} 
             strokeWidth={6} 
@@ -48,7 +88,7 @@ export default function Dashboard() {
         </div>
         <div className="bg-card border border-border rounded-[20px] p-6 shadow-sm flex flex-col items-center text-center">
           <CircularProgress 
-            value={6} 
+            value={stats.recommendedCareers} 
             max={10} 
             size={70} 
             strokeWidth={6} 
@@ -64,86 +104,79 @@ export default function Dashboard() {
         <div className="col-span-2 space-y-8">
           <section>
             <h2 className="text-xl font-bold text-foreground mb-4">Continue Learning</h2>
-            <div className="bg-card border border-border rounded-[20px] p-6 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500">
-                    <BarChart className="w-6 h-6" />
+            {currentRoadmap ? (
+              <div className="bg-card border border-border rounded-[20px] p-6 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500">
+                      <BarChart className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-foreground">
+                        {dashboardData?.progress?.[0]?.roadmapTitle || "Current Learning Path"}
+                      </h3>
+                      <p className="text-sm text-muted-foreground mt-0.5">In Progress</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground">Data Analysis with Pandas</h3>
-                    <p className="text-sm text-muted-foreground mt-0.5">In Progress</p>
-                  </div>
+                  <Link href="/roadmap">
+                    <Button className="rounded-full px-6">Continue</Button>
+                  </Link>
                 </div>
-                <Button className="rounded-full px-6">Continue</Button>
+                <div className="mt-6 flex items-center gap-4">
+                  <Progress value={Math.round(currentRoadmap.progressPercentage)} className="h-2 flex-1" />
+                  <span className="text-sm font-medium">{Math.round(currentRoadmap.progressPercentage)}%</span>
+                </div>
               </div>
-              <div className="mt-6 flex items-center gap-4">
-                <Progress value={60} className="h-2 flex-1" />
-                <span className="text-sm font-medium">60%</span>
+            ) : (
+              <div className="bg-card border border-border rounded-[20px] p-6 shadow-sm text-center text-muted-foreground">
+                <p>Start your first roadmap to begin learning!</p>
+                <Link href="/roadmap" className="mt-3">
+                  <Button className="rounded-full px-6">Explore Roadmaps</Button>
+                </Link>
               </div>
-            </div>
+            )}
           </section>
 
           <section>
             <h2 className="text-xl font-bold text-foreground mb-4">Recommended for you</h2>
             <div className="grid grid-cols-3 gap-4">
-              <div className="bg-card border border-border rounded-[20px] p-5 shadow-sm hover:shadow-md transition-shadow">
-                <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center text-purple-500 mb-4">
-                  <Code className="w-5 h-5" />
+              {recommendations.slice(0, 3).map((rec, idx) => (
+                <div key={idx} className="bg-card border border-border rounded-[20px] p-5 shadow-sm hover:shadow-md transition-shadow">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-4 ${
+                    idx === 0 ? "bg-purple-50 text-purple-500" : 
+                    idx === 1 ? "bg-orange-50 text-orange-500" : 
+                    "bg-blue-50 text-blue-500"
+                  }`}>
+                    {idx === 0 ? <Code className="w-5 h-5" /> : 
+                     idx === 1 ? <Brain className="w-5 h-5" /> : 
+                     <BarChart className="w-5 h-5" />}
+                  </div>
+                  <h3 className="font-semibold text-sm mb-1 leading-snug">{rec.career}</h3>
+                  <p className="text-xs text-muted-foreground mb-3">Career Match</p>
+                  <div className="flex items-center text-amber-500 text-xs font-medium">
+                    ★ {(rec.score / 20).toFixed(1)}
+                  </div>
                 </div>
-                <h3 className="font-semibold text-sm mb-1 leading-snug">Python for Data Science</h3>
-                <p className="text-xs text-muted-foreground mb-3">Course • Beginner</p>
-                <div className="flex items-center text-amber-500 text-xs font-medium">
-                  ★ 4.8
-                </div>
-              </div>
-              
-              <div className="bg-card border border-border rounded-[20px] p-5 shadow-sm hover:shadow-md transition-shadow">
-                <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center text-orange-500 mb-4">
-                  <Brain className="w-5 h-5" />
-                </div>
-                <h3 className="font-semibold text-sm mb-1 leading-snug">Machine Learning Basics</h3>
-                <p className="text-xs text-muted-foreground mb-3">Course • Beginner</p>
-                <div className="flex items-center text-amber-500 text-xs font-medium">
-                  ★ 4.9
-                </div>
-              </div>
-
-              <div className="bg-card border border-border rounded-[20px] p-5 shadow-sm hover:shadow-md transition-shadow">
-                <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500 mb-4">
-                  <BarChart className="w-5 h-5" />
-                </div>
-                <h3 className="font-semibold text-sm mb-1 leading-snug">Data Visualization</h3>
-                <p className="text-xs text-muted-foreground mb-3">Course • Beginner</p>
-                <div className="flex items-center text-amber-500 text-xs font-medium">
-                  ★ 4.7
-                </div>
-              </div>
+              ))}
             </div>
           </section>
         </div>
 
         <div className="col-span-1 space-y-6">
           <div className="bg-card border border-border rounded-[20px] p-6 shadow-sm">
-            <h3 className="font-bold text-foreground mb-4">Upcoming Milestones</h3>
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                  <CalendarClock className="w-4 h-4" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-semibold text-foreground">Finish Pandas Course</h4>
-                  <p className="text-xs text-muted-foreground mt-0.5">May 25 2024</p>
-                </div>
+            <h3 className="font-bold text-foreground mb-4">Your Stats</h3>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Total XP</span>
+                <span className="font-semibold text-foreground">{stats.totalXp} XP</span>
               </div>
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                  <CalendarClock className="w-4 h-4" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-semibold text-foreground">Complete SQL Basics</h4>
-                  <p className="text-xs text-muted-foreground mt-0.5">May 30 2024</p>
-                </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Current Streak</span>
+                <span className="font-semibold text-foreground">{stats.streak} days</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Roadmaps Completed</span>
+                <span className="font-semibold text-foreground">{stats.completedRoadmaps}</span>
               </div>
             </div>
           </div>
@@ -153,10 +186,12 @@ export default function Dashboard() {
             <Sparkles className="w-8 h-8 text-white/80 mb-4" />
             <h3 className="font-bold text-lg mb-2">AI Suggestion</h3>
             <p className="text-sm text-primary-foreground/90 mb-6 leading-relaxed">
-              Based on your recent activity, focusing on advanced SQL queries will boost your Data Analyst match score by 15%.
+              {topRecommendation 
+                ? `${topRecommendation.career} has a strong ${topRecommendation.score}% match with your profile. ${topRecommendation.reason || "Focus on the recommended roadmap to get started!"}`
+                : "Complete your assessment to get personalized recommendations!"}
             </p>
-            <Link href="/roadmap" className="inline-flex items-center gap-2 text-sm font-medium text-white hover:text-white/80 transition-colors">
-              View Roadmap
+            <Link href={topRecommendation ? "/roadmap" : "/assessments"} className="inline-flex items-center gap-2 text-sm font-medium text-white hover:text-white/80 transition-colors">
+              {topRecommendation ? "View Roadmap" : "Start Assessment"}
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>

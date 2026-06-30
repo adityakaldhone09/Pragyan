@@ -1,4 +1,8 @@
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
+import { aiService } from "@/services/aiService";
+import { dashboardService } from "@/services/dashboardService";
 import {
   Sparkles, ArrowRight, Search, BarChart2, Brain,
   Target, MapPin, TrendingUp
@@ -41,26 +45,42 @@ function RobotIllustration() {
   );
 }
 
-const careerMatches = [
-  { role: "Data Scientist", match: 95, color: "bg-green-500", icon: BarChart2, iconBg: "bg-green-100 text-green-600" },
-  { role: "AI/ML Engineer", match: 89, color: "bg-green-400", icon: Brain, iconBg: "bg-blue-100 text-blue-600" },
-  { role: "Data Analyst", match: 84, color: "bg-amber-500", icon: Target, iconBg: "bg-amber-100 text-amber-600" },
-];
-
-const stats = [
-  { icon: BarChart2, iconBg: "bg-blue-100 text-blue-600", value: "3", label: "career option explored" },
-  { icon: TrendingUp, iconBg: "bg-orange-100 text-orange-600", value: "72%", label: "Assessment score" },
-  { icon: Brain, iconBg: "bg-yellow-100 text-yellow-600", value: "18", label: "Skills Identified" },
-  { icon: MapPin, iconBg: "bg-red-100 text-red-500", value: "5", label: "Roadmap steps completed" },
-];
+function getFirstName(fullName?: string | null) {
+  return fullName?.trim().split(/\s+/)[0] || "there";
+}
 
 export default function Home() {
+  const { user } = useAuth();
+  const firstName = getFirstName(user?.fullName);
+
+  const { data: heroRecommendation } = useQuery({
+    queryKey: ["ai", "top-career"],
+    queryFn: aiService.getTopCareer,
+    retry: false,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const { data: recommendations = [] } = useQuery({
+    queryKey: ["ai", "recommend-careers"],
+    queryFn: aiService.getCareerRecommendations,
+    retry: false,
+  });
+
+  const { data: dashboardData } = useQuery({
+    queryKey: ["dashboard"],
+    queryFn: dashboardService.getDashboard,
+    retry: false,
+  });
+
+  const topRecommendation = heroRecommendation || recommendations[0];
+  const careerMatches = recommendations.slice(0, 3);
+
   return (
     <div className="max-w-5xl mx-auto pb-12">
       {/* Page header with search */}
       <div className="flex items-start justify-between mb-8">
         <div>
-          <h1 className="text-4xl font-bold text-foreground tracking-tight">Hello, Sanika!</h1>
+          <h1 className="text-4xl font-bold text-foreground tracking-tight">Hello, {firstName}!</h1>
           <p className="text-muted-foreground mt-1.5 text-base">Let's discover the best career path for your future</p>
         </div>
         <div className="flex items-center gap-3 mt-1">
@@ -92,18 +112,22 @@ export default function Home() {
           <p className="text-white/70 text-sm font-medium mb-3">Your AI Career Recommendation</p>
           <div className="flex items-center gap-3 mb-3">
             <Sparkles className="w-8 h-8 text-blue-300 flex-shrink-0" />
-            <h2 className="text-4xl font-bold text-white leading-tight">Data Scientist</h2>
+            <h2 className="text-4xl font-bold text-white leading-tight">
+              {topRecommendation?.career || "Complete Assessment"}
+            </h2>
           </div>
           <p className="text-white/75 text-sm leading-relaxed max-w-xs mb-7">
-            Analyzing data, building models and solving real-world problems with AI
+            {topRecommendation?.reason || "Take an assessment to get personalized career recommendations"}
           </p>
           <div className="flex items-center gap-3 flex-wrap">
-            <button className="px-5 py-2.5 rounded-full border-2 border-white/40 text-white text-sm font-semibold hover:bg-white/10 transition-colors backdrop-blur-sm">
-              95% MATCH
-            </button>
-            <Link href="/roadmap">
+            {topRecommendation && (
+              <button className="px-5 py-2.5 rounded-full border-2 border-white/40 text-white text-sm font-semibold hover:bg-white/10 transition-colors backdrop-blur-sm">
+                {Math.round(topRecommendation.score)}% MATCH
+              </button>
+            )}
+            <Link href={topRecommendation ? "/roadmap" : "/assessments"}>
               <button className="px-5 py-2.5 rounded-full border-2 border-white/40 text-white text-sm font-semibold hover:bg-white/10 transition-colors flex items-center gap-2 backdrop-blur-sm" data-testid="button-view-roadmap">
-                View Full Roadmap <ArrowRight className="w-4 h-4" />
+                {topRecommendation ? "View Full Roadmap" : "Start Assessment"} <ArrowRight className="w-4 h-4" />
               </button>
             </Link>
           </div>
@@ -118,17 +142,42 @@ export default function Home() {
       {/* Journey at a Glance */}
       <h2 className="text-xl font-bold text-foreground mb-4">Your Journey at a Glance</h2>
       <div className="grid grid-cols-4 gap-4 mb-8">
-        {stats.map(({ icon: Icon, iconBg, value, label }) => (
-          <div key={label} className="bg-card border border-border rounded-[18px] p-5 shadow-sm flex items-center gap-4">
-            <div className={`w-10 h-10 rounded-xl ${iconBg} flex items-center justify-center flex-shrink-0`}>
-              <Icon className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-foreground leading-tight">{value}</p>
-              <p className="text-xs text-muted-foreground leading-snug mt-0.5">{label}</p>
-            </div>
+        <div className="bg-card border border-border rounded-[18px] p-5 shadow-sm flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0">
+            <BarChart2 className="w-5 h-5" />
           </div>
-        ))}
+          <div>
+            <p className="text-2xl font-bold text-foreground leading-tight">{recommendations.length}</p>
+            <p className="text-xs text-muted-foreground leading-snug mt-0.5">career option explored</p>
+          </div>
+        </div>
+        <div className="bg-card border border-border rounded-[18px] p-5 shadow-sm flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center flex-shrink-0">
+            <TrendingUp className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-foreground leading-tight">{Math.round((recommendations[0]?.score || 0))}%</p>
+            <p className="text-xs text-muted-foreground leading-snug mt-0.5">top career match</p>
+          </div>
+        </div>
+        <div className="bg-card border border-border rounded-[18px] p-5 shadow-sm flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl bg-yellow-100 text-yellow-600 flex items-center justify-center flex-shrink-0">
+            <Brain className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-foreground leading-tight">{user?.skills?.length || 0}</p>
+            <p className="text-xs text-muted-foreground leading-snug mt-0.5">Skills Identified</p>
+          </div>
+        </div>
+        <div className="bg-card border border-border rounded-[18px] p-5 shadow-sm flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl bg-red-100 text-red-500 flex items-center justify-center flex-shrink-0">
+            <MapPin className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-foreground leading-tight">{Math.round(dashboardData?.progress?.[0]?.progressPercentage || 0)}%</p>
+            <p className="text-xs text-muted-foreground leading-snug mt-0.5">Roadmap progress</p>
+          </div>
+        </div>
       </div>
 
       {/* Bottom two cards */}
@@ -137,18 +186,24 @@ export default function Home() {
         <div className="bg-card border border-border rounded-[20px] p-6 shadow-sm">
           <h3 className="font-bold text-foreground text-base mb-4">Top Career Matches</h3>
           <div className="space-y-3">
-            {careerMatches.map(({ role, match, iconBg, icon: Icon }) => (
-              <div key={role} className="flex items-center justify-between">
+            {careerMatches.map((rec, idx) => (
+              <div key={rec.career} className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-lg ${iconBg} flex items-center justify-center flex-shrink-0`}>
-                    <Icon className="w-4 h-4" />
+                  <div className={`w-8 h-8 rounded-lg ${
+                    idx === 0 ? "bg-purple-50 text-purple-500" : 
+                    idx === 1 ? "bg-orange-50 text-orange-500" : 
+                    "bg-blue-50 text-blue-500"
+                  } flex items-center justify-center flex-shrink-0`}>
+                    {idx === 0 ? <BarChart2 className="w-4 h-4" /> : 
+                     idx === 1 ? <Brain className="w-4 h-4" /> : 
+                     <Target className="w-4 h-4" />}
                   </div>
-                  <span className="text-sm font-medium text-foreground">{role}</span>
+                  <span className="text-sm font-medium text-foreground">{rec.career}</span>
                 </div>
                 <span className={`px-3 py-1 rounded-full text-xs font-bold text-white ${
-                  match >= 90 ? "bg-green-500" : match >= 85 ? "bg-green-400" : "bg-amber-500"
+                  rec.score >= 80 ? "bg-green-500" : rec.score >= 60 ? "bg-green-400" : "bg-amber-500"
                 }`}>
-                  {match}% match
+                  {Math.round(rec.score)}% match
                 </span>
               </div>
             ))}
@@ -163,14 +218,20 @@ export default function Home() {
         {/* Continue your Roadmap */}
         <div className="bg-card border border-border rounded-[20px] p-6 shadow-sm relative overflow-hidden">
           <h3 className="font-bold text-foreground text-base mb-1">Continue your Roadmap</h3>
-          <p className="text-sm font-semibold text-foreground mt-3">Data Scientist Roadmap</p>
-          <p className="text-xs text-muted-foreground">Step 5 of 12</p>
+          <p className="text-sm font-semibold text-foreground mt-3">
+            {dashboardData?.progress?.[0]?.roadmapTitle || "No active roadmap"}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Step {Math.round((dashboardData?.progress?.[0]?.progressPercentage || 0) / 10)} of 12
+          </p>
 
           <div className="mt-4 mb-2">
             <div className="h-2 bg-muted rounded-full overflow-hidden">
-              <div className="h-full rounded-full bg-primary" style={{ width: "42%" }} />
+              <div className="h-full rounded-full bg-primary" style={{ width: `${dashboardData?.progress?.[0]?.progressPercentage || 0}%` }} />
             </div>
-            <p className="text-xs text-muted-foreground text-right mt-1">42%</p>
+            <p className="text-xs text-muted-foreground text-right mt-1">
+              {Math.round(dashboardData?.progress?.[0]?.progressPercentage || 0)}%
+            </p>
           </div>
 
           <Link href="/roadmap">

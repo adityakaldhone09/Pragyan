@@ -360,24 +360,41 @@ export class AssessmentService {
 
     let matches: Array<{ careerTitle: string; matchScore: number }> = [];
     try {
-      matches = await careerMatchingEngine.analyzeAssessment(userId, assessmentAnswers);
-      console.log(`[AssessmentService] submitAssessment: Career matching found ${matches.length} matches`);
+      const matchPromise = careerMatchingEngine.analyzeAssessment(userId, assessmentAnswers)
+        .catch((error) => {
+          console.error('[AssessmentService] Career matching failed (caught):', error);
+          return [];
+        });
+      matches = await Promise.race([
+        matchPromise,
+        new Promise<typeof matches>((resolve) => setTimeout(() => resolve([]), 7000)),
+      ]);
+      if (!Array.isArray(matches)) {
+        matches = [];
+      }
+      if (matches.length === 0) {
+        console.warn('[AssessmentService] submitAssessment: Career matching did not complete within timeout or returned no results');
+      } else {
+        console.log(`[AssessmentService] submitAssessment: Career matching found ${matches.length} matches`);
+      }
     } catch (error) {
       console.error('[AssessmentService] Career matching failed:', error);
+      matches = [];
     }
 
     // Enhance local matches with a lightweight GPT layer for explanations and small adjustments
-    let combined = null;
-    try {
-      combined = await enhanceAndCombineScores(assessmentAnswers, matches as any[]);
-      console.log(`[AssessmentService] submitAssessment: AI enhancement successful`);
-    } catch (e) {
-      console.warn('[AssessmentService] Scoring enhancement failed (non-blocking):', (e as any)?.message || e);
-      // Non-blocking - continue without AI enhancements
-    }
+    const enhancementPromise = enhanceAndCombineScores(assessmentAnswers, matches as any[])
+      .catch((e) => {
+        console.warn('[AssessmentService] Scoring enhancement failed (non-blocking):', (e as any)?.message || e);
+        return null;
+      });
+
+    const combined = await Promise.race([
+      enhancementPromise,
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)),
+    ]);
 
     const result = this.buildAssessmentSummary(answers, matches, assessmentAnswers);
-    // Attach combinedMatches if available
     if (combined) {
       (result as any).combinedMatches = combined;
     }

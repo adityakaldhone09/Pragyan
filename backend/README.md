@@ -1,457 +1,240 @@
-# Pragyan Backend - Production-Ready API
+# Pragyan Backend
 
-Complete backend implementation for Pragyan, an AI-powered career guidance platform.
+This package is the backend for Pragyan, the AI-powered career guidance platform. It provides the Express API, Prisma schema, authentication, recommendation endpoints, and seed scripts.
 
-## 🎯 Overview
+## What Runs Here
 
-- **Framework**: Express.js + TypeScript
-- **Database**: MongoDB + Prisma ORM
-- **Authentication**: JWT with refresh tokens
-- **Security**: Helmet, CORS, Rate Limiting
-- **Architecture**: MVC pattern with services
+- Express + TypeScript server
+- MongoDB via Prisma
+- JWT authentication and session support
+- Route modules for auth, roadmaps, progress, assessment, AI, jobs, and admin workflows
+- Startup validation that fails fast when required env values are missing or invalid
 
-## 📁 Project Structure
+## Project Structure
 
-```
+```text
 backend/
 ├── src/
-│   ├── controllers/       # Request handlers
-│   ├── services/          # Business logic
-│   ├── routes/            # API endpoints
-│   ├── middleware/        # Auth, validation, errors
-│   ├── validators/        # Zod schemas
-│   ├── types/             # TypeScript interfaces
-│   ├── config/            # Environment config
-│   ├── utils/             # Helpers (JWT, password, errors)
-│   ├── lib/               # External libraries (Prisma)
-│   ├── app.ts             # Express app setup
-│   └── server.ts          # Server entry point
+│   ├── app.ts                 # Express middleware and route wiring
+│   ├── server.ts              # Startup validation and server bootstrap
+│   ├── config/                # Environment, validation, passport, diagnostics
+│   ├── routes/                # API routes
+│   ├── controllers/           # Request handlers
+│   ├── services/              # Business logic
+│   ├── middleware/            # Auth, validation, rate limiting, errors
+│   ├── ai/                    # AI helpers and fallback logic
+│   ├── lib/                   # Prisma, cache, and integrations
+│   └── utils/                 # Shared utilities
 ├── prisma/
-│   ├── schema.prisma      # Database schema
-│   └── seed.ts            # Seed data
+│   ├── schema.prisma          # Prisma schema
+│   └── seed.ts                # Seed script
+├── scripts/                   # Import, smoke test, and maintenance scripts
 ├── package.json
-├── tsconfig.json
-└── .env
+└── .env.example
 ```
 
-## 🚀 Quick Start
+## Prerequisites
 
-### Prerequisites
+- Node.js 18 or newer
+- npm 9+ or pnpm 8+
+- MongoDB Atlas or another replica-set compatible MongoDB instance
+- Optional: Gemini key, Groq key, Redis URL, and OAuth credentials if you use those features
 
-- Node.js 18+
-- MongoDB 6+ (or MongoDB Atlas)
-- npm or yarn
+## Environment Setup
 
-### Installation
+Create the local environment file from the example:
 
 ```bash
-# Install dependencies
-npm install
-
-# Setup environment variables
+cd /workspaces/Pragyan/backend
 cp .env.example .env
+```
 
-# Configure your DATABASE_URL in .env
-# Example (Atlas): mongodb+srv://user:password@cluster.mongodb.net/pragyan_db?retryWrites=true&w=majority
+The current backend config reads values from `backend/.env` and validates them at startup.
 
-# Generate Prisma client
+### Required values
+
+Set these first:
+
+- `PORT` - backend port, usually `5000`
+- `DATABASE_URL` - MongoDB connection string
+- `JWT_SECRET` - access-token secret
+- `JWT_REFRESH_SECRET` - refresh-token secret
+- `FRONTEND_URL` - usually `http://localhost:5173`
+- `CORS_ORIGINS` - comma-separated list of allowed browser origins
+- `RAPID_API_KEY` - required by the current config layer
+
+### Common optional values
+
+- `NODE_ENV` - `development` or `production`
+- `JWT_EXPIRY` and `JWT_REFRESH_EXPIRY`
+- `AI_PROVIDER` - `gemini`, `groq`, or `local`
+- `GEMINI_API_KEY` and `GEMINI_MODEL`
+- `GROQ_API_KEY` and `GROQ_MODEL`
+- `REDIS_URL`
+- `API_BASE_URL`
+- `BCRYPT_ROUNDS`
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `SESSION_SECRET` if you use OAuth
+
+Do not commit `.env` to git.
+
+## First-Time Backend Setup
+
+### 1. Install dependencies
+
+```bash
+cd /workspaces/Pragyan/backend
+npm install
+```
+
+### 2. Generate Prisma client
+
+```bash
 npm run prisma:generate
+```
 
-# Run migrations
-npm run prisma:migrate
+### 3. Push the Prisma schema
 
-# Seed database
+```bash
+npm run prisma:push
+```
+
+### 4. Seed data if needed
+
+```bash
 npm run seed
+```
 
-# Start development server
+The seed step is optional, but it is useful when you want demo careers, roadmaps, jobs, and test accounts in a fresh database.
+
+## Start The Backend
+
+```bash
+cd /workspaces/Pragyan/backend
 npm run dev
 ```
 
-The server will start on `http://localhost:5000`
+This starts the API on `http://localhost:5000` using `tsx watch src/server.ts`.
 
-## 🔑 API Endpoints
+The startup flow does three important things before the server listens:
 
-### Authentication
+1. loads environment variables
+2. validates the MongoDB URL and required secrets
+3. connects Prisma to MongoDB before the app is marked ready
 
-```
-POST   /api/auth/register          - Register new user
-POST   /api/auth/login             - Login user
-GET    /api/auth/me                - Get current user
-POST   /api/auth/logout            - Logout user
-POST   /api/auth/refresh-token     - Refresh access token
-```
+If the environment is invalid, the server exits early with a clear diagnostic message instead of hanging.
 
-### Roadmaps
-
-```
-GET    /api/roadmaps               - Get all roadmaps (paginated)
-GET    /api/roadmaps/:id           - Get single roadmap
-GET    /api/roadmaps/search?q=     - Search roadmaps
-GET    /api/roadmaps/category/:cat - Get roadmaps by category
-GET    /api/roadmaps/categories    - Get all categories
-GET    /api/roadmaps/skillup/:careerId - Skill-up plan (auth, explanation + profile)
-
-POST   /api/roadmaps               - Create roadmap (ADMIN)
-PUT    /api/roadmaps/:id           - Update roadmap (ADMIN)
-DELETE /api/roadmaps/:id           - Delete roadmap (ADMIN)
-```
-
-### Progress Tracking
-
-```
-GET    /api/progress/:roadmapId    - Get roadmap progress
-POST   /api/progress/complete-task - Mark task complete
-POST   /api/progress/complete-roadmap - Complete roadmap
-GET    /api/progress/user/dashboard - Get dashboard data
-```
-
-### Assessment
-
-```
-GET    /api/assessment/questions           - Get all questions
-GET    /api/assessment/questions/:category - Get category questions
-POST   /api/assessment/submit              - Submit assessment
-GET    /api/assessment/result/:resultId    - Get assessment result
-```
-
-### AI Recommendations
-
-```
-GET    /api/ai/recommend-careers                  - Get career recommendations
-GET    /api/ai/roadmaps/:career                   - Get roadmaps for career
-POST   /api/ai/personalized-roadmap               - Generate personalized roadmap
-```
-
-## AI And Cache Configuration
-
-- `AI_PROVIDER`: set to `gemini` for Gemini or `local` to force deterministic fallback mode.
-- `GEMINI_API_KEY`: enables live Gemini-generated explanations. If missing, backend uses heuristic fallback.
-- `REDIS_URL`: optional Redis connection string for persistent caching. If missing/unavailable, in-memory cache is used.
-
-Example values in `.env`:
-
-```bash
-AI_PROVIDER=gemini
-GEMINI_API_KEY=AIzaSyDNOZao7XxY53ATGARvKAZKmciuzrGQrvw
-GEMINI_MODEL=gemini-1.5-flash
-REDIS_URL=redis://127.0.0.1:6379
-```
-
-Notes:
-- This project uses the official Google Gemini SDK for all AI calls.
-- The default model is `gemini-1.5-flash` via configuration (`config.gemini.model`).
-- AI responses are requested as JSON where possible; the backend has a robust heuristic fallback when the model is unavailable or returns invalid JSON.
-
-## 📚 API Examples
-
-### Register User
-
-```bash
-curl -X POST http://localhost:5000/api/auth/register \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "fullName": "John Doe",
-    "email": "john@example.com",
-    "password": "SecurePass123"
-  }'
-```
-
-Response:
-```json
-{
-  "success": true,
-  "message": "User registered successfully",
-  "data": {
-    "user": {
-      "id": "user123",
-      "fullName": "John Doe",
-      "email": "john@example.com",
-      "role": "USER"
-    },
-    "accessToken": "eyJhbGc...",
-    "refreshToken": "eyJhbGc..."
-  }
-}
-```
-
-### Login User
-
-```bash
-curl -X POST http://localhost:5000/api/auth/login \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "email": "john@example.com",
-    "password": "SecurePass123"
-  }'
-```
-
-### Get Roadmaps
-
-```bash
-curl -X GET "http://localhost:5000/api/roadmaps?page=1&limit=10" \\
-  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
-```
-
-### Search Roadmaps
-
-```bash
-curl -X GET "http://localhost:5000/api/roadmaps/search?q=react" \\
-  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
-```
-
-### Complete Task
-
-```bash
-curl -X POST http://localhost:5000/api/progress/complete-task \\
-  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "roadmapId": "roadmap123",
-    "taskId": "task456"
-  }'
-```
-
-### Get Dashboard
-
-```bash
-curl -X GET http://localhost:5000/api/progress/user/dashboard \\
-  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
-```
-
-### Submit Assessment
-
-```bash
-curl -X POST http://localhost:5000/api/assessment/submit \\
-  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "answers": {
-      "q1": "yes",
-      "q2": "no",
-      "q3": "maybe"
-    }
-  }'
-```
-
-### Get Career Recommendations
-
-```bash
-curl -X GET http://localhost:5000/api/ai/recommend-careers \\
-  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
-```
-
-## 🔐 Authentication
-
-All protected endpoints require JWT token in Authorization header:
-
-```
-Authorization: Bearer <access_token>
-```
-
-**Token Expiry**: 7 days
-**Refresh Token Expiry**: 30 days
-
-To refresh token:
-
-```bash
-curl -X POST http://localhost:5000/api/auth/refresh-token \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "refreshToken": "YOUR_REFRESH_TOKEN"
-  }'
-```
-
-## 🗄️ Database Schema
-
-### User
-- id, fullName, email, password, avatar
-- selectedCareer, skillLevel, role
-- xp, streak, lastActiveDate
-- createdAt, updatedAt
-
-### Roadmap
-- id, title, category, description
-- level, duration, icon, estimatedHours
-- tags (array)
-
-### UserProgress
-- userId, roadmapId
-- completedTasks[], completedDays[]
-- progressPercentage, currentDay
-- xp, streak, lastActiveDate
-
-### AssessmentResult
-- userId, answers, suggestedCareers
-- scores, strengths, weaknesses
-
-## 🛡️ Security Features
-
-- ✅ Password hashing with bcrypt (10 rounds)
-- ✅ JWT authentication with access/refresh tokens
-- ✅ Rate limiting on auth endpoints (5 requests/15 min)
-- ✅ General rate limiting (100 requests/15 min)
-- ✅ CORS protection
-- ✅ Helmet security headers
-- ✅ Input validation with Zod
-- ✅ SQL injection prevention via Prisma
-- ✅ Role-based access control (ADMIN, USER)
-
-## 🧪 Environment Variables
-
-```
-PORT=5000
-NODE_ENV=development
-DATABASE_URL=mongodb+srv://user:password@cluster.mongodb.net/pragyan_db?retryWrites=true&w=majority
-JWT_SECRET=your_jwt_secret_key
-JWT_EXPIRY=7d
-JWT_REFRESH_SECRET=your_jwt_refresh_secret_key
-JWT_REFRESH_EXPIRY=30d
-FRONTEND_URL=http://localhost:5173
-BCRYPT_ROUNDS=10
-```
-
-## 📊 Admin Credentials (After Seeding)
-
-```
-Email: admin@pragyan.com
-Password: admin123
-```
-
-## 🔄 Database Commands
-
-```bash
-# Generate Prisma client
-npm run prisma:generate
-
-# Create new migration
-npm run prisma:migrate -- --name add_feature
-
-# Run migrations in production
-npm run prisma:migrate:prod
-
-# Open Prisma Studio (GUI)
-npm run prisma:studio
-
-# Seed database
-npm run seed
-```
-
-## 🚢 Production Deployment
-
-### Build for Production
+## Production Build
 
 ```bash
 npm run build
-npm start
+npm run start
 ```
 
-### Environment Setup
+- `npm run build` compiles TypeScript to `dist/`
+- `npm run start` runs the compiled server with module aliases enabled
 
-1. Set `NODE_ENV=production` in .env
-2. Use strong `JWT_SECRET` and `JWT_REFRESH_SECRET`
-3. Use MongoDB database
-4. Enable HTTPS
-5. Set `FRONTEND_URL` to production domain
-6. Use environment variables for sensitive data
+## Available Scripts
 
-### Deployment Checklist
-
-- [ ] Update JWT secrets
-- [ ] Configure MongoDB connection
-- [ ] Set NODE_ENV=production
-- [ ] Update FRONTEND_URL
-- [ ] Run database migrations
-- [ ] Seed initial data
-- [ ] Enable rate limiting
-- [ ] Setup monitoring/logging
-- [ ] Configure backups
-- [ ] Setup SSL/TLS
-
-## 📖 Technologies Used
-
-- **Express.js** - Web framework
-- **TypeScript** - Type safety
-- **Prisma** - ORM
-- **MongoDB** - Database
-- **JWT** - Authentication
-- **bcryptjs** - Password hashing
-- **Zod** - Validation
-- **Helmet** - Security headers
-- **CORS** - Cross-origin support
-- **Morgan** - Logging
-
-## 🐛 Error Handling
-
-All errors return standardized format:
-
-```json
-{
-  "success": false,
-  "message": "Error message",
-  "errors": {
-    "field": ["error detail"]
-  }
-}
+```bash
+npm run dev               # Development server with watch mode
+npm run build             # Compile TypeScript
+npm run start             # Run the compiled server
+npm run prisma:generate   # Generate Prisma client
+npm run prisma:push       # Push schema to MongoDB
+npm run seed              # Seed demo data
+npm run test              # Jest test suite with coverage
+npm run ci                # Build + test
 ```
 
-Common HTTP Status Codes:
-- 200 - OK
-- 201 - Created
-- 400 - Bad Request
-- 401 - Unauthorized
-- 403 - Forbidden
-- 404 - Not Found
-- 409 - Conflict
-- 500 - Internal Server Error
+## Runtime Behavior
 
-## 📝 API Response Format
+The backend app setup in `src/app.ts` includes:
 
-### Success Response
+- Helmet security headers
+- session middleware
+- Passport initialization
+- CORS restrictions using `FRONTEND_URL` / `CORS_ORIGINS`
+- request logging in development
+- API rate limiting
+- centralized error handling
 
-```json
-{
-  "success": true,
-  "message": "Success message",
-  "data": {}
-}
+The server bootstrap in `src/server.ts` includes:
+
+- environment validation
+- Prisma connection retries
+- DNS fallback handling for Atlas SRV lookups
+- graceful shutdown handlers
+- startup diagnostics for easier debugging
+
+## API Overview
+
+The current route groups are mounted under `/api` and include:
+
+- `/api/auth`
+- `/api/skills`
+- `/api/tasks`
+- `/api/roadmaps`
+- `/api/progress`
+- `/api/assessment`
+- `/api/ai`
+- `/api/recommendations`
+- `/api/career-matching`
+- `/api/careers`
+- `/api/jobs`
+- `/api/admin`
+
+There is also a health endpoint at `/health`.
+
+## Database
+
+The Prisma schema is MongoDB-based and contains models for users, roadmaps, tasks, progress tracking, assessments, AI personalization, jobs, and related relationships.
+
+Common maintenance commands:
+
+```bash
+npm run prisma:generate
+npm run prisma:push
+npm run seed
 ```
 
-### Paginated Response
+## Local Development Checklist
 
-```json
-{
-  "success": true,
-  "data": [],
-  "pagination": {
-    "page": 1,
-    "limit": 10,
-    "total": 100,
-    "totalPages": 10
-  }
-}
-```
+Before you start the backend, confirm:
 
-## 🎓 Learning Resources
+1. `backend/.env` exists
+2. `DATABASE_URL` is a valid MongoDB connection string
+3. the MongoDB user can reach the cluster
+4. the required secrets are not placeholder values
+5. the frontend is allowed in `CORS_ORIGINS`
 
-- [Express.js Docs](https://expressjs.com/)
-- [Prisma Docs](https://www.prisma.io/docs/)
-- [MongoDB Docs](https://www.mongodb.com/docs/)
-- [JWT Introduction](https://jwt.io/introduction)
-- [OWASP Security](https://owasp.org/)
+## Troubleshooting
 
-## 📄 License
+### Backend exits during startup
 
-Proprietary - Pragyan Platform
+- Check `backend/.env`
+- Fix `DATABASE_URL`
+- Replace placeholder secrets
+- Verify the MongoDB cluster is reachable
 
-## 🤝 Contributing
+### Prisma connection errors
 
-1. Create a new branch for features
-2. Follow TypeScript best practices
-3. Add proper error handling
-4. Write tests for new features
-5. Submit pull request
+- Re-run `npm run prisma:generate`
+- Re-run `npm run prisma:push`
+- Confirm the database supports the Prisma MongoDB workflow
 
----
+### Auth or CORS errors from the browser
 
-**Status**: ✅ Production Ready
-**Version**: 1.0.0
+- Ensure the frontend runs on `http://localhost:5173`
+- Make sure `FRONTEND_URL` and `CORS_ORIGINS` include that origin
+- Restart the backend after updating `.env`
+
+### Seed data is missing
+
+- Run `npm run seed` after the schema is pushed
+- Confirm the backend is connected to the expected database
+
+## Notes For Maintenance
+
+- Use `.env.example` as the source of truth for the full list of supported variables.
+- Keep `backend/.env` out of git.
+- The app fails fast on configuration issues by design, so startup errors should be treated as setup problems first.

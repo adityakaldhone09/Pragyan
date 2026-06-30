@@ -90,6 +90,8 @@ export function buildMentorPrompt(data: {
   context?: Record<string, unknown>;
   history?: Array<{ role?: string; content?: string }>;
 }) {
+  const rawMessage = normalizeText(data.message);
+  const slashCommand = rawMessage.startsWith('/') ? rawMessage.split(/\s+/)[0] : '';
   const historyText = Array.isArray(data.history)
     ? data.history
         .slice(-6)
@@ -103,10 +105,11 @@ export function buildMentorPrompt(data: {
       'Answer in concise markdown with practical bullet points when helpful.',
       'Use career guidance, roadmap help, resume help, and interview preparation as your primary domains.',
       'If the request needs backend data you do not have, be transparent and suggest the closest available Pragyan feature.',
+      slashCommand ? `The user’s message begins with the slash command ${slashCommand}. Use this as a mode hint for the response.` : '',
       'Return a helpful response only.',
     ],
     {
-      message: normalizeText(data.message),
+      message: rawMessage,
       context: compactProfile(data.context || {}),
       history: historyText,
     }

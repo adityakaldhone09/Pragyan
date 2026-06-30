@@ -22,6 +22,7 @@ router.post('/personalized-roadmap', authenticate, validate(personalizedRoadmapS
 router.get('/status', aiController.getStatus);
 router.get('/telemetry', aiController.getTelemetry);
 router.post('/chat', authenticate, validate(aiChatSchema), aiController.chatAssistant);
+router.post('/action-event', authenticate, aiController.recordAIActionEvent);
 router.post('/daily-plan', authenticate, validate(dailyPlanSchema), aiController.generateDailyPlan);
 router.post('/report', authenticate, validate(assessmentReportSchema), aiController.generateAssessmentReport);
 router.post('/roadmap', authenticate, validate(learningRoadmapGenerationSchema), aiController.generateLearningRoadmap);

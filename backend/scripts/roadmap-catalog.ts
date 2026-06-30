@@ -730,7 +730,7 @@ function buildRoadmapEntry(category: RoadmapCategoryDefinition, topic: string, i
   };
 }
 
-export function generateRoadmapCatalog() {
+function generateRoadmapCatalog() {
   return CATEGORY_DEFINITIONS.flatMap((category) =>
     category.topics.map((topic, index) => buildRoadmapEntry(category, topic, index))
   );

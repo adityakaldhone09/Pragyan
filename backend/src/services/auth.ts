@@ -1031,6 +1031,14 @@ export class AuthService {
         console.warn('Non-blocking snapshot upsert failed during profile update:', (snapshotErr as any)?.message || snapshotErr);
       }
 
+      // Invalidate aggregated AI context for this user so AI sees latest profile
+      try {
+        const { contextAggregator } = await import('@/services/contextAggregator');
+        void contextAggregator.invalidate(userId).catch(() => undefined);
+      } catch (e) {
+        // ignore
+      }
+
       return {
         id: updated.id,
         fullName: updated.fullName,

@@ -12,6 +12,7 @@ if (Number.isNaN(port) || port <= 0) {
 }
 
 const basePath = process.env.BASE_PATH ?? "/";
+const backendUrl = process.env.VITE_BACKEND_URL ?? "http://localhost:5000";
 
 export default defineConfig({
   base: basePath,
@@ -36,6 +37,13 @@ export default defineConfig({
     strictPort: true,
     host: "0.0.0.0",
     allowedHosts: true,
+    proxy: {
+      "/api": {
+        target: backendUrl,
+        changeOrigin: true,
+        secure: false,
+      },
+    },
     fs: {
       strict: true,
     },

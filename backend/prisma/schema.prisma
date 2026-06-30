@@ -75,6 +75,7 @@ model User {
   personalityProfiles     PersonalityProfile[]
   learningVelocities      LearningVelocity[]
   decisionSnapshots       DecisionSnapshot[]
+  generatedNotes          GeneratedNote[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -973,6 +974,32 @@ model DecisionSnapshot {
   @@index([userId])
 }
 
+model GeneratedNote {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String   @db.ObjectId
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic          String
+  format         String
+  source         String   @default("ai-counselor")
+  sourceMessageId String?
+  fileName       String
+  mimeType       String
+  byteSize       Int
+  contentHash    String
+  metadata       Json
+  content        String?
+  generatedAt    DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([topic])
+  @@index([format])
+  @@index([generatedAt])
+  @@unique([userId, contentHash, format])
+}
+
 model MentorConversation {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   userId    String   @db.ObjectId
@@ -1136,4 +1163,128 @@ model PlacementReadiness {
 
   @@index([userId])
   @@index([journeyId])
+}
+
+// ============ RECRUITER PLATFORM MODELS ============
+
+model Recruiter {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @unique @db.ObjectId
+  companyId   String?  @db.ObjectId
+  name        String
+  designation String?
+  email       String
+  status      String   @default("ACTIVE")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([email])
+}
+
+model Company {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  name           String
+  industry       String?
+  website        String?
+  companySize    String?
+  location       String?
+  recruiterName  String?
+  designation    String?
+  logo           String?
+  description    String?
+  hiringDomains  String[] @default([])
+  socialLinks    Json?
+  ownerRecruiterId String? @db.ObjectId
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([ownerRecruiterId])
+  @@index([name])
+}
+
+model RecruiterJob {
+  id                 String   @id @default(auto()) @map("_id") @db.ObjectId
+  recruiterId        String   @db.ObjectId
+  companyId          String?  @db.ObjectId
+  title              String
+  description        String
+  salary             String?
+  experience         String?
+  skills             String[] @default([])
+  location           String?
+  deadline           DateTime?
+  community          String?
+  assessmentRequired Boolean  @default(false)
+  status             String   @default("DRAFT")
+  matchSummary       Json?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([recruiterId])
+  @@index([companyId])
+  @@index([status])
+}
+
+model RecruiterApplication {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  recruiterId String   @db.ObjectId
+  jobId       String   @db.ObjectId
+  candidateId String   @db.ObjectId
+  stage       String   @default("APPLIED")
+  notes       String?
+  rating      Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([jobId, candidateId])
+  @@index([recruiterId])
+  @@index([candidateId])
+  @@index([stage])
+}
+
+model CandidateBookmark {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  recruiterId String   @db.ObjectId
+  candidateId String   @db.ObjectId
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  @@unique([recruiterId, candidateId])
+  @@index([candidateId])
+}
+
+model RecruiterMessage {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  recruiterId String   @db.ObjectId
+  candidateId String?  @db.ObjectId
+  community   String?
+  subject     String
+  body        String
+  status      String   @default("SENT")
+  createdAt   DateTime @default(now())
+
+  @@index([recruiterId])
+  @@index([candidateId])
+  @@index([community])
+}
+
+model InterviewSchedule {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  recruiterId String   @db.ObjectId
+  candidateId String   @db.ObjectId
+  jobId       String?  @db.ObjectId
+  scheduledAt DateTime
+  mode        String
+  status      String   @default("SCHEDULED")
+  notes       String?
+  aiFeedback  Json?
+  rating      Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([recruiterId])
+  @@index([candidateId])
+  @@index([jobId])
+  @@index([scheduledAt])
 }

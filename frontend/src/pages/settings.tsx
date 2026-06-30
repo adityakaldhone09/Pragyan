@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Bell, Lock, Palette, Globe, Shield,
   Eye, EyeOff, Moon, Sun, Smartphone,
@@ -6,6 +6,9 @@ import {
   ChevronRight, LogOut, Trash2, Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import { authService } from "@/services/authService";
+import { useMutation } from "@tanstack/react-query";
 
 type Section = "notifications" | "privacy" | "appearance" | "account" | "security";
 
@@ -64,7 +67,9 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
 }
 
 export default function Settings() {
+  const { user } = useAuth();
   const [active, setActive] = useState<Section>("notifications");
+  const [saved, setSaved] = useState(false);
 
   const [notifs, setNotifs] = useState({
     emailUpdates: true,
@@ -95,11 +100,26 @@ export default function Settings() {
   });
 
   const [showPassword, setShowPassword] = useState(false);
-  const [saved, setSaved] = useState(false);
+
+  const updatePreferencesMutation = useMutation({
+    mutationFn: (prefs: Partial<typeof appearance>) =>
+      authService.updateProfile({
+        preferences: prefs,
+      }),
+    onSuccess: () => {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    },
+  });
+
+  useEffect(() => {
+    if (user?.preferences) {
+      setAppearance(prev => ({ ...prev, ...user.preferences }));
+    }
+  }, [user?.preferences]);
 
   const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    updatePreferencesMutation.mutate(appearance);
   };
 
   const toggle = <K extends keyof typeof notifs>(key: K) =>
@@ -140,6 +160,12 @@ export default function Settings() {
 
         {/* Content panel */}
         <div className="flex-1 bg-card border border-border rounded-[20px] p-7 shadow-sm">
+          {saved && (
+            <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg text-sm flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4" />
+              Settings saved successfully!
+            </div>
+          )}
 
           {/* NOTIFICATIONS */}
           {active === "notifications" && (
@@ -245,6 +271,16 @@ export default function Settings() {
                   ].map(z => <option key={z}>{z}</option>)}
                 </select>
               </SettingRow>
+
+              <div className="mt-8 flex gap-3">
+                <Button 
+                  onClick={handleSave}
+                  disabled={updatePreferencesMutation.isPending}
+                  className="rounded-xl"
+                >
+                  {updatePreferencesMutation.isPending ? "Saving..." : "Save Preferences"}
+                </Button>
+              </div>
             </div>
           )}
 
@@ -378,41 +414,41 @@ export default function Settings() {
 
               <SectionHeading>Profile</SectionHeading>
               <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-xl mb-6">
-                <div className="w-14 h-14 rounded-full bg-orange-500 flex items-center justify-center text-white text-xl font-bold flex-shrink-0">
-                  SB
+                <div className="w-14 h-14 rounded-full bg-primary flex items-center justify-center text-white text-xl font-bold flex-shrink-0">
+                  {user?.fullName?.split(" ").map((n: string) => n[0]).join("").toUpperCase() || "U"}
                 </div>
                 <div>
-                  <p className="font-bold text-foreground">Sanika Bavaskar</p>
-                  <p className="text-sm text-muted-foreground">sanikabavaskar@gmail.com</p>
-                  <p className="text-xs text-primary font-semibold mt-0.5">Free Plan</p>
+                  <p className="font-bold text-foreground">{user?.fullName || "User"}</p>
+                  <p className="text-sm text-muted-foreground">{user?.email}</p>
+                  <p className="text-xs text-primary font-semibold mt-0.5">{user?.role === "ADMIN" ? "Premium Plan" : "Free Plan"}</p>
                 </div>
               </div>
 
-              <SectionHeading>Plan & Billing</SectionHeading>
-              <div className="border border-border rounded-xl p-5 mb-6">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="font-bold text-foreground">Free Plan</p>
-                    <p className="text-sm text-muted-foreground mt-0.5">Access to basic career guidance, assessments, and resources.</p>
+              <SectionHeading>Account Stats</SectionHeading>
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                {[
+                  { label: "Career Match", value: "85%", color: "text-primary" },
+                  { label: "Roadmaps Active", value: user?.roadmaps?.length || "1", color: "text-green-600" },
+                  { label: "Assessments Done", value: "2", color: "text-amber-600" },
+                ].map(({ label, value, color }) => (
+                  <div key={label} className="bg-muted/50 rounded-xl p-4 text-center">
+                    <p className={`text-2xl font-bold ${color}`}>{value}</p>
+                    <p className="text-xs text-muted-foreground mt-2">{label}</p>
                   </div>
-                  <Button className="rounded-xl" data-testid="button-upgrade-plan">
-                    Upgrade to Pro
-                  </Button>
-                </div>
-                <div className="mt-4 grid grid-cols-3 gap-4 text-center">
-                  {[
-                    { label: "Assessments", used: "2", limit: "3" },
-                    { label: "AI Sessions", used: "5", limit: "10" },
-                    { label: "Resources", used: "24", limit: "Unlimited" },
-                  ].map(({ label, used, limit }) => (
-                    <div key={label} className="bg-muted/50 rounded-xl p-3">
-                      <p className="text-lg font-bold text-foreground">{used}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{label} used</p>
-                      <p className="text-xs font-medium text-primary mt-0.5">of {limit}</p>
-                    </div>
-                  ))}
-                </div>
+                ))}
               </div>
+
+              <SectionHeading>Account Actions</SectionHeading>
+              <SettingRow label="Download My Data" desc="Export a full copy of your profile and activity.">
+                <Button variant="outline" size="sm" className="rounded-xl flex items-center gap-2">
+                  <Download className="w-4 h-4" /> Export
+                </Button>
+              </SettingRow>
+              <SettingRow label="Delete Account" desc="Permanently delete your account and all associated data.">
+                <Button variant="outline" size="sm" className="rounded-xl text-destructive hover:text-destructive" data-testid="button-delete-account">
+                  Delete
+                </Button>
+              </SettingRow>
 
               <SectionHeading>Integrations</SectionHeading>
               {[

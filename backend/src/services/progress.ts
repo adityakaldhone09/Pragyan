@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { NotFoundError } from '@/utils/errors';
 import { xpService } from '@/services/xp';
+import { contextAggregator } from '@/services/contextAggregator';
 
 interface UpsertRoadmapProgressInput {
   roadmapId: string;
@@ -115,6 +116,9 @@ export class ProgressService {
     // Update user XP
     await xpService.awardXp(userId, xpReward, 'task-complete', { taskId, roadmapId });
 
+    // Invalidate aggregated context so AI shows updated progress immediately
+    void contextAggregator.invalidate(userId).catch(() => undefined);
+
     return updatedProgress;
   }
 
@@ -191,6 +195,7 @@ export class ProgressService {
       },
     });
 
+    void contextAggregator.invalidate(userId).catch(() => undefined);
     return completed;
   }
 
@@ -202,7 +207,7 @@ export class ProgressService {
     const nextProgressPercentage = input.progressPercentage ?? progress.progressPercentage;
     const nextCurrentDay = input.currentDay ?? progress.currentDay;
 
-    return prisma.userProgress.update({
+    const updated = await prisma.userProgress.update({
       where: {
         userId_roadmapId: {
           userId,
@@ -217,6 +222,8 @@ export class ProgressService {
         lastActiveDate: new Date(),
       },
     });
+    void contextAggregator.invalidate(userId).catch(() => undefined);
+    return updated;
   }
 
   async getRoadmapProgress(userId: string, roadmapId?: string) {
@@ -347,11 +354,14 @@ export class ProgressService {
       }),
     ]);
 
+    void contextAggregator.invalidate(userId).catch(() => undefined);
     return {
       progress: updatedProgress,
       user,
       achievements,
     };
+    // invalidate aggregated context
+    // (note: unreachable due to return above) 
   }
 
   private async calculateNextStreak(userId: string, today: string) {

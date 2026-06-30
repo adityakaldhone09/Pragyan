@@ -1,22 +1,25 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 import {
   User, Linkedin, CalendarDays, Mail,
   Phone, MapPin, Briefcase, Target, Pencil, Save
 } from "lucide-react";
 
-const fields = [
-  { icon: User, label: "FULL NAME", value: "Sanika Bavaskar" },
-  { icon: Linkedin, label: "LINKEDIN", value: "linkedin.com/in/sanika-bavaskar" },
-  { icon: CalendarDays, label: "AGE", value: "21" },
-  { icon: Mail, label: "EMAIL", value: "sanikabavaskar@gmail.com" },
-  { icon: Phone, label: "PHONE", value: "9876543210" },
-  { icon: MapPin, label: "LOCATION", value: "Pune" },
-  { icon: Briefcase, label: "CURRENT TITLE", value: "Learner" },
-  { icon: Target, label: "CAREER TRACK", value: "Not specified" },
-];
-
 export default function Information() {
+  const { user } = useAuth();
+
+  const fields = [
+    { icon: User, label: "FULL NAME", value: user?.fullName || "Not set" },
+    { icon: Linkedin, label: "LINKEDIN", value: user?.linkedin || "Not provided" },
+    { icon: CalendarDays, label: "AGE", value: user?.age ? String(user.age) : "Not set" },
+    { icon: Mail, label: "EMAIL", value: user?.email || "Not set" },
+    { icon: Phone, label: "PHONE", value: user?.phone || "Not provided" },
+    { icon: MapPin, label: "LOCATION", value: user?.location || "Not set" },
+    { icon: Briefcase, label: "CURRENT TITLE", value: user?.title || "Learner" },
+    { icon: Target, label: "CAREER TRACK", value: user?.careerTrack || "Not specified" },
+  ];
+
   return (
     <div className="max-w-5xl mx-auto pb-12">
       <div className="flex items-start justify-between mb-2">
