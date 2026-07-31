@@ -60,7 +60,7 @@ export const getAdminCareers = asyncHandler(async (_req: Request, res: Response)
   
   // Cache for 10 minutes
   try {
-    await redisClient.set(cacheKey, JSON.stringify(careers), 600);
+    await redisClient.set(ADMIN_CAREERS_CACHE_KEY, JSON.stringify(careers), 600);
     console.log('[Cache] Admin careers list cached to Redis');
   } catch (cacheErr) {
     console.warn('[Cache] Failed to cache careers:', (cacheErr as Error).message);

@@ -311,7 +311,7 @@ export default function Settings() {
           )}
 
           {/* Generic save for notifications/appearance/privacy */}
-          {active !== "profile" && active !== "account" && active !== "security" && (
+          {active !== "account" && active !== "security" && (
             <div className="flex items-center justify-between mt-8 pt-6 border-t border-border">
               <p className={`text-sm font-medium transition-all ${saved ? "text-green-600 opacity-100" : "opacity-0"}`}>
                 <CheckCircle2 className="w-4 h-4 inline mr-1.5" /> Saved

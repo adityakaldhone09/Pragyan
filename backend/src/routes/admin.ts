@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authenticate } from '@/middleware/auth';
 // import { authorize } from '@/middleware/auth'; // Temporarily disabled
 import * as adminController from '@/controllers/admin';
+import * as auditLogController from '@/controllers/auditLog';
 import * as careerRoadmapController from '@/modules/career-roadmap/career-roadmap.controller';
 import { validate } from '@/middleware/validator';
 import {
@@ -79,5 +80,11 @@ router.put('/resource/:id', validate(updateResourceSchema), careerRoadmapControl
 router.delete('/resource/:id', careerRoadmapController.deleteResource);
 router.post('/resources/fix-titles', careerRoadmapController.fixResourceTitles);
 router.get('/security/metrics', adminController.getSecurityMetrics);
+
+// ── Audit Log routes ───────────────────────────────────────────────────────────
+router.get('/audit-logs',                              auditLogController.getAuditLogs);
+router.get('/audit-logs/stats',                        auditLogController.getAuditStats);
+router.get('/audit-logs/user/:userId',                 auditLogController.getUserActivity);
+router.get('/audit-logs/organization/:organizationId', auditLogController.getOrganizationLogs);
 
 export default router;

@@ -37,6 +37,7 @@ const InterestDiscovery = lazy(() => import("@/pages/interest-discovery"));
 const CapabilityDiscovery = lazy(() => import("@/pages/capability-discovery"));
 const AICounselor = lazy(() => import("@/pages/ai-counselor"));
 const AdminRoadmapManager = lazy(() => import("@/pages/admin-roadmap-builder-optimized"));
+const AdminFeedbackPage   = lazy(() => import("@/pages/admin-feedback"));
 const AdminDashboard = lazy(() => import("@/pages/admin-dashboard"));
 const AdminUsers = lazy(() => import("@/pages/admin-users"));
 const AdminOrganizations = lazy(() => import("@/pages/admin-organizations"));
