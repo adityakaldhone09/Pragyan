@@ -1,11 +1,11 @@
 import { useState, useEffect, lazy, Suspense } from "react";
-import { Link, useSearch } from "wouter";
+import { useSearch } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import {
   Bell, Lock, Palette, Shield,
   Eye, EyeOff, Moon, Sun, Smartphone,
   CheckCircle2, ChevronRight, LogOut, Trash2, Download,
-  MessageSquareDot,
+  MessageSquareDot, Mail, KeyRound, CalendarDays, Monitor,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -56,12 +56,23 @@ export default function Settings() {
   const { user, logout, reloadUser } = useAuth();
   const { toast } = useToast();
 
-  // Support deep-link: /settings?tab=feedback
+  // Support deep-link and in-app navigation: /settings?tab=feedback
+  // useSearch re-runs on every location change, so this effect keeps
+  // the active tab in sync whenever the URL query string changes.
   const search = useSearch();
   const tabParam = new URLSearchParams(search).get("tab") as Section | null;
   const [active, setActive] = useState<Section>(
     tabParam && sections.some((s) => s.id === tabParam) ? tabParam : "notifications"
   );
+
+  // Keep active tab in sync whenever the URL query string changes
+  // (e.g. AccountMenu navigates to /settings?tab=feedback while already on /settings)
+  useEffect(() => {
+    if (!tabParam) return;
+    if (sections.some((s) => s.id === tabParam)) {
+      setActive(tabParam);
+    }
+  }, [tabParam]);
 
   const [saved, setSaved] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -452,57 +463,122 @@ export default function Settings() {
           {active === "account" && (
             <div>
               <h2 className="text-lg font-bold text-foreground mb-1">Account</h2>
-              <p className="text-sm text-muted-foreground mb-6">Manage your account and integrations.</p>
-              <SH>Profile Summary</SH>
-              <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-xl mb-6">
-                <div className="w-14 h-14 rounded-full bg-primary flex items-center justify-center text-white text-xl font-bold flex-shrink-0">
-                  {user?.fullName?.split(" ").map((n: string) => n[0]).join("").toUpperCase() || "U"}
+              <p className="text-sm text-muted-foreground mb-6">Manage your account information, integrations, and session.</p>
+
+              {/* ── Account Information ── */}
+              <SH>Account Information</SH>
+              <div className="rounded-xl border border-border overflow-hidden mb-6">
+                {/* Primary Email */}
+                <div className="flex items-center gap-3 px-4 py-3.5 border-b border-border">
+                  <div className="w-8 h-8 rounded-lg bg-primary/8 flex items-center justify-center flex-shrink-0">
+                    <Mail className="w-4 h-4 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide leading-none mb-1">Primary Email</p>
+                    <p className="text-sm text-foreground font-medium truncate">{user?.email ?? "—"}</p>
+                  </div>
+                  {user?.emailVerified ? (
+                    <span className="flex items-center gap-1 text-[10px] font-semibold text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full flex-shrink-0">
+                      <CheckCircle2 className="w-3 h-3" /> Verified
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full flex-shrink-0">
+                      Unverified
+                    </span>
+                  )}
                 </div>
-                <div>
-                  <p className="font-bold text-foreground">{user?.fullName || "User"}</p>
-                  <p className="text-sm text-muted-foreground">{user?.email}</p>
-                  {user?.careerGoal && <p className="text-xs text-primary font-medium mt-0.5">Goal: {user.careerGoal}</p>}
+
+                {/* Authentication Provider */}
+                <div className="flex items-center gap-3 px-4 py-3.5 border-b border-border">
+                  <div className="w-8 h-8 rounded-lg bg-primary/8 flex items-center justify-center flex-shrink-0">
+                    <KeyRound className="w-4 h-4 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide leading-none mb-1">Authentication</p>
+                    <p className="text-sm text-foreground font-medium capitalize">
+                      {user?.provider === "google" ? "Google OAuth" : user?.provider === "github" ? "GitHub OAuth" : "Email & Password"}
+                    </p>
+                  </div>
+                  {user?.linkedAccounts && user.linkedAccounts.length > 1 && (
+                    <span className="text-[10px] font-medium text-muted-foreground bg-muted px-2.5 py-1 rounded-full flex-shrink-0">
+                      {user.linkedAccounts.length} connected
+                    </span>
+                  )}
                 </div>
-                <Link href="/profile" className="ml-auto">
-                  <Button variant="outline" size="sm" className="rounded-xl">View Profile</Button>
-                </Link>
+
+                {/* Member Since */}
+                <div className="flex items-center gap-3 px-4 py-3.5">
+                  <div className="w-8 h-8 rounded-lg bg-primary/8 flex items-center justify-center flex-shrink-0">
+                    <CalendarDays className="w-4 h-4 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide leading-none mb-1">Member Since</p>
+                    <p className="text-sm text-foreground font-medium">
+                      {user?.createdAt
+                        ? new Date(user.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })
+                        : "—"}
+                    </p>
+                  </div>
+                </div>
               </div>
+
+              {/* ── Active Sessions ── */}
+              <SH>Active Sessions</SH>
+              <div className="flex items-center gap-3 p-4 bg-card border border-border rounded-xl mb-6">
+                <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                  <Monitor className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground">Current session</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">This device · Active now</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-xl flex-shrink-0 text-amber-700 border-amber-300 hover:bg-amber-50 gap-1.5 font-semibold"
+                  onClick={() => logout()}
+                  data-testid="button-logout-all"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  Log out
+                </Button>
+              </div>
+
+              {/* ── Integrations ── */}
               <SH>Integrations</SH>
               {[
-                { label: "LinkedIn", desc: "Import your experience and certifications.", connected: false },
-                { label: "GitHub",   desc: "Showcase your repositories and coding activity.", connected: true  },
-                { label: "Google Calendar", desc: "Sync roadmap milestones and study schedule.", connected: false },
+                { label: "LinkedIn",       desc: "Import your experience and certifications.",          connected: false },
+                { label: "GitHub",         desc: "Showcase your repositories and coding activity.",     connected: true  },
+                { label: "Google Calendar",desc: "Sync roadmap milestones and study schedule.",         connected: false },
               ].map(({ label, desc, connected }) => (
                 <Row key={label} label={label} desc={desc}>
                   <Button variant={connected ? "outline" : "default"} size="sm" className="rounded-xl"
-                    data-testid={`button-${connected ? "disconnect" : "connect"}-${label.toLowerCase()}`}>
+                    data-testid={`button-${connected ? "disconnect" : "connect"}-${label.toLowerCase().replace(/\s+/g, "-")}`}>
                     {connected ? "Disconnect" : "Connect"}
                   </Button>
                 </Row>
               ))}
+
+              {/* ── Danger Zone ── */}
               <SH>Danger Zone</SH>
-              <div className="border border-destructive/30 rounded-xl p-5 space-y-4 bg-destructive/5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-foreground flex items-center gap-2"><LogOut className="w-4 h-4 text-destructive" /> Logout</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Sign out of this session and return to the login screen.</p>
+              <div className="border border-destructive/30 rounded-xl p-5 bg-destructive/5">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 w-8 h-8 rounded-lg bg-destructive/10 border border-destructive/20 flex items-center justify-center flex-shrink-0">
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-foreground">Delete Account</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Permanently removes your account and all associated data. This action cannot be undone.</p>
                   </div>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="rounded-xl border-destructive/40 text-destructive hover:bg-destructive/10"
-                    onClick={() => logout()}
-                    data-testid="button-logout"
+                    className="rounded-xl ml-4 flex-shrink-0 border-destructive/40 text-destructive hover:bg-destructive/10 font-semibold"
+                    data-testid="button-delete-account"
+                    onClick={() => setShowDeleteModal(true)}
                   >
-                    Logout
+                    Delete Account
                   </Button>
-                </div>
-                <div className="flex items-center justify-between pt-4 border-t border-destructive/20">
-                  <div>
-                    <p className="text-sm font-semibold text-foreground flex items-center gap-2"><Trash2 className="w-4 h-4 text-destructive" /> Delete Account</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Permanently delete account and all data. Cannot be undone.</p>
-                  </div>
-                  <Button variant="outline" size="sm" className="rounded-xl border-destructive/40 text-destructive hover:bg-destructive/10" data-testid="button-delete-account" onClick={() => setShowDeleteModal(true)}>Delete Account</Button>
                 </div>
               </div>
             </div>

@@ -28,6 +28,23 @@ const TYPE_ICONS: Record<string, string> = {
   DEFAULT: '🔔',
 };
 
+/** Resolve the navigation link for a notification.
+ *  Priority: explicit metadata.link → type-based fallback → nothing */
+function resolveNotifLink(item: AppNotification): string | undefined {
+  const explicit = (item.metadata as Record<string, unknown> | null)?.link as string | undefined;
+  if (explicit) return explicit;
+  // Type-based fallbacks so notifications always navigate somewhere meaningful
+  const TYPE_FALLBACK_LINKS: Record<string, string> = {
+    FEEDBACK_REPLY: '/settings?tab=feedback',
+    SYSTEM:         '/home',
+    ACHIEVEMENT:    '/dashboard',
+    ROADMAP:        '/roadmap',
+    JOB:            '/jobs',
+    ASSESSMENT:     '/assessments',
+  };
+  return TYPE_FALLBACK_LINKS[item.type] ?? undefined;
+}
+
 function NotifItem({
   item,
   onRead,
@@ -38,7 +55,7 @@ function NotifItem({
   onDelete: (id: string) => void;
 }) {
   const [, navigate] = useLocation();
-  const link = (item.metadata as any)?.link as string | undefined;
+  const link = resolveNotifLink(item);
   const icon = TYPE_ICONS[item.type] ?? TYPE_ICONS.DEFAULT;
 
   const handleClick = () => {

@@ -97,11 +97,32 @@ function Router() {
                 <Route path="/home" component={Home} />
                 <Route path="/profile" component={Profile} />
                 <Route path="/profile/skills" component={Skills} />
-                {/* /feedback is now inside Settings → redirect any stale links */}
+                {/* ── Settings deep-link redirects ─────────────────────────────────
+                 *  These catch both manual URL entry and old bookmarks.
+                 *  /settings/:tab  →  /settings?tab=:tab
+                 *  /feedback       →  /settings?tab=feedback  (legacy stale link)
+                 * ─────────────────────────────────────────────────────────────── */}
                 <Route path="/feedback">
                   {() => { window.location.replace("/settings?tab=feedback"); return null; }}
                 </Route>
-                {/* Information section removed */}
+                <Route path="/settings/feedback">
+                  {() => { window.location.replace("/settings?tab=feedback"); return null; }}
+                </Route>
+                <Route path="/settings/notifications">
+                  {() => { window.location.replace("/settings?tab=notifications"); return null; }}
+                </Route>
+                <Route path="/settings/security">
+                  {() => { window.location.replace("/settings?tab=security"); return null; }}
+                </Route>
+                <Route path="/settings/privacy">
+                  {() => { window.location.replace("/settings?tab=privacy"); return null; }}
+                </Route>
+                <Route path="/settings/appearance">
+                  {() => { window.location.replace("/settings?tab=appearance"); return null; }}
+                </Route>
+                <Route path="/settings/account">
+                  {() => { window.location.replace("/settings?tab=account"); return null; }}
+                </Route>
                 <Route path="/settings" component={SettingsPage} />
 
                 {/* Student Routes */}
