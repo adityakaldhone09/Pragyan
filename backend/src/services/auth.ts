@@ -55,6 +55,12 @@ const userProfileSelect = {
   country: true,
   state: true,
   city: true,
+  username: true,
+  bio: true,
+  githubUrl: true,
+  portfolioWebsite: true,
+  dateOfBirth: true,
+  preferredCareerDomain: true,
   firstName: true,
   lastName: true,
   currentStatus: true,
@@ -157,6 +163,12 @@ function buildUserSession(user: {
   currentCompany?: string | null;
   currentRole?: string | null;
   careerGoal?: string | null;
+  username?: string | null;
+  bio?: string | null;
+  githubUrl?: string | null;
+  portfolioWebsite?: string | null;
+  dateOfBirth?: Date | string | null;
+  preferredCareerDomain?: string | null;
   createdAt?: Date;
   updatedAt?: Date;
 }) {
@@ -208,6 +220,12 @@ function buildUserSession(user: {
     currentCompany: user.currentCompany,
     currentRole: user.currentRole,
     careerGoal: user.careerGoal,
+    username: user.username,
+    bio: user.bio,
+    githubUrl: user.githubUrl,
+    portfolioWebsite: user.portfolioWebsite,
+    dateOfBirth: user.dateOfBirth,
+    preferredCareerDomain: user.preferredCareerDomain,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };
@@ -1006,12 +1024,18 @@ export class AuthService {
       'currentStatus', 'collegeName', 'university', 'degree', 'branch',
       'currentYear', 'expectedGraduationYear', 'programmingExperience',
       'previouslyWorked', 'yearsOfExperience', 'currentCompany', 'currentRole',
-      'careerGoal',
+      'careerGoal', 'username', 'bio', 'githubUrl', 'portfolioWebsite',
+      'preferredCareerDomain', 'dateOfBirth',
     ];
 
     for (const key of scalar) {
       if ((input as any)[key] !== undefined) {
-        data[key] = (input as any)[key];
+        const value = (input as any)[key];
+        if (key === 'dateOfBirth' && value) {
+          data[key] = value instanceof Date ? value : new Date(value);
+        } else {
+          data[key] = value;
+        }
       }
     }
 
@@ -1055,6 +1079,12 @@ export class AuthService {
           programmingExperience: true, previouslyWorked: true,
           yearsOfExperience: true, currentCompany: true, currentRole: true,
           careerGoal: true,
+          username: true,
+          bio: true,
+          githubUrl: true,
+          portfolioWebsite: true,
+          dateOfBirth: true,
+          preferredCareerDomain: true,
           createdAt: true, updatedAt: true,
         },
       });
