@@ -1,11 +1,9 @@
 /**
  * Account Activation Service
- * Handles role-based account activation logic (Unit 4)
+ * Handles account activation after email verification (Unit 4)
  * 
  * Activation Rules:
- * - STUDENT → ACTIVE (immediate activation)
- * - RECRUITER → PENDING (requires admin approval)
- * - PLACEMENT_OFFICER → PENDING (requires admin approval)
+ * - Any public signup role → ACTIVE after email verification
  */
 
 import { UserRole, AccountStatus } from "@prisma/client";
@@ -17,7 +15,7 @@ export class AccountActivationService {
    * Activate account after email verification
    * 
    * Flow:
-   * 1. Determine new status based on role
+   * 1. Mark the account as active after email ownership is verified
    * 2. Update user account status
    * 3. Publish EmailVerified event
    * 
@@ -31,33 +29,11 @@ export class AccountActivationService {
       throw new Error("User not found");
     }
 
-    // Determine new status based on role
-    let newStatus: AccountStatus;
-
-    switch (user.userRole) {
-      case "STUDENT":
-        // Students are auto-approved after email verification
-        newStatus = "ACTIVE";
-        break;
-
-      case "RECRUITER":
-      case "PLACEMENT_OFFICER":
-        // Recruiters and placement officers require admin approval
-        newStatus = "PENDING";
-        break;
-
-      case "ADMIN":
-        // Admins are auto-approved (no email verification needed)
-        newStatus = "ACTIVE";
-        break;
-
-      default:
-        throw new Error("Invalid role for registration");
-    }
-
-    // Update user status
+    // Email verification is the only activation gate for local signups.
     const updatedUser = await userRepository.update(userId, {
-      accountStatus: newStatus,
+      accountStatus: "ACTIVE",
+      status: "ACTIVE",
+      emailVerified: true,
       emailVerifiedAt: new Date(),
     });
 

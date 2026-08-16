@@ -3,10 +3,10 @@
  * Handles user registration flow (Unit 3)
  * 
  * Registration Flow:
- * 1. Validate input (Zod schema)
+ * 1. Validate input (Zod schema with zxcvbn strength check)
  * 2. Check if email exists
- * 3. Validate password policy
- * 4. Hash password
+ * 3. Check if password is in known breaches (HIBP)
+ * 4. Hash password with Argon2id
  * 5. Determine initial account status
  * 6. [TRANSACTION START]
  *    - Create User
@@ -19,13 +19,14 @@
  * Note: No JWT returned. User must verify email and login separately.
  */
 
-import bcrypt from "bcryptjs";
+import { PasswordUtil } from "@/utils/password";
+import { HIBPService } from "@/services/hibp.service";
 import { TokenPurpose, PrismaClient } from "@prisma/client";
 import type { RegisterInput } from "@/shared/auth";
 import { userRepository } from "../repository";
-import { PasswordPolicy } from "../policies/password.policy";
 import { publishUserRegistered, publishEmailVerificationRequested } from "../events";
 import { AUTH_CONSTANTS } from "../constants";
+import { config } from "@/config/env";
 
 const prisma = new PrismaClient();
 
@@ -38,7 +39,8 @@ export class RegisterService {
    * 
    * Throws:
    * - "Email already registered" (409)
-   * - "Password policy violation" (422)
+   * - "This password has appeared in known data breaches" (422)
+   * - "Password is too weak" (422)
    * - "Validation error" (400)
    */
   async register(input: RegisterInput) {
@@ -50,16 +52,29 @@ export class RegisterService {
       throw new Error("Email already registered");
     }
 
-    // Step 3: Validate password policy
-    PasswordPolicy.validate(input.password);
+    // Step 3: Check if password is in known breaches (HIBP)
+    // This is a secondary check; Zod validators already check strength
+    const breachCheck = await HIBPService.checkPassword(input.password);
+    if (breachCheck.breached) {
+      throw new Error(
+        "This password has appeared in known data breaches. Please choose a different password."
+      );
+    }
 
-    // Step 4: Hash password
-    const passwordHash = await bcrypt.hash(input.password, 12);
+    // Step 4: Hash password using Argon2id
+    // No need to hash manually - the new PasswordUtil handles it
+    let passwordHash: string;
+    try {
+      passwordHash = await PasswordUtil.hash(input.password);
+    } catch (error) {
+      throw new Error(
+        `Password hashing failed: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
+    }
 
-    // Step 5: Determine initial account status
-    // ADMIN, RECRUITER, PLACEMENT_OFFICER: ACTIVE (no email verification needed)
-    // STUDENT: EMAIL_PENDING (requires email verification)
-    const accountStatus = input.role === "STUDENT" ? "EMAIL_PENDING" : "ACTIVE";
+    // Step 5: Every local signup starts pending email verification.
+    // Email ownership, not admin approval, is the activation gate.
+    const accountStatus = "EMAIL_PENDING";
 
     // Step 6-7: TRANSACTION - Atomic user + token creation
     const tokenExpiresAt = new Date(
@@ -76,28 +91,26 @@ export class RegisterService {
           data: {
             email: input.email,
             fullName: input.fullName,
-            password: passwordHash,
+            password: passwordHash, // Store Argon2id hash
             userRole: input.role as "STUDENT" | "RECRUITER" | "PLACEMENT_OFFICER",
             role: this.mapUserRoleToLegacy(input.role as "STUDENT" | "RECRUITER" | "PLACEMENT_OFFICER"),
             accountStatus,
+            status: accountStatus,
+            emailVerified: false,
           },
         });
 
-        // Create verification token only for non-ADMIN users
-        let rawToken: string | undefined;
-        if (accountStatus !== "ACTIVE") {
-          rawToken = this.generateVerificationToken();
-          const tokenHash = this.hashToken(rawToken);
+        const rawToken = this.generateVerificationToken();
+        const tokenHash = this.hashToken(rawToken);
 
-          await tx.verificationToken.create({
-            data: {
-              userId: newUser.id,
-              tokenHash,
-              purpose: TokenPurpose.EMAIL_VERIFY,
-              expiresAt: tokenExpiresAt,
-            },
-          });
-        }
+        await tx.verificationToken.create({
+          data: {
+            userId: newUser.id,
+            tokenHash,
+            purpose: TokenPurpose.EMAIL_VERIFY,
+            expiresAt: tokenExpiresAt,
+          },
+        });
 
         return { newUser, rawToken };
       });
@@ -109,7 +122,7 @@ export class RegisterService {
     }
 
     // Step 8: Publish events (after transaction commits)
-    publishUserRegistered({
+    await publishUserRegistered({
       userId: user.id,
       email: user.email,
       fullName: user.fullName,
@@ -118,26 +131,17 @@ export class RegisterService {
       timestamp: new Date(),
     });
 
-    // Only publish email verification event for non-ADMIN users
-    if (accountStatus !== "ACTIVE") {
-      publishEmailVerificationRequested({
-        userId: user.id,
-        email: user.email,
-        fullName: user.fullName,
-        verificationToken: verificationToken!,
-        verificationLink: `${process.env.FRONTEND_URL || "http://localhost:3000"}/auth/verify?token=${verificationToken}`,
-        expiresAt: tokenExpiresAt,
-        timestamp: new Date(),
-      });
-    }
+    await publishEmailVerificationRequested({
+      userId: user.id,
+      email: user.email,
+      fullName: user.fullName,
+      verificationToken: verificationToken!,
+      verificationLink: `${config.frontendUrl}/auth/verify?token=${verificationToken}`,
+      expiresAt: tokenExpiresAt,
+      timestamp: new Date(),
+    });
 
     // Step 9: Return response (no JWT)
-    if (accountStatus === "ACTIVE") {
-      return {
-        message: "Registration successful. Your account is active.",
-        email: user.email,
-      };
-    }
     return {
       message: "Registration successful. Please verify your email.",
       email: user.email,

@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { NotFoundError } from '@/utils/errors';
-import { xpService } from '@/services/xp';
+import { xpService } from '@/services/xpService';
 import { contextAggregator } from '@/services/contextAggregator';
 
 interface UpsertRoadmapProgressInput {
@@ -114,7 +114,7 @@ export class ProgressService {
     });
 
     // Update user XP
-    await xpService.awardXp(userId, xpReward, 'task-complete', { taskId, roadmapId });
+    await xpService.awardXp({ userId, eventType: 'DAY' as any });
 
     // Invalidate aggregated context so AI shows updated progress immediately
     void contextAggregator.invalidate(userId).catch(() => undefined);
@@ -291,7 +291,7 @@ export class ProgressService {
       const previousStreak = user?.streak ?? 0;
       const nextStreak = xpDelta > 0 ? await this.calculateNextStreak(userId, today) : previousStreak;
 
-      await xpService.awardXp(userId, xpDelta, 'task-complete', { taskId, roadmapId: input.roadmapId });
+      await xpService.awardXp({ userId, eventType: 'DAY' as any });
 
       if (xpDelta > 0) {
         await Promise.all([

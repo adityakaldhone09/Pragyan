@@ -96,6 +96,8 @@ export class UserRepository {
       where: { id },
       data: {
         accountStatus: "ACTIVE",
+        status: "ACTIVE",
+        emailVerified: true,
         emailVerifiedAt: new Date(),
       },
       include: {

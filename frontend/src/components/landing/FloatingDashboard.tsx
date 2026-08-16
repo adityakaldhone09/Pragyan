@@ -34,8 +34,11 @@ export default function FloatingDashboard() {
   const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
+    // Only attach listener when actually hovering
+    if (!isHovered) return;
+
     const handleMouseMove = (e: MouseEvent) => {
-      if (!containerRef.current || !isHovered) return;
+      if (!containerRef.current) return;
 
       const rect = containerRef.current.getBoundingClientRect();
       const x = e.clientX - rect.left;

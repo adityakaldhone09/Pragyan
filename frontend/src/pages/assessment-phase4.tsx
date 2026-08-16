@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { saveLastAccessedPhase } from "@/utils/assessmentProgress";
+import { PHASE4_RESULT_STORAGE_KEY, saveLastAccessedPhase } from "@/utils/assessmentProgress";
+import { ApiError } from "@/services/apiClient";
 import {
   assessmentService,
   type Phase4Question,
@@ -21,6 +22,21 @@ type Phase = "loading" | "quiz" | "submitting" | "results";
 
 const TOTAL_PHASES = 7;
 const MIN_QUESTIONS = 6;
+
+const QUESTION_TYPE_COLORS: Record<Phase4Question["questionType"], string> = {
+  MCQ: "bg-blue-100 text-blue-700",
+  Scenario: "bg-purple-100 text-purple-700",
+  Conceptual: "bg-green-100 text-green-700",
+  Practical: "bg-amber-100 text-amber-700",
+  Experience: "bg-pink-100 text-pink-700",
+};
+
+const DIFFICULTY_COLORS: Record<Phase4Question["difficulty"], string> = {
+  Foundation: "bg-green-100 text-green-700 border-green-200",
+  Intermediate: "bg-blue-100 text-blue-700 border-blue-200",
+  Advanced: "bg-orange-100 text-orange-700 border-orange-200",
+  Expert: "bg-red-100 text-red-700 border-red-200",
+};
 
 interface ResultsSummary {
   resultId: string;
@@ -48,29 +64,16 @@ function CodeBlock({ code }: { code: string }) {
 }
 
 function QuestionTypeBadge({ type }: { type: Phase4Question["questionType"] }) {
-  const colors: Record<Phase4Question["questionType"], string> = {
-    MCQ: "bg-blue-100 text-blue-700",
-    Scenario: "bg-purple-100 text-purple-700",
-    Conceptual: "bg-green-100 text-green-700",
-    Practical: "bg-amber-100 text-amber-700",
-    Experience: "bg-pink-100 text-pink-700",
-  };
   return (
-    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${colors[type]}`}>
+    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${QUESTION_TYPE_COLORS[type]}`}>
       {type}
     </span>
   );
 }
 
 function DifficultyBadge({ difficulty }: { difficulty: Phase4Question["difficulty"] }) {
-  const colors: Record<Phase4Question["difficulty"], string> = {
-    Foundation: "bg-green-100 text-green-700 border-green-200",
-    Intermediate: "bg-blue-100 text-blue-700 border-blue-200",
-    Advanced: "bg-orange-100 text-orange-700 border-orange-200",
-    Expert: "bg-red-100 text-red-700 border-red-200",
-  };
   return (
-    <span className={`px-2 py-0.5 rounded border text-xs font-semibold ${colors[difficulty]}`}>
+    <span className={`px-2 py-0.5 rounded border text-xs font-semibold ${DIFFICULTY_COLORS[difficulty]}`}>
       {difficulty}
     </span>
   );
@@ -107,16 +110,19 @@ export default function AssessmentPhase4() {
         setPhase("quiz");
         setError(null);
       })
-      .catch((err: Error) => {
-        if (err.message?.includes("Phase 2") || err.message?.includes("domains")) {
+      .catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : "Failed to start technical assessment";
+        const status = err instanceof ApiError ? err.status : undefined;
+
+        if (status === 400 || message.includes("Phase 2") || message.includes("domains")) {
           toast({ 
             title: "Complete Phase 2 first", 
-            description: "Please finish Phase 2 to select domains.", 
+            description: "Please finish the earlier assessment phases before starting the technical assessment.", 
             variant: "destructive" 
           });
           navigate("/assessment/phase-2");
         } else {
-          setError(err.message || "Failed to start technical assessment");
+          setError(message);
           setPhase("quiz");
         }
       });
@@ -128,7 +134,7 @@ export default function AssessmentPhase4() {
     onSuccess: async (data) => {
       setError(null);
       try {
-        localStorage.setItem("pragyan_phase4_result", JSON.stringify(data));
+        localStorage.setItem(PHASE4_RESULT_STORAGE_KEY, JSON.stringify(data));
         localStorage.setItem("pragyan_assessment_phase", "4");
       } catch { /* ignore */ }
       await reloadUser();
@@ -245,10 +251,10 @@ export default function AssessmentPhase4() {
           </div>
           <Progress value={progressPct} className="h-2 mb-1" />
           <div className="h-1 bg-muted rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-gradient-to-r from-primary/40 to-primary transition-all duration-500"
-              style={{ width: `${confidencePct}%` }}
-            />
+              <div 
+                className="h-full bg-gradient-to-r from-primary/40 to-primary transition-[width] duration-500"
+                style={{ width: `${confidencePct}%` }}
+              />
           </div>
         </div>
 
@@ -330,11 +336,11 @@ export default function AssessmentPhase4() {
 
               {/* Options */}
               <div className="space-y-3 mt-6">
-                {currentQuestion.options.map((opt, idx) => {
+                {currentQuestion.options.map((opt) => {
                   const active = selectedAnswer === opt;
                   return (
                     <button
-                      key={idx}
+                      key={opt}
                       type="button"
                       onClick={() => !isBusy && setSelectedAnswer(opt)}
                       disabled={isBusy}
@@ -462,8 +468,8 @@ export default function AssessmentPhase4() {
                 Technical Strengths
               </h3>
               <ul className="space-y-2">
-                {result.summary.technicalStrengths.map((s, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-foreground">
+                {result.summary.technicalStrengths.map((s) => (
+                  <li key={s} className="flex items-start gap-2 text-sm text-foreground">
                     <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
                     {s}
                   </li>
@@ -479,8 +485,8 @@ export default function AssessmentPhase4() {
                 Growth Areas
               </h3>
               <ul className="space-y-2">
-                {result.summary.technicalWeaknesses.map((w, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                {result.summary.technicalWeaknesses.map((w) => (
+                  <li key={w} className="flex items-start gap-2 text-sm text-muted-foreground">
                     <BookOpen className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
                     {w}
                   </li>
@@ -501,8 +507,8 @@ export default function AssessmentPhase4() {
               These concepts will be covered in specialized training:
             </p>
             <div className="flex flex-wrap gap-2">
-              {result.summary.knowledgeGaps.map((gap, i) => (
-                <span key={i} className="px-3 py-1.5 bg-white border border-amber-300 text-amber-800 text-xs font-medium rounded-lg">
+              {result.summary.knowledgeGaps.map((gap) => (
+                <span key={gap} className="px-3 py-1.5 bg-white border border-amber-300 text-amber-800 text-xs font-medium rounded-lg">
                   {gap}
                 </span>
               ))}

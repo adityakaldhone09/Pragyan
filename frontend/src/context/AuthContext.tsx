@@ -33,7 +33,7 @@ function readStoredSession(): AuthSession | null {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSessionState] = useState<AuthSession | null>(() => readStoredSession());
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!session); // ✅ Only show loading if no stored session
 
   const persistSession = useCallback((nextSession: AuthSession | null) => {
     setSessionState(nextSession);
@@ -45,14 +45,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     async function restore() {
       try {
-        const user = await authService.me();
-        if (!active) return;
+        // ✅ Only call /me if we have tokens to validate
         const stored = readStoredSession();
-        persistSession({
-          user,
-          accessToken: stored?.accessToken || "",
-          refreshToken: stored?.refreshToken || "",
-        });
+        if (stored?.accessToken) {
+          const user = await authService.me();
+          if (!active) return;
+          persistSession({
+            user,
+            accessToken: stored.accessToken,
+            refreshToken: stored.refreshToken || "",
+          });
+        }
       } catch {
         if (active) {
           clearStoredAuthSession();
@@ -67,7 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       active = false;
     };
-  }, [persistSession]);
+  }, []); // ✅ Empty dependency - run only on mount
 
   const value = useMemo<AuthContextValue>(() => {
     const userRole = (session?.user?.role as UserRole) || null;
@@ -97,9 +100,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return next;
       },
       async register(input) {
-        const next = await authService.register(input);
-        persistSession(next);
-        return next;
+        // Registration returns { message, email } — NOT auth tokens
+        // User must verify email and login separately
+        const response = await authService.register(input);
+        // Don't persist session or redirect — show verification message
+        return {
+          user: null,
+          accessToken: "",
+          refreshToken: "",
+        } as AuthSession;
       },
       async logout() {
         const refreshToken = session?.refreshToken;

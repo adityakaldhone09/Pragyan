@@ -39,7 +39,14 @@ export default function AuthCallback() {
         }
 
         // Fetch user profile
-        const response = await fetch("http://localhost:3000/api/auth/me", {
+        // Development: uses relative /api (proxied by Vite)
+        // Production: direct to Render backend
+        const apiUrl =
+          import.meta.env.DEV
+            ? "/api/auth/me"
+            : "https://pragyan-ai-nmeu.onrender.com/api/auth/me";
+        
+        const response = await fetch(apiUrl, {
           headers: {
             Authorization: `Bearer ${token}`,
           },

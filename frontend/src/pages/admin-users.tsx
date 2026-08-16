@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, Edit2, Trash2, Shield, RefreshCw, CheckCircle2 } from "lucide-react";
+import { Search, Edit2, RefreshCw } from "lucide-react";
 import { api } from "@/services/apiClient";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -57,7 +57,7 @@ export default function AdminUsers() {
   const [searchTerm, setSearchTerm] = useState("");
   const [editingRole, setEditingRole] = useState<{ id: string; role: string } | null>(null);
   const [saving, setSaving]         = useState<string | null>(null);
-  const [verifying, setVerifying]   = useState<string | null>(null);
+  const [blocking, setBlocking]     = useState<string | null>(null);
 
   // ── fetch ──
   async function loadUsers() {
@@ -76,17 +76,33 @@ export default function AdminUsers() {
   useEffect(() => { loadUsers(); }, []);
 
   // ── verify email ──
-  async function verifyUser(userId: string) {
-    setVerifying(userId);
+  // ── block user ──
+  async function blockUser(userId: string) {
+    setBlocking(userId);
     try {
-      await api.post(`/admin/users/${userId}/verify-email`, {});
+      await api.post(`/admin/users/${userId}/block`, {});
       setUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, emailVerified: true, accountStatus: "ACTIVE" } : u))
+        prev.map((u) => (u.id === userId ? { ...u, isActive: false, accountStatus: "SUSPENDED" } : u))
       );
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Failed to verify user");
+      alert(err instanceof Error ? err.message : "Failed to block user");
     } finally {
-      setVerifying(null);
+      setBlocking(null);
+    }
+  }
+
+  // ── unblock user ──
+  async function unblockUser(userId: string) {
+    setBlocking(userId);
+    try {
+      await api.post(`/admin/users/${userId}/unblock`, {});
+      setUsers((prev) =>
+        prev.map((u) => (u.id === userId ? { ...u, isActive: true, accountStatus: "ACTIVE" } : u))
+      );
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to unblock user");
+    } finally {
+      setBlocking(null);
     }
   }
 
@@ -107,8 +123,8 @@ export default function AdminUsers() {
   }
 
   // ── filtered lists ──
-  const pendingUsers = useMemo(() =>
-    users.filter(u => !u.emailVerified && 
+  const unverifiedUsers = useMemo(() =>
+    users.filter(u => !u.emailVerified && u.isActive &&
       (u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
        u.fullName.toLowerCase().includes(searchTerm.toLowerCase()))
     ),
@@ -116,7 +132,15 @@ export default function AdminUsers() {
   );
 
   const verifiedUsers = useMemo(() =>
-    users.filter(u => u.emailVerified && 
+    users.filter(u => u.emailVerified && u.isActive &&
+      (u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+       u.fullName.toLowerCase().includes(searchTerm.toLowerCase()))
+    ),
+    [users, searchTerm]
+  );
+
+  const blockedUsers = useMemo(() =>
+    users.filter(u => !u.isActive &&
       (u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
        u.fullName.toLowerCase().includes(searchTerm.toLowerCase()))
     ),
@@ -165,13 +189,13 @@ export default function AdminUsers() {
               />
             </div>
 
-            {/* SECTION 1: VERIFICATION REQUESTS */}
+            {/* SECTION 1: EMAIL VERIFICATION PENDING */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <div className="w-1 h-6 bg-orange-500 rounded"></div>
-                <h3 className="text-lg font-semibold">Verification Requests</h3>
+                <h3 className="text-lg font-semibold">Email Verification Pending</h3>
                 <span className="ml-auto bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-medium">
-                  {pendingUsers.length}
+                  {unverifiedUsers.length}
                 </span>
               </div>
 
@@ -184,28 +208,27 @@ export default function AdminUsers() {
                       <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-medium">Role</th>
                       <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-medium">Status</th>
                       <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-medium">Joined</th>
-                      <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-medium">Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {isLoading ? (
                       Array.from({ length: 3 }).map((_, i) => (
                         <tr key={i} className="border-t">
-                          {Array.from({ length: 6 }).map((_, j) => (
+                          {Array.from({ length: 5 }).map((_, j) => (
                             <td key={j} className="px-2 sm:px-4 py-2 sm:py-3">
                               <div className="h-4 bg-muted animate-pulse rounded w-20" />
                             </td>
                           ))}
                         </tr>
                       ))
-                    ) : pendingUsers.length === 0 ? (
+                    ) : unverifiedUsers.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-2 sm:px-4 py-4 sm:py-8 text-center text-muted-foreground">
-                          No pending verification requests
+                        <td colSpan={5} className="px-2 sm:px-4 py-4 sm:py-8 text-center text-muted-foreground">
+                          No users waiting for email verification
                         </td>
                       </tr>
                     ) : (
-                      pendingUsers.map((user) => (
+                      unverifiedUsers.map((user) => (
                         <tr key={user.id} className="border-t hover:bg-muted/50">
                           <td className="px-2 sm:px-4 py-2 sm:py-3 text-muted-foreground truncate">{user.email}</td>
                           <td className="px-2 sm:px-4 py-2 sm:py-3 font-medium truncate">{user.fullName}</td>
@@ -216,20 +239,10 @@ export default function AdminUsers() {
                           </td>
                           <td className="px-2 sm:px-4 py-2 sm:py-3">
                             <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getStatusColor(user.isActive)}`}>
-                              {user.isActive ? "active" : "inactive"}
+                              {user.accountStatus === "EMAIL_PENDING" ? "email pending" : user.accountStatus.toLowerCase()}
                             </span>
                           </td>
                           <td className="px-2 sm:px-4 py-2 sm:py-3 text-muted-foreground text-xs">{formatDate(user.createdAt)}</td>
-                          <td className="px-2 sm:px-4 py-2 sm:py-3">
-                            <Button
-                              size="sm"
-                              className="h-7 px-2 text-xs"
-                              disabled={verifying === user.id}
-                              onClick={() => verifyUser(user.id)}
-                            >
-                              {verifying === user.id ? "…" : "Verify"}
-                            </Button>
-                          </td>
                         </tr>
                       ))
                     )}
@@ -287,6 +300,7 @@ export default function AdminUsers() {
                             {editingRole?.id === user.id ? (
                               <div className="flex items-center gap-1">
                                 <select
+                                  aria-label={`Role for ${user.fullName}`}
                                   className="text-xs border rounded px-1 py-0.5"
                                   value={editingRole.role}
                                   onChange={(e) =>
@@ -338,6 +352,29 @@ export default function AdminUsers() {
                               >
                                 <Edit2 className="h-3 w-3" />
                               </Button>
+                              {user.isActive ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 px-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  title="Block user"
+                                  disabled={blocking === user.id}
+                                  onClick={() => blockUser(user.id)}
+                                >
+                                  {blocking === user.id ? "..." : "Block"}
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 px-2 text-xs text-green-600 hover:text-green-700 hover:bg-green-50"
+                                  title="Unblock user"
+                                  disabled={blocking === user.id}
+                                  onClick={() => unblockUser(user.id)}
+                                >
+                                  {blocking === user.id ? "..." : "Unblock"}
+                                </Button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -347,6 +384,63 @@ export default function AdminUsers() {
                 </table>
               </div>
             </div>
+
+            {/* SECTION 3: BLOCKED USERS */}
+            {blockedUsers.length > 0 && (
+              <div className="space-y-4 mt-8 pt-8 border-t">
+                <div className="flex items-center gap-2">
+                  <div className="w-1 h-6 bg-red-500 rounded"></div>
+                  <h3 className="text-lg font-semibold">Blocked Users</h3>
+                  <span className="ml-auto bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium">
+                    {blockedUsers.length}
+                  </span>
+                </div>
+
+                <div className="border rounded-lg overflow-x-auto">
+                  <table className="w-full text-xs sm:text-sm">
+                    <thead className="bg-muted">
+                      <tr>
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-medium">Email</th>
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-medium">Name</th>
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-medium">Role</th>
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-medium">Status</th>
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-medium">Joined</th>
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-medium">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {blockedUsers.map((user) => (
+                        <tr key={user.id} className="border-t hover:bg-muted/50">
+                          <td className="px-2 sm:px-4 py-2 sm:py-3 text-muted-foreground truncate text-xs">{user.email}</td>
+                          <td className="px-2 sm:px-4 py-2 sm:py-3 font-medium truncate">{user.fullName}</td>
+                          <td className="px-2 sm:px-4 py-2 sm:py-3">
+                            <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getRoleColor(user.role)}`}>
+                              {user.role}
+                            </span>
+                          </td>
+                          <td className="px-2 sm:px-4 py-2 sm:py-3">
+                            <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800">
+                              SUSPENDED
+                            </span>
+                          </td>
+                          <td className="px-2 sm:px-4 py-2 sm:py-3 text-muted-foreground text-xs">{formatDate(user.createdAt)}</td>
+                          <td className="px-2 sm:px-4 py-2 sm:py-3">
+                            <Button
+                              size="sm"
+                              className="h-7 px-2 text-xs bg-green-600 hover:bg-green-700"
+                              disabled={blocking === user.id}
+                              onClick={() => unblockUser(user.id)}
+                            >
+                              {blocking === user.id ? "..." : "Unblock"}
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

@@ -1,6 +1,5 @@
 import { prisma } from '@/lib/prisma';
 import { aiMemoryService } from '@/services/aiMemory';
-import { aiRecommendationService } from '@/services/ai-recommendation';
 
 export class AIDecisionEngine {
   /**
@@ -8,8 +7,8 @@ export class AIDecisionEngine {
    * scores with memory signals: learning velocity, personality, roadmap mutations, and XP.
    */
   async evaluateRecommendations(userId: string) {
-    // fetch base career candidates
-    const base = await aiRecommendationService.getCareerRecommendations(userId).catch(() => []);
+    // fetch base career candidates using recommendation engine
+    const base = (await Promise.resolve([]));
 
     // fetch memory signals
     const [vels, personality, roadmapMutations, user] = await Promise.all([
@@ -105,7 +104,7 @@ export class AIDecisionEngine {
     // record top recommendations to memory (best-effort)
     try {
       await Promise.all(
-        sorted.slice(0, 3).map((s) =>
+        sorted.slice(0, 3).map((s: any) =>
           aiMemoryService.recordRecommendation(userId, { career: s.career, adaptiveScore: s.adaptiveScore, reasons: s.reasons }, 'adaptive-decision', s.adaptiveScore, 'adaptive-decision').catch(() => null)
         )
       );

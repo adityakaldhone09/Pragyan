@@ -3,6 +3,8 @@
  * It falls back gracefully when no external AI provider is configured.
  */
 
+import { callLLM as callProviderLLM } from '@/services/hybridAssessment/llmClient';
+
 export interface LLMCallParams {
   systemPrompt: string;
   userPrompt: string;
@@ -10,7 +12,14 @@ export interface LLMCallParams {
 }
 
 export async function callLLM(params: LLMCallParams): Promise<string> {
-  console.info('[assessment/llmClient] Calling LLM with mocked fallback');
+  try {
+    return await callProviderLLM(params);
+  } catch (error) {
+    console.warn(
+      '[assessment/llmClient] Provider LLM failed; using mocked fallback:',
+      error instanceof Error ? error.message : String(error)
+    );
+  }
 
   const prompt = `${params.systemPrompt}\n\n${params.userPrompt}`.toLowerCase();
 

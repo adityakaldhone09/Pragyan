@@ -12,7 +12,7 @@ export function NoCareerSelected() {
       <p className="text-slate-600 text-center max-w-md mb-6">
         Take your assessment to unlock your personalized learning journey.
       </p>
-      <Link href="/assessment">
+      <Link href="/assessments">
         <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-6">
           Start Assessment
         </Button>

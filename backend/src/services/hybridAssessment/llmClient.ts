@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const provider = (process.env.LLM_PROVIDER || 'groq').toLowerCase();
+type LLMProvider = 'gemini' | 'groq';
+
+const provider = normalizeProvider(process.env.LLM_PROVIDER);
 
 const groqApiKey = process.env.GROQ_API_KEY || '';
 const groqModel = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
@@ -17,24 +19,44 @@ export interface LLMCallOptions {
 }
 
 export async function callLLM(options: LLMCallOptions): Promise<string> {
-  const { systemPrompt, userPrompt, temperature = 0.4 } = options;
+  const providers = getProviderOrder(provider);
+  const errors: string[] = [];
 
-  if (provider === 'gemini') {
-    if (!geminiApiKey) throw new Error('GEMINI_API_KEY is not configured');
-
-    const response = await axios.post(
-      `${geminiUrl}?key=${geminiApiKey}`,
-      {
-        contents: [{ role: 'user', parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
-        generationConfig: { temperature, responseMimeType: 'application/json' },
-      },
-      { headers: { 'Content-Type': 'application/json' } }
-    );
-
-    return response.data.candidates[0].content.parts[0].text as string;
+  for (const currentProvider of providers) {
+    try {
+      if (currentProvider === 'gemini') return await callGemini(options);
+      return await callGroq(options);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      errors.push(`${currentProvider}: ${message}`);
+      console.warn(`[LLM] ${currentProvider} failed; trying next provider if available:`, message);
+    }
   }
 
-  if (!groqApiKey) throw new Error('GROQ_API_KEY is not configured');
+  throw new Error(`All configured LLM providers failed (${errors.join('; ')})`);
+}
+
+async function callGemini(options: LLMCallOptions): Promise<string> {
+  const { systemPrompt, userPrompt, temperature = 0.4 } = options;
+
+  if (!isUsableKey(geminiApiKey)) throw new Error('GEMINI_API_KEY is not configured');
+
+  const response = await axios.post(
+    `${geminiUrl}?key=${geminiApiKey}`,
+    {
+      contents: [{ role: 'user', parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
+      generationConfig: { temperature, responseMimeType: 'application/json' },
+    },
+    { headers: { 'Content-Type': 'application/json' } }
+  );
+
+  return response.data.candidates[0].content.parts[0].text as string;
+}
+
+async function callGroq(options: LLMCallOptions): Promise<string> {
+  const { systemPrompt, userPrompt, temperature = 0.4 } = options;
+
+  if (!isUsableKey(groqApiKey)) throw new Error('GROQ_API_KEY is not configured');
 
   const response = await axios.post(
     groqUrl,
@@ -56,6 +78,20 @@ export async function callLLM(options: LLMCallOptions): Promise<string> {
   );
 
   return response.data.choices[0].message.content as string;
+}
+
+function normalizeProvider(value?: string): LLMProvider {
+  return value?.toLowerCase() === 'gemini' ? 'gemini' : 'groq';
+}
+
+function getProviderOrder(primary: LLMProvider): LLMProvider[] {
+  const secondary: LLMProvider = primary === 'gemini' ? 'groq' : 'gemini';
+  return [primary, secondary];
+}
+
+function isUsableKey(value: string): boolean {
+  const trimmed = value.trim();
+  return Boolean(trimmed) && !trimmed.toLowerCase().startsWith('your_');
 }
 
 export function parseLLMJson<T>(raw: string): T {

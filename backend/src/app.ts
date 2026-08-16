@@ -21,42 +21,43 @@ import { aiUsageLimiter } from '@/security/ai/aiUsageLimiter';
 
 // Routes
 import authRoutes from '@/modules/auth'; // Phase 2 auth module
-import roadmapRoutes from '@/routes/roadmap';
-import assessmentRoadmapRoutes from '@/routes/assessmentRoadmap';
-import progressRoutes from '@/routes/progress';
-import assessmentRoutes from '@/routes/assessment';
-import aiRoutes from '@/routes/ai';
-import recommendationsRoutes from '@/routes/recommendations';
-import adminRoutes from '@/routes/admin';
-import profileRoutes from '@/routes/profile';
-import skillRoutes from '@/routes/skill';
-import feedbackRoutes from '@/routes/feedback';
-import notificationRoutes from '@/routes/notifications';
+import {
+  roadmapRoutes,
+  assessmentRoadmapRoutes,
+  progressRoutes,
+  recommendationsRoutes,
+  profileRoutes,
+  skillRoutes,
+  feedbackRoutes,
+  notificationRoutes,
+  taskRoutes,
+  careersRoutes,
+  csvCareerRecommendationsRoutes,
+  topicsRoutes,
+  jobsRoutes,
+  careerGraphRoutes,
+  learningResourcesRoutes,
+} from '@/routes';
 
-import taskRoutes from '@/routes/task';
-import healthRoutes from '@/routes/health';
-import careerMatchingRoutes from '@/routes/career-matching';
-import careersRoutes from '@/routes/careers';
-import csvCareerRecommendationsRoutes from '@/routes/csv-career-recommendations';
-import topicsRoutes from '@/routes/topics';
-import jobsRoutes from '@/routes/jobs';
-import careerGraphRoutes from '@/routes/careerGraph';
-import learningResourcesRoutes from '@/routes/learningResources';
-import xpRoutes from '@/routes/xp';
-import quizRoutes from '@/routes/quiz';
-import { redisRateLimiter } from '@/middleware/redisRateLimiter';
-import { authenticate, authorize } from '@/middleware/auth';
-import * as feedbackController from '@/controllers/feedback';
+import assessmentDiscoveryRoutes from '@/routes/assessmentDiscovery';
+import assessmentInterestRoutes from '@/routes/assessmentInterest';
+import assessmentCapabilityRoutes from '@/routes/assessmentCapability';
+import assessmentRoutes from '@/routes/assessment';
+import adminRoutes from '@/routes/admin';
 import debugRoutes from '@/routes/debug';
 import adminDevRoutes from '@/routes/adminDev';
+
+// Module routes
 import journeyRoutes from '@/modules/journey/journey.routes';
 import mentorRoutes from '@/modules/mentor/mentor.routes';
 import intelligenceRoutes from '@/modules/intelligence/intelligence.routes';
-import { ensureIntelligenceIndexes } from '@/modules/intelligence/intelligence.indexes';
 import notesRoutes from '@/modules/notes/notes.routes';
 import recruitmentRoutes from '@/modules/recruitment/recruitment.routes';
 import placementRoutes from '@/modules/placement/placement.routes';
+
+import { ensureIntelligenceIndexes } from '@/modules/intelligence/intelligence.indexes';
 import { csvCareerDatasetService } from '@/services/csv-career-dataset';
+import healthRoutes from '@/routes/health';
 import path from 'path';
 import fs from 'fs';
 
@@ -109,8 +110,6 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
-const isDevelopment = config.nodeEnv !== 'production';
-
 // CORS
 app.use(secureCors);
 
@@ -127,22 +126,8 @@ if (config.nodeEnv === 'development') {
 
 // ============ ROUTES ============
 
-// Health check
-app.get('/health', (_req: Request, res: Response) => {
-  res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
-});
-
 app.use('/api/health', healthRoutes);
-
 app.use('/api/assessment/hybrid/parse-resume', logParseResumeRequest);
-
-app.post('/api/top-career', (_req: Request, res: Response) => {
-  res.json({
-    success: true,
-    message: 'Please use authenticated recommendation endpoints for personalized top career.',
-    data: null,
-  });
-});
 
 // API routes
 app.use('/api', generalApiRateLimiter);
@@ -156,27 +141,21 @@ app.use('/api/profile', profileRoutes);
 app.use('/api/skills', skillRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/notifications', notificationRoutes);
-app.get('/api/admin/feedback', authenticate, authorize('ADMIN'), feedbackController.listAllFeedback);
-app.get('/api/admin/feedback/:id', authenticate, authorize('ADMIN'), feedbackController.getFeedbackById);
-app.patch('/api/admin/feedback/:id', authenticate, authorize('ADMIN'), feedbackController.updateFeedbackStatus);
-app.delete('/api/admin/feedback/:id', authenticate, authorize('ADMIN'), feedbackController.deleteFeedbackAdmin);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/roadmap', assessmentRoadmapRoutes);
 app.use('/api/roadmaps', roadmapRoutes);
 app.use('/api/progress', progressRoutes);
-// Protect assessment and AI endpoints with Redis-backed per-user/IP limiter (falls back to in-memory)
-app.use('/api/assessment', redisRateLimiter, assessmentRoutes);
-app.use('/api/ai', redisRateLimiter, aiRoutes);
 app.use('/api/recommendations', recommendationsRoutes);
-app.use('/api/career-matching', careerMatchingRoutes);
 app.use('/api/careers', careersRoutes);
 app.use('/api/csv-careers', csvCareerRecommendationsRoutes);
 app.use('/api/topics', topicsRoutes);
 app.use('/api/jobs', jobsRoutes);
 app.use('/api/learning-resources', learningResourcesRoutes);
-app.use('/api/xp', xpRoutes);
-app.use('/api/quiz', quizRoutes);
 app.use('/api/career-graph', careerGraphRoutes);
+app.use('/api/assessment/discovery', assessmentDiscoveryRoutes);
+app.use('/api/assessment/interest', assessmentInterestRoutes);
+app.use('/api/assessment/capability', assessmentCapabilityRoutes);
+app.use('/api/assessment', assessmentRoutes);
 app.use('/api/journey', journeyRoutes);
 app.use('/api/mentor', mentorRoutes);
 app.use('/api/intelligence', intelligenceRoutes);
@@ -186,7 +165,7 @@ app.use('/api/placement', placementRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Development-only debug routes (do not expose in production)
-if (isDevelopment) {
+if (config.nodeEnv !== 'production') {
   app.use('/api/debug', debugRoutes);
   // Dev-only admin summary (no auth) for quick checks
   // Mounted under /api/dev/admin to avoid colliding with authenticated /api/admin

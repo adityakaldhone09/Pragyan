@@ -17,75 +17,8 @@ import {
   changePasswordSchema,
 } from "./validators";
 import { profileUpdateSchema } from "@/validators/auth";
-import { prisma } from "@/lib/prisma";
-import crypto from "crypto";
 
 const router = Router();
-
-/**
- * Development-only endpoint to get verification token (for testing)
- * GET /api/auth/dev/verification-token?email=user@test.com
- */
-if (process.env.NODE_ENV !== 'production') {
-  router.get("/dev/verification-token", async (req, res): Promise<void> => {
-    try {
-      const { email } = req.query;
-      if (!email || typeof email !== 'string') {
-        res.status(400).json({ success: false, message: "Email required" });
-        return;
-      }
-
-      const user = await prisma.user.findUnique({ where: { email } });
-      if (!user) {
-        res.status(404).json({ success: false, message: "User not found" });
-        return;
-      }
-
-      const token = await prisma.verificationToken.findFirst({
-        where: {
-          userId: user.id,
-          usedAt: null,
-        },
-      });
-
-      if (!token) {
-        res.status(404).json({ success: false, message: "No unused verification token" });
-        return;
-      }
-
-      // Return the token ID (this is a test endpoint - in production we'd never do this)
-      // For actual verification, we need the raw token which was sent via email
-      // As a workaround for testing, we'll regenerate it
-      
-      // Delete the old token
-      await prisma.verificationToken.delete({ where: { id: token.id } });
-      
-      // Create a new one with a known token for testing
-      const rawToken = crypto.randomBytes(32).toString("hex");
-      const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
-      
-      await prisma.verificationToken.create({
-        data: {
-          userId: user.id,
-          tokenHash,
-          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-        },
-      });
-
-      res.status(200).json({
-        success: true,
-        message: "Verification token",
-        data: {
-          email,
-          token: rawToken,
-          verifyLink: `/api/auth/verify-email?token=${rawToken}`,
-        },
-      });
-    } catch (error: any) {
-      res.status(500).json({ success: false, message: error.message });
-    }
-  });
-}
 
 /**
  * Public routes
@@ -131,6 +64,16 @@ router.post(
   AuthController.refresh
 );
 
+// Alias used by the frontend client
+router.post(
+  "/refresh-token",
+  (req, _res, next) => {
+    req.body = validateInput(refreshTokenSchema, req.body);
+    next();
+  },
+  AuthController.refresh
+);
+
 router.post(
   "/forgot-password",
   (req, _res, next) => {
@@ -138,6 +81,18 @@ router.post(
     next();
   },
   AuthController.forgotPassword
+);
+
+router.post(
+  "/verify-reset-token",
+  (req, _res, next) => {
+    req.body = {
+      token: String(req.body.token || ""),
+      email: String(req.body.email || ""),
+    };
+    next();
+  },
+  AuthController.verifyResetToken
 );
 
 router.post(
@@ -161,11 +116,10 @@ router.get(
   (req, res, next) => {
     passport.authenticate("google", {
       session: false,
-      failureRedirect: "http://localhost:5173/auth?error=oauth_failed",
+      failureRedirect: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth?error=oauth_failed`,
     })(req, res, (err: any) => {
       if (err) {
-        console.error("[OAuth:Google:Middleware] Authentication error:", err);
-        return res.redirect("http://localhost:5173/auth?error=oauth_failed");
+        return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth?error=oauth_failed`);
       }
       next();
     });
@@ -185,11 +139,10 @@ router.get(
   (req, res, next) => {
     passport.authenticate("github", {
       session: false,
-      failureRedirect: "http://localhost:5173/auth?error=oauth_failed",
+      failureRedirect: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth?error=oauth_failed`,
     })(req, res, (err: any) => {
       if (err) {
-        console.error("[OAuth:GitHub:Middleware] Authentication error:", err);
-        return res.redirect("http://localhost:5173/auth?error=oauth_failed");
+        return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth?error=oauth_failed`);
       }
       next();
     });
@@ -232,6 +185,16 @@ router.post(
 
 // ── Account deletion ───────────────────────────────────────────────────────────
 router.delete("/account", AuthController.deleteAccount);
+
+// ── Password Management ────────────────────────────────────────────────────────
+router.post(
+  "/change-password",
+  (req, _res, next) => {
+    req.body = validateInput(changePasswordSchema, req.body);
+    next();
+  },
+  AuthController.changePassword
+);
 
 // ── 2FA ───────────────────────────────────────────────────────────────────────
 router.get("/2fa/status",  AuthController.get2FAStatus);

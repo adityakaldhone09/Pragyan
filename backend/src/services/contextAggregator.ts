@@ -1,5 +1,4 @@
 import { profileBuilderService } from '@/services/profile-builder';
-import { assessmentService } from '@/services/assessment';
 import { progressService } from '@/services/progress';
 import { recommendationEngineService } from '@/services/recommendation-engine';
 import { aiMemoryService } from '@/services/aiMemory';
@@ -42,9 +41,8 @@ class ContextAggregator {
     }
 
     // Fetch pieces in parallel; tolerate failures
-    const [profileRes, assessmentRes, roadmapRes, recRes, aiProfileRes, aiMemRes] = await Promise.allSettled([
+    const [profileRes, roadmapRes, recRes, aiProfileRes, aiMemRes] = await Promise.allSettled([
       profileBuilderService.getProfile(userId),
-      assessmentService.getLatestAssessment(userId),
       progressService.getRoadmapProgress(userId),
       recommendationEngineService.getTopCareer(userId),
       aiMemoryService.getProfile(userId),
@@ -52,7 +50,7 @@ class ContextAggregator {
     ]);
 
     const profile = profileRes.status === 'fulfilled' ? profileRes.value : undefined;
-    const assessment = assessmentRes.status === 'fulfilled' ? assessmentRes.value : null;
+    const assessment = null;  // assessment service removed
     const roadmapProgress = roadmapRes.status === 'fulfilled' ? roadmapRes.value : null;
     const topCareer = recRes.status === 'fulfilled' ? recRes.value : null;
     const aiProfile = aiProfileRes.status === 'fulfilled' ? aiProfileRes.value : null;

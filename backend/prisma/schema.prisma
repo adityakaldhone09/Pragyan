@@ -82,6 +82,10 @@ enum AuditAction {
   LOGIN
   LOGOUT
   PASSWORD_RESET
+  PASSWORD_RESET_REQUESTED
+  PASSWORD_RESET_COMPLETED
+  PASSWORD_CHANGE_FAILED
+  PASSWORD_CHANGED
   EMAIL_VERIFIED
   INVITATION_CREATED
   INVITATION_ACCEPTED
@@ -422,11 +426,12 @@ model User {
   accountSettings         Json?
   profileCompletion       Float?
 
-  // ── Security fields ──────────────────────────────────────────────────────
-  twoFactorEnabled        Boolean  @default(false)
-  twoFactorSecret         String?  // TOTP secret (base32)
   // ── Account lifecycle ────────────────────────────────────────────────────
   deleteRequestedAt       DateTime? // set when user requests account deletion
+
+  // ── Two-factor authentication ────────────────────────────────────────────
+  twoFactorEnabled        Boolean  @default(false)
+  twoFactorSecret         String?  // TOTP secret (base32)
 
   // Relations
   refreshTokens           RefreshToken[]
@@ -485,12 +490,13 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Indexes
   @@index([provider, providerId])
   @@index([userRole])
   @@index([accountStatus])
   @@index([isActive])
   @@index([organizationId])
-  @@index([updatedAt])  // For fetching recently active users
+  @@index([updatedAt])                     // For fetching recently active users
 }
 
 // Intelligence debug audit logs for admin access to sensitive intelligence payloads
@@ -603,8 +609,9 @@ model RefreshToken {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Indexes for token refresh & session management
   @@index([tokenHash])                    // Index only, not unique (handles NULLs)
-  @@index([userId])
+  @@index([userId])                       // Fast lookups by user during logout
   @@index([familyId])                     // For revoking entire family
   @@index([expiresAt])                    // For cleanup queries
   @@index([revokedAt])                    // For security queries
@@ -622,9 +629,10 @@ model VerificationToken {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([tokenHash])                    // Index, not unique (handles NULLs)
-  @@index([userId])
-  @@index([purpose])
+  // Indexes for verification token lookups
+  @@index([tokenHash])                    // Fast token validation
+  @@index([userId])                       // Find user's verification tokens
+  @@index([purpose])                      // Filter by token purpose
 }
 
 model SecurityLog {

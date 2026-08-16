@@ -34,7 +34,6 @@ router.get("/", authenticate, authorize("ADMIN"), async (req, res) => {
 
     res.json(logs);
   } catch (error) {
-    console.error("Error fetching audit logs:", error);
     res.status(500).json({ error: "Failed to fetch audit logs" });
   }
 });
@@ -49,7 +48,6 @@ router.get("/stats", authenticate, authorize("ADMIN"), async (req, res) => {
     const stats = await AuditLogService.getAuditStats(organizationId as string);
     res.json(stats);
   } catch (error) {
-    console.error("Error fetching audit stats:", error);
     res.status(500).json({ error: "Failed to fetch audit stats" });
   }
 });
@@ -74,7 +72,6 @@ router.get(
 
       res.json(logs);
     } catch (error) {
-      console.error("Error fetching organization audit logs:", error);
       res.status(500).json({ error: "Failed to fetch audit logs" });
     }
   }
@@ -96,7 +93,6 @@ router.get("/user/:userId", authenticate, authorize("ADMIN"), async (req, res) =
 
     res.json(logs);
   } catch (error) {
-    console.error("Error fetching user activity:", error);
     res.status(500).json({ error: "Failed to fetch user activity" });
   }
 });

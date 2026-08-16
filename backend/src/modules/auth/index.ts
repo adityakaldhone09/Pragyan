@@ -2,6 +2,9 @@
  * Auth Module - Main Export
  */
 
+// ✅ Initialize event listeners FIRST (before routes)
+import "./listeners";
+
 import authRoutes from "./routes";
 
 export default authRoutes;

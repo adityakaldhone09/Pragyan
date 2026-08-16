@@ -101,15 +101,56 @@ User request: ${message}` : message;
 }
 
 function toApiHistory(items: Message[]): AIChatMessage[] {
-  return items.reduce<AIChatMessage[]>((history, message) => {
+  // ✅ OPTIMIZED: Message windowing
+  // Send only recent messages to reduce payload
+  // If > 15 messages, take last 10 + create summary of earlier ones
+  
+  const MAX_HISTORY_MESSAGES = 15;
+  const RECENT_MESSAGES = 10;
+  
+  if (items.length <= MAX_HISTORY_MESSAGES) {
+    // Short conversation - send all
+    return items.reduce<AIChatMessage[]>((history, message) => {
+      const content = message.text.trim();
+      if (!content) return history;
+      history.push({
+        role: message.role === "ai" ? "assistant" : "user",
+        content,
+      });
+      return history;
+    }, []);
+  }
+  
+  // Long conversation - use windowing
+  const earlierMessages = items.slice(0, -RECENT_MESSAGES);
+  const recentMessages = items.slice(-RECENT_MESSAGES);
+  
+  const history: AIChatMessage[] = [];
+  
+  // Add summary of earlier conversation
+  const earlierTopics = earlierMessages
+    .filter(m => m.role === "user")
+    .map(m => m.text.substring(0, 50)) // First 50 chars of each user message
+    .join(" | ");
+  
+  if (earlierTopics) {
+    history.push({
+      role: "user",
+      content: `[Earlier in conversation: ${earlierTopics}...]`,
+    });
+  }
+  
+  // Add recent messages in full
+  recentMessages.forEach(message => {
     const content = message.text.trim();
-    if (!content) return history;
+    if (!content) return;
     history.push({
       role: message.role === "ai" ? "assistant" : "user",
       content,
     });
-    return history;
-  }, []);
+  });
+  
+  return history;
 }
 
 export default function AICounselor() {
@@ -161,7 +202,9 @@ export default function AICounselor() {
 
   const send = async (text: string) => {
     const trimmedText = text.trim();
+    // ✅ ADDED: Prevent spam - disable while request in flight
     if (!trimmedText || typing) return;
+    
     const route = getSlashCommandRoute(trimmedText);
     const command = SLASH_COMMANDS.find((item) => item.command === trimmedText.split(/\s+/)[0].toLowerCase());
     const userMsg: Message = {

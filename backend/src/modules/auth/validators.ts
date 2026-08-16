@@ -3,7 +3,8 @@
  */
 
 import { z } from "zod";
-import { PASSWORD_CONSTANTS } from "./constants";
+import { zxcvbn } from "zxcvbn-ts";
+import { HIBPService } from "@/services/hibp.service";
 
 /**
  * Email validation schema
@@ -15,25 +16,40 @@ const emailSchema = z
   .trim();
 
 /**
- * Password validation schema
+ * Modern password validation schema
+ * Uses zxcvbn for strength scoring instead of arbitrary composition rules
+ * 
+ * Minimum requirements:
+ * - 12 characters long (instead of 8)
+ * - Score of at least 3/4 (Strong)
+ * - No common passwords
+ * - Not found in known breaches (checked during registration, not during validation)
+ * 
+ * This approach is more user-friendly and secure:
+ * - Allows spaces and unicode
+ * - Doesn't require artificial composition rules
+ * - Accepts passwords like "correct horse battery staple" or "Coffee@home#2024"
  */
 const passwordSchema = z
   .string()
-  .min(
-    PASSWORD_CONSTANTS.MIN_LENGTH,
-    `Password must be at least ${PASSWORD_CONSTANTS.MIN_LENGTH} characters`
+  .min(12, "Password must be at least 12 characters")
+  .max(128, "Password must not exceed 128 characters")
+  .refine(
+    (pwd) => {
+      // Use zxcvbn to score password strength
+      const result = zxcvbn(pwd);
+      // Require score of 3 or higher (Strong or Very Strong)
+      return result.score >= 3;
+    },
+    "Password is too weak. Try a longer phrase or mix different character types"
   )
   .refine(
-    (pwd) => !PASSWORD_CONSTANTS.REQUIRE_UPPERCASE || /[A-Z]/.test(pwd),
-    "Password must contain at least one uppercase letter"
-  )
-  .refine(
-    (pwd) => !PASSWORD_CONSTANTS.REQUIRE_NUMBERS || /\d/.test(pwd),
-    "Password must contain at least one number"
-  )
-  .refine(
-    (pwd) => !PASSWORD_CONSTANTS.REQUIRE_SPECIAL || /[@$!%*?&]/.test(pwd),
-    "Password must contain at least one special character (@$!%*?&)"
+    (pwd) => {
+      // Reject common passwords (caught by zxcvbn, but explicit check too)
+      const commonPasswords = HIBPService.getCommonPasswords();
+      return !commonPasswords.includes(pwd.toLowerCase());
+    },
+    "This password is too common. Please choose a more unique password"
   );
 
 /**
@@ -113,15 +129,12 @@ export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 
 /**
  * Reset Password Validator
+ * New password must meet strength requirements like registration
  */
 export const resetPasswordSchema = z
   .object({
     token: z.string().min(1, "Reset token required"),
-    otp: z
-      .string()
-      .regex(/^\d{6}$/, "OTP must be 6 digits")
-      .optional()
-      .or(z.literal("")),
+    email: emailSchema,
     newPassword: passwordSchema,
     confirmPassword: z.string(),
   })

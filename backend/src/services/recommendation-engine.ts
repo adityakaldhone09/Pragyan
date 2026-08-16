@@ -1,9 +1,19 @@
 import { prisma } from '@/lib/prisma';
-import { careerMatchingEngine, type AssessmentAnswers } from '@/services/career-matching';
 import safeParseAIResponse from '@/ai/safeParser';
 import { ExplainSchema, RoadmapSectionResponseSchema } from '@/ai/schemas';
 import { routeAI } from '@/ai/aiRouter';
 import { getIconForCareer } from '@/modules/career-roadmap/icon-mapping';
+
+// Simple assessment answers type
+interface AssessmentAnswers {
+  skills?: string[];
+  interests?: string[];
+  personality?: string[];
+  education?: string;
+  experience?: string;
+  workStyle?: string[];
+  careerGoals?: string[];
+}
 
 export interface RecommendationRequestProfile {
   skills?: string[];
@@ -73,13 +83,15 @@ export class RecommendationEngineService {
       : await this.loadProfileFromLatestAssessment(userId);
 
     let matches: any[] = [];
-    try {
-      matches = await careerMatchingEngine.analyzeAssessment(userId, effectiveProfile);
-    } catch (error) {
-      console.error('Error in analyzeAssessment:', error);
-    }
+    // Career matching engine not available - using empty matches
+    // try {
+    //   matches = await careerMatchingEngine.analyzeAssessment(userId, effectiveProfile);
+    // } catch (error) {
+    //   console.error('Error in analyzeAssessment:', error);
+    // }
 
-    const storedMatches = await careerMatchingEngine.getUserCareerMatches(userId);
+    // const storedMatches = await careerMatchingEngine.getUserCareerMatches(userId);
+    const storedMatches: any[] = [];
     const rankedMatches = this.mapCareerMatches(storedMatches, matches);
 
     const skillRecommendations = this.buildSkillRecommendations(rankedMatches, effectiveProfile.skills || []);
@@ -299,7 +311,7 @@ export class RecommendationEngineService {
 
       // Attempt to build heuristic structured object when AI call fails
       try {
-        const profileSkills = new Set((profile.skills || []).map((s) => String(s).toLowerCase()));
+        const profileSkills = new Set((profile.skills || []).map((s: any) => String(s).toLowerCase()));
         const mappedSkills: string[] = (career.skillMappings || []).map((m: any) => String(m.skill));
         const skillGaps = mappedSkills.filter((s) => !profileSkills.has(String(s).toLowerCase())).slice(0, 5);
 

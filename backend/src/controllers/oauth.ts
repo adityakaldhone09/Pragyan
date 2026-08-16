@@ -88,16 +88,8 @@ function redirectOAuthSuccess(
   if (options.provider) {
     url.searchParams.set('provider', options.provider);
   }
-  url.hash = new URLSearchParams({
-    accessToken: session.accessToken,
-    refreshToken: session.refreshToken,
-  }).toString();
-
-  console.log('[OAuth:redirectSuccess]', {
-    accessTokenPresent: Boolean(session.accessToken),
-    refreshTokenPresent: Boolean(session.refreshToken),
-    targetUrl: url.toString(),
-  });
+  // 🔒 Security: Tokens in httpOnly cookies, not in URL hash
+  // Never expose tokens in URL - can leak via browser history, referer headers, proxy logs
 
   return res.redirect(url.toString());
 }
@@ -168,13 +160,6 @@ function executePassportCallback(strategy: 'google' | 'github') {
         }
 
         const session = await authService.loginWithOAuth(profile);
-        console.log('[OAuth:passportCallback]', {
-          reachedVerifyCallback: true,
-          provider: strategy,
-          profileId: profile.providerId,
-          email: profile.email,
-          sessionId: req.sessionID,
-        });
         return redirectOAuthSuccess(res, session, { mode: 'login', provider: strategy });
       } catch (oauthError) {
         const message = oauthError instanceof Error ? oauthError.message : 'Unable to complete OAuth login';
@@ -191,17 +176,6 @@ export const startGoogleAuth = asyncHandler(async (req: Request, res: Response, 
 
   const state = generateOAuthState(req, 'google');
   await saveSession(req);
-  
-  // Debug logs: session and state before redirecting to provider
-  try {
-    console.log('[OAuth:startGoogleAuth] Session ID before redirect:', req.sessionID);
-    // @ts-ignore
-    console.log('[OAuth:startGoogleAuth] OAuth state saved:', (req.session as any)?.oauthState);
-    console.log('[OAuth:startGoogleAuth] Request cookies:', req.headers.cookie || null);
-    console.log('[OAuth:startGoogleAuth] Request origin:', req.headers.origin || req.headers.referer || null);
-  } catch (e) {
-    console.warn('[OAuth:startGoogleAuth] Failed to log session info', e);
-  }
 
   return passport.authenticate('google', {
     scope: ['profile', 'email'],
@@ -244,17 +218,6 @@ export const startLinkAuth = asyncHandler(async (req: Request, res: Response) =>
 export const handleGoogleCallback = (req: Request, res: Response, next: NextFunction) => {
   if (!verifyOAuthState(req, 'google')) {
     return redirectOAuthError(res, 'Unable to verify authorization request state.', 'google');
-  }
-  
-  // Debug logs: session info at callback entry
-  try {
-    console.log('[OAuth:handleGoogleCallback] OAuth callback session ID:', req.sessionID);
-    // @ts-ignore
-    console.log('[OAuth:handleGoogleCallback] OAuth callback state:', (req.session as any)?.oauthState);
-    console.log('[OAuth:handleGoogleCallback] Google state (query):', req.query.state);
-    console.log('[OAuth:handleGoogleCallback] Request cookies:', req.headers.cookie || null);
-  } catch (e) {
-    console.warn('[OAuth:handleGoogleCallback] Failed to log callback session info', e);
   }
 
   clearOAuthState(req, 'google');

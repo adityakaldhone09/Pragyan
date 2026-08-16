@@ -5,7 +5,7 @@ import { MongoClient, ObjectId } from 'mongodb';
 import axios from 'axios';
 import { getMongoUrl } from '@/config/mongo';
 import { randomBytes, randomInt } from 'crypto';
-import { hashPassword, comparePasswords } from '@/utils/password';
+import { PasswordUtil } from '@/utils/password';
 import { sendPasswordResetOTP } from '@/services/emailService';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '@/utils/jwt';
 import { ConflictError, UnauthorizedError, NotFoundError, BadRequestError } from '@/utils/errors';
@@ -393,7 +393,7 @@ export class AuthService {
       throw new ConflictError('Email already registered');
     }
 
-    const hashedPassword = await hashPassword(input.password);
+    const hashedPassword = await PasswordUtil.hash(input.password);
     const now = new Date();
 
     try {
@@ -407,7 +407,8 @@ export class AuthService {
           providerId: null,
           avatar: null,
           emailVerified: false,
-          role: 'USER',
+          role: input.role || 'STUDENT',
+          userRole: (input.role as any) || 'STUDENT',
           age: null,
           location: null,
           phone: null,
@@ -462,7 +463,7 @@ export class AuthService {
       const accessToken = generateAccessToken({
         id: created.id,
         email: created.email,
-        role: 'USER',
+        role: (created.role as 'USER' | 'ADMIN') || 'USER',
       });
 
       return {
@@ -488,7 +489,7 @@ export class AuthService {
       throw new UnauthorizedError('Invalid email or password');
     }
 
-    const isPasswordValid = await comparePasswords(input.password, user.password);
+    const isPasswordValid = await PasswordUtil.verify(input.password, user.password);
 
     if (!isPasswordValid) {
       throw new UnauthorizedError('Invalid email or password');
@@ -602,7 +603,7 @@ export class AuthService {
           fullName: existingUser.fullName || fullName,
         });
       } else {
-        const hashedPassword = await hashPassword(randomBytes(32).toString('hex'));
+        const hashedPassword = await PasswordUtil.hash(randomBytes(32).toString('hex'));
         console.log('[OAuth:loginWithOAuth:createUser]', {
           email: normalizedEmail,
           provider: profile.provider,
@@ -1198,7 +1199,7 @@ export class AuthService {
     await prisma.passwordResetOTP.deleteMany({ where: { email } });
 
     const otp = String(randomInt(100000, 1000000));
-    const otpHash = await hashPassword(otp);
+    const otpHash = await PasswordUtil.hash(otp);
     const expiresAt = new Date(Date.now() + OTP_EXPIRY_MS);
 
     await prisma.passwordResetOTP.create({
@@ -1237,7 +1238,7 @@ export class AuthService {
       throw new BadRequestError('Too many failed attempts. Please request a new code.');
     }
 
-    const isValidOtp = await comparePasswords(input.otp, record.otpHash);
+    const isValidOtp = await PasswordUtil.verify(input.otp, record.otpHash);
 
     if (!isValidOtp) {
       await prisma.passwordResetOTP.update({
@@ -1272,7 +1273,7 @@ export class AuthService {
 
     const [user, hashedPassword] = await Promise.all([
       prisma.user.findUnique({ where: { email } }),
-      hashPassword(input.newPassword),
+      PasswordUtil.hash(input.newPassword),
     ]);
 
     if (!user) {
@@ -1356,16 +1357,16 @@ export class AuthService {
       throw new BadRequestError('Password cannot be changed for OAuth accounts.');
     }
 
-    const isValid = await comparePasswords(currentPassword, user.password);
+    const isValid = await PasswordUtil.verify(currentPassword, user.password);
     if (!isValid) throw new UnauthorizedError('Current password is incorrect.');
 
-    const isSame = await comparePasswords(newPassword, user.password);
+    const isSame = await PasswordUtil.verify(newPassword, user.password);
     if (isSame) throw new BadRequestError('New password must be different from the current password.');
 
     // Policy: min 8 chars
     if (newPassword.length < 8) throw new BadRequestError('New password must be at least 8 characters.');
 
-    const hashed = await hashPassword(newPassword);
+    const hashed = await PasswordUtil.hash(newPassword);
     await prisma.user.update({ where: { id: userId }, data: { password: hashed, updatedAt: new Date() } });
 
     // Invalidate all refresh tokens to log out other sessions
@@ -1380,7 +1381,7 @@ export class AuthService {
 
     // Verify password for local accounts
     if (user.provider === 'local') {
-      const isValid = await comparePasswords(password, user.password);
+      const isValid = await PasswordUtil.verify(password, user.password);
       if (!isValid) throw new UnauthorizedError('Password is incorrect. Account not deleted.');
     }
 

@@ -9,6 +9,105 @@ const MIN_QUESTIONS = 6;
 const MAX_QUESTIONS = 12;
 const TARGET_CONFIDENCE = 0.88;
 
+type FallbackQuestion = Phase4Question & { correctAnswer: string };
+
+const FALLBACK_QUESTION_BANK: FallbackQuestion[] = [
+  {
+    questionId: 'fallback_web_http_001',
+    questionText: 'Which HTTP status code best represents a successful resource creation from a POST request?',
+    questionType: 'MCQ',
+    options: ['200 OK', '201 Created', '204 No Content', '400 Bad Request'],
+    correctAnswer: '201 Created',
+    topic: 'HTTP APIs',
+    domain: 'Web Development',
+    difficulty: 'Foundation',
+  },
+  {
+    questionId: 'fallback_web_react_001',
+    questionText: 'In React, which hook is most appropriate for running side effects after a component renders?',
+    questionType: 'MCQ',
+    options: ['useMemo', 'useEffect', 'useRef', 'useReducer'],
+    correctAnswer: 'useEffect',
+    topic: 'React Hooks',
+    domain: 'Web Development',
+    difficulty: 'Foundation',
+  },
+  {
+    questionId: 'fallback_backend_db_001',
+    questionText: 'What is the main reason to add an index to a frequently queried database column?',
+    questionType: 'MCQ',
+    options: ['To encrypt the column', 'To speed up reads for matching queries', 'To prevent all duplicate values', 'To reduce network latency'],
+    correctAnswer: 'To speed up reads for matching queries',
+    topic: 'Database Indexing',
+    domain: 'Backend Development',
+    difficulty: 'Intermediate',
+  },
+  {
+    questionId: 'fallback_programming_ds_001',
+    questionText: 'Which data structure is usually the best fit for fast key-based lookups?',
+    questionType: 'MCQ',
+    options: ['Array', 'Stack', 'Hash map', 'Queue'],
+    correctAnswer: 'Hash map',
+    topic: 'Data Structures',
+    domain: 'Software Development',
+    difficulty: 'Foundation',
+  },
+  {
+    questionId: 'fallback_ai_overfit_001',
+    questionText: 'A model performs very well on training data but poorly on unseen data. What is the most likely issue?',
+    questionType: 'MCQ',
+    options: ['Underfitting', 'Overfitting', 'Data normalization', 'Batching'],
+    correctAnswer: 'Overfitting',
+    topic: 'Model Generalization',
+    domain: 'AI/ML',
+    difficulty: 'Foundation',
+  },
+  {
+    questionId: 'fallback_data_sql_001',
+    questionText: 'Which SQL clause is used to filter grouped aggregate results?',
+    questionType: 'MCQ',
+    options: ['WHERE', 'HAVING', 'ORDER BY', 'LIMIT'],
+    correctAnswer: 'HAVING',
+    topic: 'SQL Aggregation',
+    domain: 'Data Science',
+    difficulty: 'Intermediate',
+  },
+  {
+    questionId: 'fallback_security_owasp_001',
+    questionText: 'Which practice best helps prevent SQL injection in application code?',
+    questionType: 'MCQ',
+    options: ['Parameterized queries', 'Client-side validation only', 'Longer passwords', 'Minified JavaScript'],
+    correctAnswer: 'Parameterized queries',
+    topic: 'Application Security',
+    domain: 'Cyber Security',
+    difficulty: 'Foundation',
+  },
+  {
+    questionId: 'fallback_cloud_container_001',
+    questionText: 'What is the primary purpose of a Docker image?',
+    questionType: 'MCQ',
+    options: ['To store only runtime logs', 'To package an app and its dependencies', 'To replace source control', 'To allocate a public IP address'],
+    correctAnswer: 'To package an app and its dependencies',
+    topic: 'Containers',
+    domain: 'Cloud',
+    difficulty: 'Foundation',
+  },
+  {
+    questionId: 'fallback_devops_ci_001',
+    questionText: 'What does a CI pipeline typically do after code is pushed?',
+    questionType: 'MCQ',
+    options: ['Runs automated checks and builds', 'Deletes old branches automatically', 'Changes production passwords', 'Writes user documentation'],
+    correctAnswer: 'Runs automated checks and builds',
+    topic: 'Continuous Integration',
+    domain: 'DevOps',
+    difficulty: 'Foundation',
+  },
+];
+
+const FALLBACK_CORRECT_ANSWERS = new Map(
+  FALLBACK_QUESTION_BANK.map((question) => [question.questionId, question.correctAnswer])
+);
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface Phase4Question {
@@ -333,15 +432,30 @@ export class Phase4TechnicalAssessmentService {
     const userPrompt = this.buildUserPrompt(session, userAnswer, questionCount, shouldForceComplete);
 
     const llmStart = Date.now();
-    const raw = await callLLM({
-      systemPrompt: PHASE4_SYSTEM_PROMPT,
-      userPrompt,
-      temperature: 0.5,
-    });
-    const llmLatencyMs = Date.now() - llmStart;
+    let llmLatencyMs = 0;
+    let response: Phase4StateMachineResponse;
+    try {
+      const raw = await callLLM({
+        systemPrompt: PHASE4_SYSTEM_PROMPT,
+        userPrompt,
+        temperature: 0.5,
+      });
+      llmLatencyMs = Date.now() - llmStart;
 
-    let response = await this.parseResponse(raw);
-    this.validateResponse(response, shouldForceComplete);
+      response = await this.parseResponse(raw);
+      this.validateResponse(response, shouldForceComplete);
+    } catch (error) {
+      llmLatencyMs = Date.now() - llmStart;
+      console.warn('[Phase 4] LLM turn failed; using deterministic fallback:', (error as any)?.message || error);
+      response = this.buildFallbackResponse(session, userAnswer, shouldForceComplete);
+
+      publishTelemetryEvent(TelemetryEvent.AI_FALLBACK_USED, {
+        sessionId: session.sessionId,
+        userId: session.userId,
+        phase: 4,
+        reason: (error as any)?.message || String(error),
+      });
+    }
 
     if (shouldForceComplete && !response.isCompleted) {
       response = this.forceCompletion(session, response);
@@ -359,6 +473,141 @@ export class Phase4TechnicalAssessmentService {
     this.applyResponseToSession(session, response, userAnswer);
 
     return response;
+  }
+
+  private buildFallbackResponse(
+    session: Phase4Session,
+    userAnswer?: string,
+    forceComplete = false
+  ): Phase4StateMachineResponse {
+    const evaluation = userAnswer && session.history.length > 0
+      ? this.evaluateFallbackAnswer(session.history[session.history.length - 1].question, userAnswer)
+      : null;
+
+    const answeredCount = userAnswer ? session.history.length : Math.max(0, session.history.length - 1);
+    const nextConfidence = evaluation
+      ? session.technicalConfidence + (evaluation.isCorrect ? 0.08 : -0.05)
+      : session.technicalConfidence;
+    const technicalConfidence = Math.max(0.20, Math.min(0.95, nextConfidence));
+    const isCompleted = forceComplete || (Boolean(userAnswer) && answeredCount >= MIN_QUESTIONS);
+
+    if (isCompleted) {
+      return {
+        technicalConfidence,
+        reasoningToast: 'Technical profile captured. Preparing your specialization recommendations.',
+        isCompleted: true,
+        evaluation,
+        nextQuestion: null,
+        finalSummary: this.buildFallbackSummary(session, evaluation),
+      };
+    }
+
+    return {
+      technicalConfidence,
+      reasoningToast: evaluation
+        ? evaluation.isCorrect
+          ? 'Good answer. Increasing the challenge slightly.'
+          : 'Useful signal. The next question will keep checking the foundations.'
+        : 'Starting with a focused foundation question for your selected domain.',
+      isCompleted: false,
+      evaluation,
+      nextQuestion: this.selectFallbackQuestion(session),
+      finalSummary: null,
+    };
+  }
+
+  private evaluateFallbackAnswer(question: Phase4Question, userAnswer: string): Phase4Evaluation {
+    const expected = FALLBACK_CORRECT_ANSWERS.get(question.questionId);
+    const normalizedAnswer = userAnswer.trim().toLowerCase();
+    const normalizedExpected = expected?.trim().toLowerCase();
+    const isCorrect = normalizedExpected ? normalizedAnswer === normalizedExpected : normalizedAnswer.length > 0;
+
+    return {
+      topic: question.topic,
+      isCorrect,
+      explanation: expected
+        ? isCorrect
+          ? `Correct. ${expected} is the best answer for ${question.topic}.`
+          : `The best answer is ${expected}. Review ${question.topic} before moving deeper.`
+        : 'Answer recorded using local fallback evaluation.',
+      skillLevel: question.difficulty,
+    };
+  }
+
+  private selectFallbackQuestion(session: Phase4Session): Phase4Question {
+    const askedIds = new Set(session.history.map((item) => item.question.questionId));
+    const preferredDomains = session.domains.map((domain) => this.normalizeDomain(domain));
+    const domainMatch = FALLBACK_QUESTION_BANK.find((question) =>
+      !askedIds.has(question.questionId) &&
+      preferredDomains.some((domain) => this.normalizeDomain(question.domain).includes(domain) || domain.includes(this.normalizeDomain(question.domain)))
+    );
+    const next = domainMatch || FALLBACK_QUESTION_BANK.find((question) => !askedIds.has(question.questionId)) || FALLBACK_QUESTION_BANK[0];
+    const { correctAnswer: _correctAnswer, ...question } = next;
+    return {
+      ...question,
+      domain: session.domains.find((domain) => this.domainsOverlap(domain, question.domain)) || question.domain,
+    };
+  }
+
+  private buildFallbackSummary(
+    session: Phase4Session,
+    latestEvaluation: Phase4Evaluation | null
+  ): Phase4StateMachineResponse['finalSummary'] {
+    const evaluatedHistory = session.history.map((item, index) => {
+      if (index === session.history.length - 1 && latestEvaluation) {
+        return { ...item, isCorrect: latestEvaluation.isCorrect, evaluatedTopic: latestEvaluation.topic };
+      }
+      return item;
+    });
+
+    const strengths = Array.from(new Set(
+      evaluatedHistory.filter((item) => item.isCorrect).map((item) => item.evaluatedTopic || item.question.topic)
+    ));
+    const weaknesses = Array.from(new Set(
+      evaluatedHistory.filter((item) => !item.isCorrect).map((item) => item.evaluatedTopic || item.question.topic)
+    ));
+    const domainReadiness: Record<string, number> = {};
+
+    session.domains.forEach((domain) => {
+      const domainQuestions = evaluatedHistory.filter((item) => this.domainsOverlap(domain, item.question.domain));
+      const correct = domainQuestions.filter((item) => item.isCorrect).length;
+      domainReadiness[domain] = domainQuestions.length > 0 ? Math.round((correct / domainQuestions.length) * 100) : 50;
+    });
+
+    const skillScores = Object.fromEntries(
+      evaluatedHistory.map((item) => [
+        item.evaluatedTopic || item.question.topic,
+        item.isCorrect ? 75 : 40,
+      ])
+    );
+
+    return {
+      domainReadiness,
+      technicalStrengths: strengths.length ? strengths : ['Technical fundamentals'],
+      technicalWeaknesses: weaknesses,
+      knowledgeGaps: weaknesses,
+      skillScores,
+      recommendedSpecialization: session.domains[0] || 'Software Development',
+      readinessForPhase5: session.technicalConfidence >= 0.55,
+    };
+  }
+
+  private domainsOverlap(left: string, right: string): boolean {
+    const normalizedLeft = this.normalizeDomain(left);
+    const normalizedRight = this.normalizeDomain(right);
+    return normalizedLeft.includes(normalizedRight) || normalizedRight.includes(normalizedLeft);
+  }
+
+  private normalizeDomain(domain: string): string {
+    const normalized = domain.toLowerCase();
+    if (normalized.includes('web') || normalized.includes('frontend') || normalized.includes('front end') || normalized.includes('full stack')) return 'web development';
+    if (normalized.includes('backend') || normalized.includes('back end') || normalized.includes('api')) return 'backend development';
+    if (normalized.includes('ai') || normalized.includes('ml') || normalized.includes('machine learning')) return 'ai/ml';
+    if (normalized.includes('data')) return 'data science';
+    if (normalized.includes('security') || normalized.includes('cyber')) return 'cyber security';
+    if (normalized.includes('cloud')) return 'cloud';
+    if (normalized.includes('devops')) return 'devops';
+    return normalized.trim();
   }
 
   private buildUserPrompt(

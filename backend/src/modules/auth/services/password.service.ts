@@ -6,7 +6,7 @@
 import { randomInt } from "crypto";
 import { prisma } from "@/lib/prisma";
 import type { ForgotPasswordInput, ResetPasswordInput } from "@/shared/auth";
-import { comparePasswords, hashPassword as hashPasswordUtil } from "@/utils/password";
+import { PasswordUtil } from "@/utils/password";
 import { InvalidCredentialsError, WeakPasswordError } from "../errors";
 import { PasswordPolicy } from "../policies/password.policy";
 
@@ -70,14 +70,14 @@ export class PasswordService {
    * Helper: Hash password (internal)
    */
   protected async hashPassword(password: string): Promise<string> {
-    return hashPasswordUtil(password);
+    return PasswordUtil.hash(password);
   }
 
   /**
    * Helper: Verify password (internal)
    */
   protected async verifyPassword(plainPassword: string, hash: string): Promise<boolean> {
-    return comparePasswords(plainPassword, hash);
+    return PasswordUtil.verify(plainPassword, hash);
   }
 }
 

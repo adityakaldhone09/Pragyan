@@ -160,19 +160,12 @@ export class AssessmentDecisionTreeService {
     return (dashboardMapping as any)[role] || 'default-dashboard';
   }
 
-  static async generateRoadmapIfNeeded(assessmentPathId: string, userId?: string) {
+  static async generateRoadmapIfNeeded(assessmentPathId: string, _userId?: string) {
     const ap = await prisma.assessmentPath.findUnique({ where: { id: assessmentPathId } });
     if (!ap) return null;
     if (ap.selectedRole) {
-      // trigger existing roadmap generator for the selected role
-      try {
-        // default skill level 'Beginner' — caller may override
-        const { aiRecommendationService } = await import('@/services/ai-recommendation');
-        const roadmap = await aiRecommendationService.generatePersonalizedRoadmap(userId || ap.userId, ap.selectedRole, 'Beginner');
-        return roadmap;
-      } catch (e) {
-        return null;
-      }
+      // Roadmap generation deferred - recommendation engine not available in this context
+      return null;
     }
     return null;
   }

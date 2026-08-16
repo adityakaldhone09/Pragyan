@@ -5,7 +5,7 @@
  * Flow:
  * 1. Receive token from query params
  * 2. Call verificationTokenRepository.consume() → userId
- * 3. Call accountActivationService.activateAccount() → role-based status
+ * 3. Call accountActivationService.activateAccount() → ACTIVE
  * 4. Log to AuditRepository
  * 5. Publish EmailVerified event
  * 6. Return success response
@@ -42,7 +42,7 @@ export class VerifyEmailService {
       throw error;
     }
 
-    // Step 3: Activate account (role-based: STUDENT→ACTIVE, others→PENDING)
+    // Step 3: Activate account. Email ownership is the only signup activation gate.
     const activatedUser = await accountActivationService.activateAccount(userId);
 
     // Step 4: Return success

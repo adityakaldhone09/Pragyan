@@ -2,7 +2,7 @@ import { ObjectId, type Collection, type Db } from 'mongodb';
 import { prisma } from '@/lib/prisma';
 import { getMongoUrl } from '@/config/mongo';
 import { MongoClient } from 'mongodb';
-import { comparePasswords, hashPassword } from '@/utils/password';
+import { PasswordUtil } from '@/utils/password';
 import { ConflictError, NotFoundError, UnauthorizedError } from '@/utils/errors';
 import { generateAccessToken, generateRefreshToken } from '@/utils/jwt';
 import { routeAI } from '@/ai/aiRouter';
@@ -186,7 +186,7 @@ export class RecruiterService {
       data: {
         email,
         fullName: input.recruiterName,
-        password: await hashPassword(input.password),
+        password: await PasswordUtil.hash(input.password),
         provider: 'local',
         role: 'RECRUITER',
         skills: [],
@@ -230,7 +230,7 @@ export class RecruiterService {
   async login(input: RecruiterLoginInput) {
     const user = await prisma.user.findUnique({ where: { email: normalizeEmail(input.email) } });
     if (!user || user.role !== 'RECRUITER') throw new UnauthorizedError('Invalid recruiter credentials');
-    const ok = await comparePasswords(input.password, user.password);
+    const ok = await PasswordUtil.verify(input.password, user.password);
     if (!ok) throw new UnauthorizedError('Invalid recruiter credentials');
     return buildSession(user, await this.issueRefreshToken(user.id));
   }

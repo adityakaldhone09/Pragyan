@@ -1099,10 +1099,9 @@ export class LearningResourceService {
         },
       });
 
-      const xpDelta = Math.max(5, Math.round((input.progressPercent ?? 100) / 10));
-      const { xpService } = await import('@/services/xp');
+      const { xpService } = await import('@/services/xpService');
       await Promise.all([
-        xpService.awardXp(userId, xpDelta, 'resource-complete', { resourceId: input.resourceId }),
+        xpService.awardXp({ userId, eventType: 'DAY' as any }),
         prisma.user.update({ where: { id: userId }, data: { streak: nextStreak } }),
       ]);
     }

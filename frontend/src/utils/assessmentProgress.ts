@@ -14,6 +14,7 @@ export interface AssessmentProgress {
 }
 
 const TOTAL_PHASES = 7;
+export const PHASE4_RESULT_STORAGE_KEY = "pragyan:v1:phase4_result";
 
 const PHASE_ROUTES: Record<number, string> = {
   0: "/assessments",
@@ -75,7 +76,9 @@ export async function getAssessmentProgress(): Promise<AssessmentProgress> {
     // Check Phase 4 (technical assessment)
     if (completedPhases.includes(3)) {
       try {
-        const phase4Result = localStorage.getItem("pragyan_phase4_result");
+        const phase4Result =
+          localStorage.getItem(PHASE4_RESULT_STORAGE_KEY) ||
+          localStorage.getItem("pragyan_phase4_result");
         if (phase4Result) {
           const parsed = JSON.parse(phase4Result);
           if (parsed && parsed.resultId) {
@@ -170,9 +173,11 @@ export function canAccessPhase(targetPhase: number, completedPhases: number[]): 
   // Phase 1 is always accessible
   if (targetPhase === 1) return true;
 
+  const completedPhaseSet = new Set(completedPhases);
+
   // All other phases require the previous phase to be completed
   for (let i = 1; i < targetPhase; i++) {
-    if (!completedPhases.includes(i)) {
+    if (!completedPhaseSet.has(i)) {
       return false;
     }
   }

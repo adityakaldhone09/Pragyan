@@ -1,4 +1,3 @@
-import { useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
   Home, Compass, BrainCircuit, Map,
@@ -6,12 +5,11 @@ import {
   Grid, Sparkles,
   Briefcase, Users, TrendingUp, FileText,
   BarChart3, Building2, Activity, MessageSquare,
-  ChevronUp,
+  LogOut,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { NotificationBell } from "@/components/NotificationCenter";
-import { AccountMenu } from "@/components/AccountMenu";
 
 type NavItem = {
   href: string;
@@ -84,11 +82,12 @@ function NavLink({
       href={item.href}
       className={`nav-item flex items-center gap-3 rounded-xl transition-all duration-300 cursor-pointer ${
         compact ? "px-2.5 py-2" : "px-3 py-2.5"
+      } ${
+        isActive 
+          ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white" 
+          : "text-slate-400 hover:text-white hover:bg-white/10"
       }`}
       style={{
-        background: isActive ? "linear-gradient(90deg, #4F46E5, #625EF8)" : "transparent",
-        color: isActive ? "#FFFFFF" : "#94A3B8",
-        fontWeight: isActive ? "500" : "400",
         animationDelay: `${idx * 50}ms`,
       }}
       onMouseEnter={(e) => {
@@ -101,7 +100,7 @@ function NavLink({
       onMouseLeave={(e) => {
         if (!isActive) {
           (e.currentTarget as HTMLElement).style.backgroundColor = "transparent";
-          (e.currentTarget as HTMLElement).style.color = "#94A3B8";
+          (e.currentTarget as HTMLElement).style.color = "#CBD5E1";
           (e.currentTarget as HTMLElement).style.transform = "translateX(0)";
         }
       }}
@@ -120,22 +119,10 @@ function NavLink({
 // ── Layout ─────────────────────────────────────────────────────────────────────
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const compactSidebar = Boolean(
     (user?.preferences as Record<string, unknown> | undefined)?.compactSidebar
   );
-
-  // Account menu state
-  const [menuOpen, setMenuOpen] = useState(false);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-
-  const initials =
-    (user?.fullName || user?.email || "U")
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase())
-      .join("") || "U";
 
   const isActive = (href: string, exact = false) => {
     if (exact) return location === href;
@@ -164,30 +151,22 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     return order.map((sec) => [sec, groups[sec]]);
   };
 
-  const toggleMenu = () => setMenuOpen((prev) => !prev);
-
   return (
     <div className="flex h-screen w-full">
       {/* ── Sidebar ─────────────────────────────────────────────────────────── */}
-      <aside
-        className={`${
-          compactSidebar ? "w-[190px]" : "w-[220px]"
-        } flex-shrink-0 flex flex-col transition-all duration-300`}
-        style={{ backgroundColor: "#0F172A" }}
+      <aside 
+        className={`${compactSidebar ? "w-[190px]" : "w-[220px]"} flex-shrink-0 flex flex-col transition-all duration-300 bg-slate-900`}
       >
         {/* Logo */}
         <div className="p-6 flex items-center gap-2">
           <div
-            className="p-1.5 rounded-md flex items-center justify-center transition-transform duration-300 hover:scale-110"
-            style={{ background: "linear-gradient(135deg, #7666F6 0%, #625EF8 100%)" }}
+            className="p-1.5 rounded-md flex items-center justify-center transition-transform duration-300 hover:scale-110 bg-gradient-to-br from-purple-600 to-purple-500"
           >
             <Sparkles className="w-5 h-5 text-white" />
           </div>
           <div>
             <h1 className="font-bold text-lg leading-tight text-white">Pragyan AI</h1>
-            <p className="text-xs transition-colors duration-200" style={{ color: "#94A3B8" }}>
-              Your Career Guide
-            </p>
+            <p className="text-xs transition-colors duration-200 text-slate-400">Your Career Guide</p>
           </div>
         </div>
 
@@ -209,14 +188,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               {/* Section label — shown for all named sections except "Core" */}
               {section !== "Core" && SECTION_LABELS[section] && (
                 <p
-                  className="px-3 pb-1.5 pt-2"
-                  style={{
-                    fontSize: "0.62rem",
-                    fontWeight: 700,
-                    letterSpacing: "0.07em",
-                    textTransform: "uppercase",
-                    color: "#475569",
-                  }}
+                  className="px-3 pb-1.5 pt-2 text-xs font-bold tracking-wider text-slate-500 uppercase"
                 >
                   {SECTION_LABELS[section]}
                 </p>
@@ -235,88 +207,20 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
 
-        {/* ── Sidebar footer — Account Menu trigger ─────────────────────────── */}
-        <div
-          className="px-3 py-3 border-t transition-colors duration-200"
-          style={{ borderColor: "rgba(255,255,255,0.1)" }}
-        >
+        {/* ── Sidebar footer — Logout Button ─────────────────────────── */}
+        <div className="px-3 py-3 border-t border-white/10 transition-colors duration-200">
           <button
-            ref={triggerRef}
-            onClick={toggleMenu}
-            aria-haspopup="menu"
-            aria-expanded={menuOpen}
-            aria-label="Open account menu"
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
-            style={{
-              backgroundColor: menuOpen ? "rgba(255,255,255,0.1)" : undefined,
-            }}
+            onClick={logout}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300 text-red-400 hover:bg-red-500/20"
           >
-            {/* Avatar */}
-            <div
-              className="flex-shrink-0 flex items-center justify-center rounded-full text-white font-bold select-none transition-transform duration-200 group-hover:scale-105"
-              style={{
-                width:      compactSidebar ? 30 : 34,
-                height:     compactSidebar ? 30 : 34,
-                fontSize:   compactSidebar ? 11 : 13,
-                background: "linear-gradient(135deg, #7666F6 0%, #0ea5e9 100%)",
-                boxShadow:  "0 0 0 2px rgba(118,102,246,0.4)",
-              }}
-            >
-              {user?.avatar ? (
-                <img
-                  src={user.avatar}
-                  alt={user.fullName ?? "avatar"}
-                  className="w-full h-full rounded-full object-cover"
-                />
-              ) : (
-                initials
-              )}
-            </div>
-
-            {/* Name + role */}
-            <div className="flex-1 min-w-0 text-left">
-              <p
-                className="font-semibold leading-tight truncate"
-                style={{ fontSize: compactSidebar ? 11 : 12, color: "#E2E8F0" }}
-              >
-                {user?.fullName || user?.email || "Account"}
-              </p>
-              <p
-                className="truncate capitalize leading-tight mt-0.5"
-                style={{ fontSize: 10, color: "#64748B" }}
-              >
-                {(user?.role ?? "user").toLowerCase().replace(/_/g, " ")}
-              </p>
-            </div>
-
-            {/* Chevron — rotates when open */}
-            <ChevronUp
-              className="flex-shrink-0 transition-all duration-200"
-              style={{
-                width: 14,
-                height: 14,
-                color: "#94A3B8",
-                opacity: menuOpen ? 1 : 0.4,
-                transform: menuOpen ? "rotate(0deg)" : "rotate(180deg)",
-              }}
-              aria-hidden="true"
-            />
+            <LogOut className="w-[18px] h-[18px] flex-shrink-0" />
+            <span className="text-sm font-medium">Logout</span>
           </button>
         </div>
-      </aside>
-
-      {/* Account Menu popover */}
-      <AccountMenu
-        open={menuOpen}
-        onClose={() => setMenuOpen(false)}
-        triggerRef={triggerRef}
-        compact={compactSidebar}
-      />
 
       {/* ── Main Content ────────────────────────────────────────────────────── */}
       <main
-        className="flex-1 flex flex-col rounded-tl-[56px] overflow-hidden transition-all duration-300"
-        style={{ backgroundColor: "#F7F8FC" }}
+        className="flex-1 flex flex-col rounded-tl-[56px] overflow-hidden transition-all duration-300 bg-slate-50"
       >
         {/* Top bar */}
         <div className="flex items-center justify-end px-6 pt-4 pb-0 gap-2">

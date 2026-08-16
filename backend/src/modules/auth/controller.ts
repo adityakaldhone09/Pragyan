@@ -7,7 +7,6 @@ import { Request, Response, NextFunction } from "express";
 import { asyncHandler } from "@/middleware/errorHandler";
 import { meService, registerService, verifyEmailService, loginService } from "./services";
 import { OAuthService } from "./services/oauth.service";
-import { passwordService } from "./services/password.service";
 import { config } from "@/config/env";
 import { authService } from "@/services/auth";
 import { twoFactorService } from "@/services/twoFactor";
@@ -109,41 +108,128 @@ export class AuthController {
 
   /**
    * POST /api/auth/refresh
-   * Unit 6 implementation
    */
   static refresh = asyncHandler(
-    async (_req: Request, _res: Response, _next: NextFunction) => {
-      throw new Error("Not implemented in Unit 1 - see Unit 6");
+    async (req: Request, res: Response, _next: NextFunction) => {
+      const { readRefreshTokenCookie, setAuthCookies } = await import('@/security');
+      const token = req.body.refreshToken || readRefreshTokenCookie(req.headers.cookie);
+      if (!token) {
+        return res.status(400).json({ success: false, message: 'Refresh token is required' });
+      }
+      const result = await authService.refreshAccessToken(token);
+      setAuthCookies(res, result);
+      return res.status(200).json({ success: true, message: 'Access token refreshed', data: result });
     }
   );
 
   /**
    * POST /api/auth/logout
-   * Unit 7 implementation
    */
   static logout = asyncHandler(
-    async (_req: Request, _res: Response, _next: NextFunction) => {
-      throw new Error("Not implemented in Unit 1 - see Unit 7");
+    async (req: Request, res: Response, _next: NextFunction) => {
+      const { readRefreshTokenCookie, clearAuthCookies } = await import('@/security');
+      const refreshToken = req.body.refreshToken || readRefreshTokenCookie(req.headers.cookie);
+      if (!refreshToken) {
+        return res.status(400).json({ success: false, message: 'Refresh token is required' });
+      }
+      await authService.logout(refreshToken);
+      clearAuthCookies(res);
+      return res.status(200).json({ success: true, message: 'Logged out successfully', data: {} });
     }
   );
 
   /**
    * POST /api/auth/forgot-password
-   * Unit 8 implementation
+   * Request password reset
+   * 
+   * Input: { email }
+   * Returns: 200 { message: "If account exists..." }
+   * 
+   * Generic response prevents email enumeration attacks
    */
   static forgotPassword = asyncHandler(
-    async (_req: Request, _res: Response, _next: NextFunction) => {
-      throw new Error("Not implemented in Unit 1 - see Unit 8");
+    async (req: Request, res: Response, _next: NextFunction) => {
+      const { email } = req.body as { email: string };
+
+      const { PasswordResetService } = await import("./services/password-reset.service");
+      
+      const result = await PasswordResetService.requestPasswordReset({
+        email,
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: result.message,
+        data: {},
+      });
+    }
+  );
+
+  /**
+   * POST /api/auth/verify-reset-token
+   * Verify password reset token
+   * 
+   * Input: { token, email }
+   * Returns: 200 { valid: boolean } or error
+   */
+  static verifyResetToken = asyncHandler(
+    async (req: Request, res: Response, _next: NextFunction) => {
+      const { token, email } = req.body as { token: string; email: string };
+
+      const { PasswordResetService } = await import("./services/password-reset.service");
+
+      const result = PasswordResetService.verifyResetToken({ token, email });
+
+      if (!result.valid) {
+        return res.status(400).json({
+          success: false,
+          message: result.error || "Invalid reset token",
+          data: { valid: false },
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Token verified",
+        data: { valid: true },
+      });
     }
   );
 
   /**
    * POST /api/auth/reset-password
-   * Unit 9 implementation
+   * Reset password with valid token
+   * 
+   * Input: { token, email, newPassword, confirmPassword }
+   * Returns: 200 { message: "Password reset successful" }
+   * 
+   * Security:
+   * - Verifies token
+   * - Validates password strength (zxcvbn score 3+)
+   * - Checks HIBP for breached passwords
+   * - Invalidates all sessions
    */
   static resetPassword = asyncHandler(
-    async (_req: Request, _res: Response, _next: NextFunction) => {
-      throw new Error("Not implemented in Unit 1 - see Unit 9");
+    async (req: Request, res: Response, _next: NextFunction) => {
+      const { token, email, newPassword } = req.body as {
+        token: string;
+        email: string;
+        newPassword: string;
+      };
+
+      const { PasswordResetService } = await import("./services/password-reset.service");
+
+      const result = await PasswordResetService.resetPassword({
+        token,
+        email,
+        newPassword,
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: result.message,
+        data: {},
+      });
     }
   );
 
@@ -172,6 +258,16 @@ export class AuthController {
   /**
    * POST /api/auth/change-password (requires auth)
    * Change password for authenticated user
+   * 
+   * Input: { currentPassword, newPassword, confirmPassword }
+   * - Requires current password verification
+   * - Validates new password strength (zxcvbn score 3+, 12+ chars)
+   * - Checks against breached passwords (HIBP)
+   * - Invalidates all existing refresh tokens (forces re-login on all devices)
+   * - Sends confirmation email
+   * 
+   * Returns: 200 { message }
+   * On error: 400/401 with error details
    */
   static changePassword = asyncHandler(
     async (req: Request, res: Response, _next: NextFunction) => {
@@ -187,16 +283,19 @@ export class AuthController {
         newPassword: string;
       };
 
-      const result = await passwordService.changePassword(
-        req.authUser.userId,
+      // Import password change service
+      const { PasswordChangeService } = await import("./services/password-change.service");
+
+      const result = await PasswordChangeService.changePassword({
+        userId: req.authUser.userId,
         currentPassword,
-        newPassword
-      );
+        newPassword,
+      });
 
       return res.status(200).json({
         success: true,
         message: result.message,
-        data: result,
+        data: {},
       });
     }
   );

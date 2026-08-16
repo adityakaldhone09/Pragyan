@@ -1,13 +1,13 @@
 import axios, { AxiosError, type AxiosRequestConfig } from "axios";
 import type { ApiResponse, AuthSession, PaginatedResponse } from "@/types/api";
 
-const rawApiUrl = (
-  (import.meta.env.VITE_API_URL as string | undefined) ??
-  (import.meta.env.VITE_BACKEND_URL as string | undefined)
-)?.replace(/\/$/, "") || "";
-const API_BASE_URL = rawApiUrl
-  ? rawApiUrl.replace(/\/api\/?$/, "") + "/api"
-  : "/api";
+// Use hardcoded URLs based on environment to avoid build-time substitution issues
+// Development: proxy to local backend via /api (Vite proxy configured in vite.config.ts)
+// Production: direct to Render backend URL (no port, uses HTTPS 443)
+const API_BASE_URL =
+  import.meta.env.DEV
+    ? "/api"
+    : "https://pragyan-ai-nmeu.onrender.com/api";
 const AUTH_SESSION_KEY = "pragyan_auth_session";
 
 type RequestConfig = AxiosRequestConfig & {

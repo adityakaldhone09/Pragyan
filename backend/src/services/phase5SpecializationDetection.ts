@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma';
+﻿import { prisma } from '@/lib/prisma';
 import redisClient from '@/lib/redis';
 import { callLLM, parseLLMJson } from './hybridAssessment/llmClient';
 import { parseJsonAsync } from '@/utils/jsonWorker';
@@ -11,7 +11,8 @@ const MIN_QUESTIONS = 4;
 const MAX_QUESTIONS = 8;
 const TARGET_CONFIDENCE = 0.85;
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+
+// â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface Phase5PredictedRole {
   roleTitle: string;
@@ -86,7 +87,7 @@ export interface Phase5StateMachineResponse {
   } | null;
 }
 
-// ── Phase 5 System Prompt ─────────────────────────────────────────────────────
+// â”€â”€ Phase 5 System Prompt â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const PHASE5_SYSTEM_PROMPT = `
 You are the Pragyan AI Phase 5 Specialization Detection Engine.
@@ -223,7 +224,7 @@ QUALITY REQUIREMENTS:
 - Reasoning toast should encourage and guide ("Great! Your understanding of MLOps is solid. Let's validate your deployment experience.")
 `.trim();
 
-// ── Service Class ─────────────────────────────────────────────────────────────
+// â”€â”€ Service Class â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export class Phase5SpecializationDetectionService {
   private getSessionKey(sessionId: string) {
@@ -249,7 +250,7 @@ export class Phase5SpecializationDetectionService {
     const sessionId = `p5_${input.userId}_${Date.now()}`;
     const now = new Date().toISOString();
 
-    // ── Step 1: Predict Career Roles using existing recommendation engine ───────
+    // â”€â”€ Step 1: Predict Career Roles using existing recommendation engine â”€â”€â”€â”€â”€â”€â”€
     const predictedRoles = await this.predictCareerRoles(input.userId, {
       domains: input.phase2Domains,
       technicalProfile: input.phase4TechnicalProfile,
@@ -564,7 +565,7 @@ ${forceComplete
 
   private formatHistory(history: Phase5Session['history']): string {
     return history.map((item, i) =>
-      `${i + 1}. [${item.question.targetRole} - ${item.question.difficulty}] ${item.question.topic}\n   Q: ${item.question.questionText}\n   A: ${item.userAnswer} -> ${item.isCorrect ? '✓ Correct' : '✗ Incorrect'} (Alignment: ${Math.round(item.roleAlignment * 100)}%)`
+      `${i + 1}. [${item.question.targetRole} - ${item.question.difficulty}] ${item.question.topic}\n   Q: ${item.question.questionText}\n   A: ${item.userAnswer} -> ${item.isCorrect ? 'âœ“ Correct' : 'âœ— Incorrect'} (Alignment: ${Math.round(item.roleAlignment * 100)}%)`
     ).join('\n\n');
   }
 

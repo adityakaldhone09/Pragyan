@@ -1,7 +1,9 @@
 // src/config/env.ts
 
 import dotenv from 'dotenv';
+import path from 'path';
 
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 dotenv.config();
 
 const requiredEnvVars = [
@@ -32,7 +34,13 @@ export const config = {
     googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || null,
     githubClientId: process.env.GITHUB_CLIENT_ID || null,
     githubClientSecret: process.env.GITHUB_CLIENT_SECRET || null,
-    sessionSecret: process.env.SESSION_SECRET || process.env.JWT_SECRET || 'change_me_in_production_use_a_unique_session_secret',
+    sessionSecret: (() => {
+      const secret = process.env.SESSION_SECRET;
+      if (!secret) {
+        throw new Error('SESSION_SECRET environment variable is required for production security');
+      }
+      return secret;
+    })(),
   },
 
   gemini: {
@@ -53,9 +61,27 @@ export const config = {
   },
   
   jwt: {
-    secret: process.env.JWT_SECRET || 'your_jwt_secret_key',
+    secret: (() => {
+      const secret = process.env.JWT_SECRET;
+      if (!secret) {
+        throw new Error('JWT_SECRET environment variable is required');
+      }
+      if (secret.length < 32) {
+        throw new Error('JWT_SECRET must be at least 32 characters long for security');
+      }
+      return secret;
+    })(),
     expiry: process.env.JWT_EXPIRY || '15m',
-    refreshSecret: process.env.JWT_REFRESH_SECRET || 'your_jwt_refresh_secret_key',
+    refreshSecret: (() => {
+      const secret = process.env.JWT_REFRESH_SECRET;
+      if (!secret) {
+        throw new Error('JWT_REFRESH_SECRET environment variable is required');
+      }
+      if (secret.length < 32) {
+        throw new Error('JWT_REFRESH_SECRET must be at least 32 characters long for security');
+      }
+      return secret;
+    })(),
     refreshExpiry: process.env.JWT_REFRESH_EXPIRY || '30d',
   },
   
