@@ -217,6 +217,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <span className="text-sm font-medium">Logout</span>
           </button>
         </div>
+      </aside>
 
       {/* ── Main Content ────────────────────────────────────────────────────── */}
       <main
